@@ -1,0 +1,4 @@
+src/screens/SettingsScreen.tsx(16,34): error TS2339: Property 'documentDirectory' does not exist on type 'typeof import("D:/QuanLyThuChi/HeoDatBeo/node_modules/expo-file-system/build/index")'.
+src/screens/SettingsScreen.tsx(16,66): error TS2339: Property 'cacheDirectory' does not exist on type 'typeof import("D:/QuanLyThuChi/HeoDatBeo/node_modules/expo-file-system/build/index")'.
+src/screens/SettingsScreen.tsx(22,84): error TS2339: Property 'EncodingType' does not exist on type 'typeof import("D:/QuanLyThuChi/HeoDatBeo/node_modules/expo-file-system/build/index")'.
+src/screens/SettingsScreen.tsx(47,109): error TS2339: Property 'EncodingType' does not exist on type 'typeof import("D:/QuanLyThuChi/HeoDatBeo/node_modules/expo-file-system/build/index")'.

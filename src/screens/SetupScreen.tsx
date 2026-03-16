@@ -1,0 +1,149 @@
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { CommonActions, useNavigation } from '@react-navigation/native';
+import { storage } from '../store/storage';
+import { PiggyBank } from 'lucide-react-native';
+
+const SetupScreen = () => {
+  const [name, setName] = useState('');
+  const [balanceStr, setBalanceStr] = useState('');
+  const navigation = useNavigation();
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng nhập tên của bạn');
+      return;
+    }
+    
+    // allow negative initial balance if people are in debt?
+    // standard numeric parse
+    const balance = parseInt(balanceStr.replace(/[^0-9-]/g, ''), 10);
+    if (isNaN(balance)) {
+      Alert.alert('Lỗi', 'Vui lòng nhập số dư hợp lệ');
+      return;
+    }
+
+    const success = await storage.saveUserProfile({
+      name: name.trim(),
+      initialBalance: balance,
+      initialBalanceTimestamp: Date.now(),
+    });
+
+    if (success) {
+      // Navigate and reset to MainApp
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'MainApp' }],
+        })
+      );
+    } else {
+      Alert.alert('Lỗi', 'Không thể lưu dữ liệu, vui lòng thử lại.');
+    }
+  };
+
+  const formatMoneyInput = (text: string) => {
+    const numericValue = text.replace(/[^0-9-]/g, '');
+    if (!numericValue) return '';
+    return parseInt(numericValue, 10).toLocaleString('vi-VN');
+  };
+
+  return (
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <PiggyBank color="#d946ef" size={80} />
+          <Text style={styles.title}>Chào mừng đến với</Text>
+          <Text style={styles.appName}>Heo Đất Béo</Text>
+        </View>
+
+        <View style={styles.form}>
+          <Text style={styles.label}>Tên của bạn</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Nhập tên của bạn"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+          />
+
+          <Text style={styles.label}>Số dư hiện hành (VNĐ)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Ví dụ: 5,000,000"
+            value={formatMoneyInput(balanceStr)}
+            onChangeText={setBalanceStr}
+            keyboardType="numeric"
+          />
+
+          <TouchableOpacity style={styles.button} onPress={handleSave}>
+            <Text style={styles.buttonText}>Bắt đầu</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  content: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  title: {
+    fontSize: 24,
+    color: '#64748b',
+    marginTop: 16,
+  },
+  appName: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#d946ef',
+    marginTop: 8,
+  },
+  form: {
+    width: '100%',
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#334155',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    marginBottom: 24,
+    color: '#0f172a',
+  },
+  button: {
+    backgroundColor: '#d946ef',
+    padding: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+});
+
+export default SetupScreen;
