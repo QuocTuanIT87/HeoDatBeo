@@ -5,7 +5,8 @@ import HomeScreen from '../screens/HomeScreen';
 import StatisticsScreen from '../screens/StatisticsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import SavingScreen from '../screens/SavingScreen';
-import { Home, PieChart, Settings, PiggyBank } from 'lucide-react-native';
+import BudgetScreen from '../screens/BudgetScreen';
+import { Home, PieChart, Settings, PiggyBank, Layers } from 'lucide-react-native';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
@@ -25,33 +26,41 @@ const BottomTabNavigator = () => {
         },
       }}
     >
-      <Tab.Screen 
-        name="Home" 
-        component={HomeScreen} 
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
         options={{
           tabBarLabel: 'Trang chủ',
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
         }}
       />
-      <Tab.Screen 
-        name="Statistics" 
-        component={StatisticsScreen} 
+      <Tab.Screen
+        name="Budget"
+        component={BudgetScreen}
+        options={{
+          tabBarLabel: 'Chia Tiền',
+          tabBarIcon: ({ color, size }) => <Layers color={color} size={size} />,
+        }}
+      />
+      <Tab.Screen
+        name="Statistics"
+        component={StatisticsScreen}
         options={{
           tabBarLabel: 'Thống kê',
           tabBarIcon: ({ color, size }) => <PieChart color={color} size={size} />,
         }}
       />
-      <Tab.Screen 
-        name="Savings" 
-        component={SavingScreen} 
+      <Tab.Screen
+        name="Savings"
+        component={SavingScreen}
         options={{
           tabBarLabel: 'Tiết kiệm',
           tabBarIcon: ({ color, size }) => <PiggyBank color={color} size={size} />,
         }}
       />
-      <Tab.Screen 
-        name="Settings" 
-        component={SettingsScreen} 
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
         options={{
           tabBarLabel: 'Cài đặt',
           tabBarIcon: ({ color, size }) => <Settings color={color} size={size} />,

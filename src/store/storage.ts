@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Transaction, UserProfile } from '../types';
+import { Transaction, UserProfile, CategoryBudget } from '../types';
 
 const TRANSACTIONS_KEY = '@transactions';
 const USER_PROFILE_KEY = '@userProfile';
+const CATEGORY_BUDGETS_KEY = '@categoryBudgets';
 
 export const storage = {
   // User Profile
@@ -30,9 +31,31 @@ export const storage = {
     try {
       await AsyncStorage.removeItem(USER_PROFILE_KEY);
       await AsyncStorage.removeItem(TRANSACTIONS_KEY);
+      await AsyncStorage.removeItem(CATEGORY_BUDGETS_KEY);
       return true;
     } catch (e) {
       console.error('Error clearing data', e);
+      return false;
+    }
+  },
+
+  // Category Budgets — stored separately for quick access
+  async getCategoryBudgets(): Promise<CategoryBudget[]> {
+    try {
+      const data = await AsyncStorage.getItem(CATEGORY_BUDGETS_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error('Error fetching category budgets', e);
+      return [];
+    }
+  },
+
+  async saveCategoryBudgets(budgets: CategoryBudget[]): Promise<boolean> {
+    try {
+      await AsyncStorage.setItem(CATEGORY_BUDGETS_KEY, JSON.stringify(budgets));
+      return true;
+    } catch (e) {
+      console.error('Error saving category budgets', e);
       return false;
     }
   },
@@ -86,11 +109,22 @@ export const storage = {
       }
   },
 
+  async updateTransactionsBulk(updatedTransactions: Transaction[]): Promise<boolean> {
+    try {
+      await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updatedTransactions));
+      return true;
+    } catch (e) {
+      console.error('Error updating transactions in bulk', e);
+      return false;
+    }
+  },
+
   // Backup / Restore capabilities
   async exportData(): Promise<string> {
     const profile = await this.getUserProfile();
     const transactions = await this.getTransactions();
-    return JSON.stringify({ profile, transactions });
+    const categoryBudgets = await this.getCategoryBudgets();
+    return JSON.stringify({ profile, transactions, categoryBudgets });
   },
 
   async importData(jsonData: string): Promise<boolean> {
@@ -101,6 +135,9 @@ export const storage = {
       }
       if (parsed.transactions) {
         await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(parsed.transactions));
+      }
+      if (parsed.categoryBudgets) {
+        await AsyncStorage.setItem(CATEGORY_BUDGETS_KEY, JSON.stringify(parsed.categoryBudgets));
       }
       return true;
     } catch (e) {

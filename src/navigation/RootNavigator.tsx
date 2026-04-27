@@ -3,6 +3,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from './types';
 import SetupScreen from '../screens/SetupScreen';
 import BottomTabNavigator from './BottomTabNavigator';
+import SavingHistoryScreen from '../screens/SavingHistoryScreen';
+import GuideScreen from '../screens/GuideScreen';
 import { storage } from '../store/storage';
 import { View, ActivityIndicator } from 'react-native';
 
@@ -36,6 +38,8 @@ const RootNavigator = () => {
     >
       <Stack.Screen name="Setup" component={SetupScreen} />
       <Stack.Screen name="MainApp" component={BottomTabNavigator} />
+      <Stack.Screen name="SavingHistory" component={SavingHistoryScreen} />
+      <Stack.Screen name="Guide" component={GuideScreen} />
     </Stack.Navigator>
   );
 };

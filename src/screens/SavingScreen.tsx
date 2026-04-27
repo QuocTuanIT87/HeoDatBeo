@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert, Modal } from 'react-native';
-import { PiggyBank, Edit2, Info } from 'lucide-react-native';
+import { PiggyBank, Edit2, Info, History } from 'lucide-react-native';
 import { storage } from '../store/storage';
-import { Transaction, UserProfile } from '../types';
+import { Transaction, UserProfile, CategoryBudget } from '../types';
 import { formatCurrency } from '../utils/format';
 import Keypad from '../components/Keypad';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types';
 
 const SavingScreen = () => {
   const isFocused = useIsFocused();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [totalBalance, setTotalBalance] = useState<number>(0);
+  const [unallocated, setUnallocated] = useState<number>(0);
   const [savingBalance, setSavingBalance] = useState<number>(0);
 
   const [type, setType] = useState<'deposit' | 'withdraw'>('deposit');
@@ -28,28 +32,25 @@ const SavingScreen = () => {
 
   const loadData = async () => {
     const p = await storage.getUserProfile();
+    const cats = await storage.getCategoryBudgets();
     setProfile(p);
     
     if (p) {
       const transactions = await storage.getTransactions();
       const validTransactions = transactions.filter(t => t.timestamp >= p.initialBalanceTimestamp);
-      
-      let calcTotal = p.initialBalance;
+
+      // Tổng số dư = tổng các danh mục + số chưa phân bổ
+      const totalAllocated = cats.reduce((sum: number, c: CategoryBudget) => sum + c.budget, 0);
+      const unalloc = Math.max(0, p.initialBalance - totalAllocated);
+      setUnallocated(unalloc);
+      setTotalBalance(totalAllocated + unalloc);
+
+      // Tính tiết kiệm từ transactions
       let calcSaving = 0;
-
       validTransactions.forEach(t => {
-        // total balance calculation
-        if (t.type === 'income') calcTotal += t.amount;
-        else if (t.type === 'expense') calcTotal -= t.amount;
-
-        // saving calculation
-        if (t.category === 'Tiết kiệm') {
-          if (t.type === 'expense') calcSaving += t.amount; // Deposit to savings = expense from total
-          else if (t.type === 'income') calcSaving -= t.amount; // Withdraw from savings = income to total
-        }
+        if (t.type === 'expense' && t.category === 'Tiết kiệm') calcSaving += t.amount;
+        else if (t.type === 'income' && (t.category === 'Tiết kiệm' || t.category === 'Rút tiết kiệm')) calcSaving -= t.amount;
       });
-
-      setTotalBalance(calcTotal);
       setSavingBalance(calcSaving);
       
       if (p.savingTarget) {
@@ -74,16 +75,16 @@ const SavingScreen = () => {
 
   const canEditTarget = () => {
     if (!profile?.savingTargetTimestamp) return true;
-    const days14 = 14 * 24 * 60 * 60 * 1000;
-    return Date.now() - profile.savingTargetTimestamp >= days14;
+    const days30 = 30 * 24 * 60 * 60 * 1000;
+    return Date.now() - profile.savingTargetTimestamp >= days30;
   };
 
   const getDaysUntilEdit = () => {
     if (!profile?.savingTargetTimestamp) return 0;
-    const days14 = 14 * 24 * 60 * 60 * 1000;
+    const days30 = 30 * 24 * 60 * 60 * 1000;
     const timePassed = Date.now() - profile.savingTargetTimestamp;
-    if (timePassed >= days14) return 0;
-    return Math.ceil((days14 - timePassed) / (24 * 60 * 60 * 1000));
+    if (timePassed >= days30) return 0;
+    return Math.ceil((days30 - timePassed) / (24 * 60 * 60 * 1000));
   };
 
   const handleSaveTarget = async () => {
@@ -118,8 +119,8 @@ const SavingScreen = () => {
       return;
     }
 
-    if (type === 'deposit' && amount > totalBalance) {
-      Alert.alert('Lỗi', 'Số dư không đủ để nạp vào tiết kiệm.');
+    if (type === 'deposit' && amount > unallocated) {
+      Alert.alert('Lỗi', `Số dư chưa phân bổ (${formatCurrency(unallocated)} đ) không đủ để nạp vào tiết kiệm.`);
       return;
     }
 
@@ -128,11 +129,23 @@ const SavingScreen = () => {
       return;
     }
 
+    // Cập nhật initial balance để tránh làm sai lệch số dư chưa phân bổ
+    if (profile) {
+      const updatedProfile = {
+        ...profile,
+        initialBalance: type === 'deposit' ? profile.initialBalance - amount : profile.initialBalance + amount,
+      };
+      await storage.saveUserProfile(updatedProfile);
+    }
+
+    const txCategory = type === 'deposit' ? 'Tiết kiệm' : 'Rút tiết kiệm';
     const newTx: Transaction = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       type: type === 'deposit' ? 'expense' : 'income',
       amount,
-      category: 'Tiết kiệm',
+      category: txCategory,
+      categorySnapshot: txCategory, // snapshot tên danh mục tại thời điểm tạo (YC 6)
+      name: type === 'deposit' ? 'Nuôi heo béo' : undefined, // YC 3: Tên hiển thị khi nạp heo
       timestamp: Date.now(),
     };
 
@@ -151,16 +164,31 @@ const SavingScreen = () => {
       {/* Header section */}
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
-          <PiggyBank color="#ffffff" size={28} />
-          <Text style={styles.headerTitle}>Heo Đất</Text>
+          <View style={{flexDirection: 'row', alignItems: 'center', gap: 12}}>
+            <PiggyBank color="#ffffff" size={28} />
+            <Text style={styles.headerTitle}>Heo Đất</Text>
+          </View>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('SavingHistory')}
+            style={styles.historyBtn}
+          >
+            <History color="#ffffff" size={24} />
+          </TouchableOpacity>
         </View>
         <View style={styles.balancesContainer}>
-          <View style={styles.balanceCol}>
+          <View style={styles.balanceRow}>
             <Text style={styles.balanceLabel}>Số dư tổng</Text>
             <Text style={styles.balanceAmount}>{formatCurrency(totalBalance)} đ</Text>
           </View>
-          <View style={styles.balanceDivider} />
-          <View style={styles.balanceCol}>
+          <View style={styles.balanceRowDivider} />
+          <View style={styles.balanceRow}>
+            <Text style={styles.balanceLabel}>Chưa phân bổ</Text>
+            <Text style={[styles.balanceAmount, { color: unallocated <= 0 ? '#fca5a5' : '#ffffff' }]}>
+              {formatCurrency(unallocated)} đ
+            </Text>
+          </View>
+          <View style={styles.balanceRowDivider} />
+          <View style={[styles.balanceRow, { marginBottom: 0 }]}>
             <Text style={styles.balanceLabel}>Tiết kiệm</Text>
             <Text style={[styles.balanceAmount, { color: '#fcd34d' }]}>
               {formatCurrency(savingBalance)} đ
@@ -299,39 +327,47 @@ const styles = StyleSheet.create({
   headerTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 20,
-    gap: 12,
   },
   headerTitle: {
     color: '#ffffff',
     fontSize: 24,
     fontWeight: 'bold',
   },
+  historyBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
   balancesContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 16,
-    padding: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
-  balanceCol: {
-    flex: 1,
+  balanceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  balanceRowDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginBottom: 8,
   },
   balanceLabel: {
     color: '#fef3c7',
-    fontSize: 13,
-    marginBottom: 4,
+    fontSize: 14,
   },
   balanceAmount: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-  },
-  balanceDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    marginHorizontal: 12,
+    textAlign: 'right',
+    flexShrink: 1,
+    marginLeft: 12,
   },
   body: {
     flex: 1,

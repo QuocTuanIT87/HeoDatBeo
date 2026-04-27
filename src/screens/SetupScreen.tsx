@@ -1,25 +1,36 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { CommonActions, useNavigation } from '@react-navigation/native';
-import { storage } from '../store/storage';
-import { PiggyBank } from 'lucide-react-native';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from "react-native";
+import { CommonActions, useNavigation } from "@react-navigation/native";
+import { storage } from "../store/storage";
+import { PiggyBank } from "lucide-react-native";
+import * as DocumentPicker from "expo-document-picker";
+import { readAsStringAsync } from "expo-file-system/legacy";
 
 const SetupScreen = () => {
-  const [name, setName] = useState('');
-  const [balanceStr, setBalanceStr] = useState('');
+  const [name, setName] = useState("");
+  const [balanceStr, setBalanceStr] = useState("");
   const navigation = useNavigation();
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập tên của bạn');
+      Alert.alert("Lỗi", "Vui lòng nhập tên của bạn");
       return;
     }
-    
+
     // allow negative initial balance if people are in debt?
     // standard numeric parse
-    const balance = parseInt(balanceStr.replace(/[^0-9-]/g, ''), 10);
+    const balance = parseInt(balanceStr.replace(/[^0-9-]/g, ""), 10);
     if (isNaN(balance)) {
-      Alert.alert('Lỗi', 'Vui lòng nhập số dư hợp lệ');
+      Alert.alert("Lỗi", "Vui lòng nhập số dư hợp lệ");
       return;
     }
 
@@ -27,6 +38,7 @@ const SetupScreen = () => {
       name: name.trim(),
       initialBalance: balance,
       initialBalanceTimestamp: Date.now(),
+      hasSeenGuide: false,
     });
 
     if (success) {
@@ -34,24 +46,58 @@ const SetupScreen = () => {
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
-          routes: [{ name: 'MainApp' }],
-        })
+          routes: [{ name: "MainApp" }],
+        }),
       );
     } else {
-      Alert.alert('Lỗi', 'Không thể lưu dữ liệu, vui lòng thử lại.');
+      Alert.alert("Lỗi", "Không thể lưu dữ liệu, vui lòng thử lại.");
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "text/plain",
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const fileContent = await readAsStringAsync(result.assets[0].uri, {
+          encoding: "utf8",
+        });
+
+        const success = await storage.importData(fileContent);
+        if (success) {
+          Alert.alert("Thành công", "Dữ liệu đã được phục hồi.");
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: "MainApp" }],
+            }),
+          );
+        } else {
+          Alert.alert(
+            "Lỗi",
+            "Dữ liệu không hợp lệ hoặc đã xảy ra lỗi trong quá trình phục hồi.",
+          );
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Lỗi", "Không thể nhập dữ liệu.");
     }
   };
 
   const formatMoneyInput = (text: string) => {
-    const numericValue = text.replace(/[^0-9-]/g, '');
-    if (!numericValue) return '';
-    return parseInt(numericValue, 10).toLocaleString('vi-VN');
+    const numericValue = text.replace(/[^0-9-]/g, "");
+    if (!numericValue) return "";
+    return parseInt(numericValue, 10).toLocaleString("vi-VN");
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={styles.content}>
         <View style={styles.header}>
@@ -82,6 +128,16 @@ const SetupScreen = () => {
           <TouchableOpacity style={styles.button} onPress={handleSave}>
             <Text style={styles.buttonText}>Bắt đầu</Text>
           </TouchableOpacity>
+
+          <View style={styles.importContainer}>
+            <Text style={styles.importText}>Đã có dữ liệu sẵn?</Text>
+            <TouchableOpacity
+              style={styles.importButton}
+              onPress={handleImport}
+            >
+              <Text style={styles.importButtonText}>Chọn file backup</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -91,58 +147,80 @@ const SetupScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
   },
   content: {
     flex: 1,
     padding: 24,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 48,
   },
   title: {
     fontSize: 24,
-    color: '#64748b',
+    color: "#64748b",
     marginTop: 16,
   },
   appName: {
     fontSize: 36,
-    fontWeight: 'bold',
-    color: '#d946ef',
+    fontWeight: "bold",
+    color: "#d946ef",
     marginTop: 8,
   },
   form: {
-    width: '100%',
+    width: "100%",
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#334155',
+    fontWeight: "600",
+    color: "#334155",
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
     marginBottom: 24,
-    color: '#0f172a',
+    color: "#0f172a",
   },
   button: {
-    backgroundColor: '#d946ef',
+    backgroundColor: "#d946ef",
     padding: 18,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
   },
   buttonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
+  },
+  importContainer: {
+    marginTop: 32,
+    alignItems: "center",
+  },
+  importText: {
+    fontSize: 14,
+    color: "#64748b",
+    marginBottom: 8,
+  },
+  importButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#d946ef",
+    backgroundColor: "transparent",
+  },
+  importButtonText: {
+    color: "#d946ef",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
 
