@@ -98,7 +98,8 @@ const HomeScreen = () => {
   };
 
   // Lưu giao dịch với danh mục cụ thể (có thể là danh mục tùy chỉnh)
-  const saveTransaction = async (chosenCategory: string) => {
+  // customLabel: tên người dùng nhập tay — nếu có, category lưu là "Khác", categorySnapshot lưu tên gốc
+  const saveTransaction = async (chosenCategory: string, customLabel?: string) => {
     if (type === "expense") {
       const catBudget = budgets.find((b) => b.name === chosenCategory);
 
@@ -112,7 +113,7 @@ const HomeScreen = () => {
           return;
         }
         const updatedBudgets = budgets.map((b) =>
-          b.name === chosenCategory ? { ...b, budget: b.budget - amount } : b
+          b.name === chosenCategory ? { ...b, budget: b.budget - amount, spent: (b.spent || 0) + amount } : b
         );
         const budgetSaved = await storage.saveCategoryBudgets(updatedBudgets);
         if (!budgetSaved) {
@@ -145,12 +146,13 @@ const HomeScreen = () => {
       }
 
       // Lưu transaction
+      // Nếu là danh mục nhập tay → gom vào "Khác", snapshot lưu tên gốc để truy vết
       const newTx: Transaction = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
         type: "expense",
         amount,
-        category: chosenCategory,
-        categorySnapshot: chosenCategory,
+        category: customLabel ? "Khác" : chosenCategory,
+        categorySnapshot: customLabel ?? chosenCategory,
         timestamp: Date.now(),
       };
       const txSaved = await storage.saveTransaction(newTx);
@@ -175,8 +177,8 @@ const HomeScreen = () => {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
         type: "income",
         amount,
-        category: chosenCategory,
-        categorySnapshot: chosenCategory,
+        category: customLabel ? "Khác" : chosenCategory,
+        categorySnapshot: customLabel ?? chosenCategory,
         timestamp: Date.now(),
       };
       const txSaved = await storage.saveTransaction(newTx);
@@ -213,6 +215,7 @@ const HomeScreen = () => {
   };
 
   // Xác nhận lưu từ modal nhập danh mục tùy chỉnh
+  // → Lưu category="Khác", categorySnapshot=tên người dùng nhập
   const handleConfirmCustomCategory = async () => {
     const trimmed = customCatInput.trim();
     if (!trimmed) {
@@ -220,7 +223,8 @@ const HomeScreen = () => {
       return;
     }
     setCustomCatModalVisible(false);
-    await saveTransaction(trimmed);
+    // Truyền trimmed làm customLabel → category DB = "Khác", snapshot = tên gốc
+    await saveTransaction("Khác", trimmed);
   };
 
   // Hủy modal và xóa danh mục đang chọn

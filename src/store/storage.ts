@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Transaction, UserProfile, CategoryBudget } from '../types';
+import { Transaction, UserProfile, CategoryBudget, TransactionDateIndex } from '../types';
 
 const TRANSACTIONS_KEY = '@transactions';
 const USER_PROFILE_KEY = '@userProfile';
 const CATEGORY_BUDGETS_KEY = '@categoryBudgets';
+const TRANSACTION_DATE_INDEX_KEY = '@transaction_date_index';
 
 export const storage = {
   // User Profile
@@ -32,10 +33,79 @@ export const storage = {
       await AsyncStorage.removeItem(USER_PROFILE_KEY);
       await AsyncStorage.removeItem(TRANSACTIONS_KEY);
       await AsyncStorage.removeItem(CATEGORY_BUDGETS_KEY);
+      await AsyncStorage.removeItem(TRANSACTION_DATE_INDEX_KEY);
       return true;
     } catch (e) {
       console.error('Error clearing data', e);
       return false;
+    }
+  },
+
+  // Transaction Date Index — lưu tháng/năm có giao dịch để lọc nhanh
+  async getTransactionDateIndex(): Promise<TransactionDateIndex> {
+    try {
+      const data = await AsyncStorage.getItem(TRANSACTION_DATE_INDEX_KEY);
+      if (data) return JSON.parse(data);
+      // Nếu chưa có index (app cũ) → rebuild từ transactions hiện có
+      return await this._rebuildTransactionDateIndex();
+    } catch (e) {
+      console.error('Error fetching transaction date index', e);
+      return { months: [], years: [] };
+    }
+  },
+
+  async _rebuildTransactionDateIndex(): Promise<TransactionDateIndex> {
+    try {
+      const transactions = await this.getTransactions();
+      const monthSet = new Set<string>();
+      const yearSet = new Set<number>();
+      transactions.forEach(tx => {
+        const d = new Date(tx.timestamp);
+        const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        monthSet.add(m);
+        yearSet.add(d.getFullYear());
+      });
+      const index: TransactionDateIndex = {
+        months: Array.from(monthSet).sort().reverse(),
+        years: Array.from(yearSet).sort((a, b) => b - a),
+      };
+      await AsyncStorage.setItem(TRANSACTION_DATE_INDEX_KEY, JSON.stringify(index));
+      return index;
+    } catch (e) {
+      console.error('Error rebuilding transaction date index', e);
+      return { months: [], years: [] };
+    }
+  },
+
+  async _addToTransactionDateIndex(timestamp: number): Promise<void> {
+    try {
+      const index = await this.getTransactionDateIndex();
+      const d = new Date(timestamp);
+      const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const year = d.getFullYear();
+      let changed = false;
+      if (!index.months.includes(month)) {
+        index.months = [month, ...index.months].sort().reverse();
+        changed = true;
+      }
+      if (!index.years.includes(year)) {
+        index.years = [year, ...index.years].sort((a, b) => b - a);
+        changed = true;
+      }
+      if (changed) {
+        await AsyncStorage.setItem(TRANSACTION_DATE_INDEX_KEY, JSON.stringify(index));
+      }
+    } catch (e) {
+      console.error('Error adding to transaction date index', e);
+    }
+  },
+
+  async _removeFromTransactionDateIndex(deletedTimestamp: number): Promise<void> {
+    try {
+      // Rebuild từ transactions còn lại sau khi xóa
+      await this._rebuildTransactionDateIndex();
+    } catch (e) {
+      console.error('Error removing from transaction date index', e);
     }
   },
 
@@ -78,6 +148,8 @@ export const storage = {
       const current = await this.getTransactions();
       const updated = [...current, transaction];
       await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updated));
+      // Cập nhật index tháng/năm
+      await this._addToTransactionDateIndex(transaction.timestamp);
       return true;
     } catch (e) {
       console.error('Error saving transaction', e);
@@ -88,8 +160,11 @@ export const storage = {
   async deleteTransaction(id: string): Promise<boolean> {
     try {
       const current = await this.getTransactions();
+      const deleted = current.find(t => t.id === id);
       const updated = current.filter(t => t.id !== id);
       await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updated));
+      // Rebuild index sau khi xóa (để loại bỏ tháng/năm không còn giao dịch)
+      if (deleted) await this._removeFromTransactionDateIndex(deleted.timestamp);
       return true;
     } catch (e) {
       console.error('Error deleting transaction', e);
@@ -139,6 +214,8 @@ export const storage = {
       if (parsed.categoryBudgets) {
         await AsyncStorage.setItem(CATEGORY_BUDGETS_KEY, JSON.stringify(parsed.categoryBudgets));
       }
+      // Rebuild index sau khi import
+      await this._rebuildTransactionDateIndex();
       return true;
     } catch (e) {
       console.error('Error importing data', e);

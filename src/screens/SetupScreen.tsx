@@ -42,6 +42,17 @@ const SetupScreen = () => {
     });
 
     if (success) {
+      // Create initial balance transaction
+      const initialTransaction = {
+        id: Date.now().toString(),
+        type: 'income' as const,
+        amount: balance,
+        category: 'Khác',
+        name: 'Số dư đầu tiên',
+        timestamp: Date.now(),
+      };
+      await storage.saveTransaction(initialTransaction);
+
       // Navigate and reset to MainApp
       navigation.dispatch(
         CommonActions.reset({
