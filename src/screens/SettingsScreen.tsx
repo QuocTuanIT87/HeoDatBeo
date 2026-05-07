@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, FlatList, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { writeAsStringAsync, readAsStringAsync } from 'expo-file-system/legacy';
 import { Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -188,7 +188,7 @@ const SettingsScreen = () => {
         <Text style={styles.headerTitle}>Cài đặt & Sao lưu</Text>
       </View>
 
-      <View style={styles.body}>
+      <ScrollView contentContainerStyle={styles.body}>
         <TouchableOpacity style={styles.card} onPress={() => setCategoryModalVisible(true)}>
           <View style={[styles.iconContainer, { backgroundColor: '#fef3c7' }]}>
             <List color="#d97706" size={24} />
@@ -245,7 +245,7 @@ const SettingsScreen = () => {
             Ứng dụng được phát triển bởi <Text style={styles.authorHighlight}>SatsBoy87</Text>
           </Text>
         </View>
-      </View>
+      </ScrollView>
 
       <Modal
         visible={isCategoryModalVisible}
