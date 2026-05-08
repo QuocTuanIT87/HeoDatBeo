@@ -191,6 +191,15 @@ const BudgetScreen = () => {
   const handleAddCategory = async () => {
     const name = newCatName.trim();
     if (!name) return;
+
+    if (name === "Tiết kiệm" || name === "Rút tiết kiệm") {
+      Alert.alert(
+        "Lỗi",
+        "Tên danh mục này đã được sử dụng cho hệ thống tiết kiệm. Vui lòng chọn tên khác.",
+      );
+      return;
+    }
+
     if (budgets.find((b) => b.name === name)) {
       Alert.alert("Lỗi", "Danh mục này đã tồn tại.");
       return;

@@ -9,13 +9,25 @@ import {
   Platform,
   ScrollView,
   Modal,
+  Dimensions,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { storage } from "../store/storage";
 import { Transaction, UserProfile, CategoryBudget } from "../types";
 import { formatCurrency } from "../utils/format";
-import { useIsFocused } from "@react-navigation/native";
-import { Trash2, X } from "lucide-react-native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
+import {
+  Trash2,
+  X,
+  PieChart as PieChartIcon,
+  BarChart2,
+} from "lucide-react-native";
+import { BarChart } from "react-native-gifted-charts";
+import CustomPieChart from "../components/CustomPieChart";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/types";
+
+const screenWidth = Dimensions.get("window").width;
 
 type FilterPeriod = "day" | "month" | "year" | "all" | "custom";
 type FilterType = "all" | "expense" | "income";
@@ -35,59 +47,64 @@ type TransactionCardProps = {
   onDelete: (tx: Transaction) => void;
 };
 
-const TransactionCard = React.memo(({ item, onDelete }: TransactionCardProps) => {
-  const dateStr = new Date(item.timestamp).toLocaleString("vi-VN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const isExpense = item.type === "expense";
-  // Nếu là số dư đầu tiên, hiển thị tên 'Số dư đầu tiên' thay vì 'Khác' làm danh mục
-  const displayCategory = item.name === 'Số dư đầu tiên' ? item.name : (item.categorySnapshot || item.category);
-  const displayName = item.name === 'Số dư đầu tiên' ? undefined : item.name;
-  const canDelete = Date.now() - item.timestamp <= 5 * 60 * 1000;
+const TransactionCard = React.memo(
+  ({ item, onDelete }: TransactionCardProps) => {
+    const dateStr = new Date(item.timestamp).toLocaleString("vi-VN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const isExpense = item.type === "expense";
+    // Nếu là số dư đầu tiên, hiển thị tên 'Số dư đầu tiên' thay vì 'Khác' làm danh mục
+    const displayCategory =
+      item.name === "Số dư đầu tiên"
+        ? item.name
+        : item.categorySnapshot || item.category;
+    const displayName = item.name === "Số dư đầu tiên" ? undefined : item.name;
+    const canDelete = Date.now() - item.timestamp <= 5 * 60 * 1000;
 
-  return (
-    <View style={cardStyles.card}>
-      <View style={cardStyles.cardRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={cardStyles.cardCategory}>{displayCategory}</Text>
-          {displayName ? (
-            <Text style={cardStyles.cardName}>{displayName}</Text>
-          ) : null}
+    return (
+      <View style={cardStyles.card}>
+        <View style={cardStyles.cardRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={cardStyles.cardCategory}>{displayCategory}</Text>
+            {displayName ? (
+              <Text style={cardStyles.cardName}>{displayName}</Text>
+            ) : null}
+          </View>
+          <Text
+            style={[
+              cardStyles.cardAmount,
+              isExpense ? cardStyles.expenseText : cardStyles.incomeText,
+            ]}
+          >
+            {isExpense ? "-" : "+"}
+            {formatCurrency(item.amount)} đ
+          </Text>
         </View>
-        <Text
-          style={[
-            cardStyles.cardAmount,
-            isExpense ? cardStyles.expenseText : cardStyles.incomeText,
-          ]}
-        >
-          {isExpense ? "-" : "+"}
-          {formatCurrency(item.amount)} đ
-        </Text>
-      </View>
-      <View style={cardStyles.cardFooter}>
-        <Text style={cardStyles.cardDate}>{dateStr}</Text>
-        <View style={cardStyles.actionRow}>
-          {canDelete ? (
-            <TouchableOpacity
-              onPress={() => onDelete(item)}
-              style={cardStyles.actionButton}
-            >
-              <Trash2 color="#ef4444" size={20} />
-            </TouchableOpacity>
-          ) : (
-            <View style={[cardStyles.actionButton, { opacity: 0.3 }]}>
-              <Trash2 color="#94a3b8" size={20} />
-            </View>
-          )}
+        <View style={cardStyles.cardFooter}>
+          <Text style={cardStyles.cardDate}>{dateStr}</Text>
+          <View style={cardStyles.actionRow}>
+            {canDelete ? (
+              <TouchableOpacity
+                onPress={() => onDelete(item)}
+                style={cardStyles.actionButton}
+              >
+                <Trash2 color="#ef4444" size={20} />
+              </TouchableOpacity>
+            ) : (
+              <View style={[cardStyles.actionButton, { opacity: 0.3 }]}>
+                <Trash2 color="#94a3b8" size={20} />
+              </View>
+            )}
+          </View>
         </View>
       </View>
-    </View>
-  );
-});
+    );
+  },
+);
 
 const cardStyles = StyleSheet.create({
   card: {
@@ -147,6 +164,8 @@ const cardStyles = StyleSheet.create({
 
 const StatisticsScreen = () => {
   const isFocused = useIsFocused();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [categoryBudgets, setCategoryBudgets] = useState<CategoryBudget[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -172,6 +191,20 @@ const StatisticsScreen = () => {
   // Modal
   const [showMonthModal, setShowMonthModal] = useState(false);
   const [showYearModal, setShowYearModal] = useState(false);
+  const [showPieChartModal, setShowPieChartModal] = useState(false);
+  const [showBarChartModal, setShowBarChartModal] = useState(false);
+
+  // CustomPieChart state
+  const [selectedPieCategory, setSelectedPieCategory] = useState<string | null>(
+    null,
+  );
+
+  // BarChart state
+  const [selectedBarData, setSelectedBarData] = useState<{
+    day: string;
+    value: number;
+    type: string;
+  } | null>(null);
 
   // Custom date range state
   const [customStartDate, setCustomStartDate] = useState<Date>(new Date());
@@ -275,7 +308,10 @@ const StatisticsScreen = () => {
       filtered = filtered.filter((tx) => tx.category === "Khác");
       if (deletedCategoryFilter !== "all") {
         filtered = filtered.filter(
-          (tx) => tx.categorySnapshot === deletedCategoryFilter || (deletedCategoryFilter === "Số dư đầu tiên" && tx.name === "Số dư đầu tiên"),
+          (tx) =>
+            tx.categorySnapshot === deletedCategoryFilter ||
+            (deletedCategoryFilter === "Số dư đầu tiên" &&
+              tx.name === "Số dư đầu tiên"),
         );
       }
     } else if (c !== "all") {
@@ -350,7 +386,11 @@ const StatisticsScreen = () => {
                 if (existingCat) {
                   const updatedCats = cats.map((b) =>
                     b.name === catName
-                      ? { ...b, budget: b.budget + tx.amount, spent: Math.max(0, (b.spent || 0) - tx.amount) }
+                      ? {
+                          ...b,
+                          budget: b.budget + tx.amount,
+                          spent: Math.max(0, (b.spent || 0) - tx.amount),
+                        }
                       : b,
                   );
                   await storage.saveCategoryBudgets(updatedCats);
@@ -525,10 +565,160 @@ const StatisticsScreen = () => {
   const displayTotal =
     type === "income" ? totalIncome : type === "expense" ? totalExpense : null;
 
+  const getPieChartData = () => {
+    const expenses = filteredTransactions.filter((tx) => tx.type === "expense");
+    const categoryTotals: Record<string, { total: number; baseCat: string }> =
+      {};
+    expenses.forEach((tx) => {
+      const catName = tx.categorySnapshot || tx.category;
+      if (!categoryTotals[catName]) {
+        categoryTotals[catName] = { total: 0, baseCat: tx.category };
+      }
+      categoryTotals[catName].total += tx.amount;
+    });
+
+    const total = Object.values(categoryTotals).reduce(
+      (sum, v) => sum + v.total,
+      0,
+    );
+    if (total === 0) return [];
+
+    const colors = [
+      "#ef4444",
+      "#f97316",
+      "#f59e0b",
+      "#84cc16",
+      "#10b981",
+      "#06b6d4",
+      "#3b82f6",
+      "#8b5cf6",
+      "#d946ef",
+      "#f43f5e",
+      "#64748b",
+    ];
+
+    return Object.keys(categoryTotals)
+      .map((catName, index) => ({
+        name: catName,
+        population: categoryTotals[catName].total,
+        color: colors[index % colors.length],
+        baseCategory: categoryTotals[catName].baseCat,
+      }))
+      .sort((a, b) => b.population - a.population);
+  };
+
+  const getBarChartData = () => {
+    let year, month;
+    if (selectedMonth) {
+      const parts = selectedMonth.split("-");
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10) - 1;
+    } else {
+      const now = new Date();
+      year = now.getFullYear();
+      month = now.getMonth();
+    }
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const dailyIncomes = new Array(daysInMonth).fill(0);
+    const dailyExpenses = new Array(daysInMonth).fill(0);
+
+    filteredTransactions.forEach((tx) => {
+      const d = new Date(tx.timestamp);
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const day = d.getDate();
+        if (tx.type === "income") dailyIncomes[day - 1] += tx.amount;
+        else if (tx.type === "expense") dailyExpenses[day - 1] += tx.amount;
+      }
+    });
+
+    const barData = [];
+    for (let i = 0; i < daysInMonth; i++) {
+      const dayStr = (i + 1).toString();
+      barData.push({
+        value: dailyIncomes[i],
+        frontColor: "#10b981", // Income Green
+        spacing: 2,
+        label: dayStr,
+        labelTextStyle: { color: "#94a3b8", fontSize: 10 },
+        onPress: () =>
+          setSelectedBarData({
+            day: dayStr,
+            value: dailyIncomes[i],
+            type: "Thu",
+          }),
+      });
+      barData.push({
+        value: dailyExpenses[i],
+        frontColor: "#ef4444", // Expense Red
+        spacing: 16,
+        onPress: () =>
+          setSelectedBarData({
+            day: dayStr,
+            value: dailyExpenses[i],
+            type: "Chi",
+          }),
+      });
+    }
+
+    return barData;
+  };
+
+  const renderBarChartContent = () => {
+    const barData = getBarChartData();
+    const chartWidth = Math.max(screenWidth - 40, (barData.length / 2) * 45);
+
+    return (
+      <View style={{ flex: 1, paddingBottom: 20 }}>
+        <View style={styles.barChartHeader}>
+          {selectedBarData ? (
+            <Text style={styles.barTooltipText}>
+              Ngày {selectedBarData.day} - {selectedBarData.type}:{" "}
+              {formatCurrency(selectedBarData.value)} đ
+            </Text>
+          ) : (
+            <Text style={styles.chartTitle}>Chạm vào cột để xem chi tiết</Text>
+          )}
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 10 }}
+        >
+          <BarChart
+            data={barData}
+            width={chartWidth}
+            height={220}
+            barWidth={12}
+            initialSpacing={10}
+            noOfSections={5}
+            yAxisThickness={0}
+            xAxisThickness={0}
+            yAxisTextStyle={{ color: "#94a3b8", fontSize: 10 }}
+            formatYLabel={(label) => {
+              const val = Number(label);
+              if (val >= 1000) return (val / 1000).toFixed(0) + "k";
+              return label;
+            }}
+            hideRules
+          />
+        </ScrollView>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Thống kê</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.headerTitle}>Thống kê</Text>
+          <TouchableOpacity
+            onPress={() => setShowPieChartModal(true)}
+            style={styles.chartButton}
+          >
+            <PieChartIcon color="#3b82f6" size={24} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.filterSection}>
@@ -748,6 +938,23 @@ const StatisticsScreen = () => {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
+        // ListHeaderComponent={
+        //   period === "month" ? (
+        //     <View style={styles.barChartButtonContainer}>
+        //       <TouchableOpacity
+        //         style={styles.openBarChartBtn}
+        //         onPress={() => {
+        //           navigation.navigate("BarChart", {
+        //             selectedMonth,
+        //           });
+        //         }}
+        //       >
+        //         <BarChart2 color="#3b82f6" size={20} />
+        //         <Text style={styles.openBarChartBtnText}>Xem biểu đồ chi tiêu</Text>
+        //       </TouchableOpacity>
+        //     </View>
+        //   ) : null
+        // }
         onEndReached={() => {
           if (displayLimit < filteredTransactions.length) {
             setDisplayLimit((prev) => prev + 10);
@@ -903,6 +1110,61 @@ const StatisticsScreen = () => {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Modal biểu đồ tròn */}
+      <Modal
+        visible={showPieChartModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPieChartModal(false)}
+      >
+        <View style={styles.pieModalOverlay}>
+          <View style={styles.pieModalBox}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Cơ cấu Chi Tiền</Text>
+              <TouchableOpacity
+                onPress={() => setShowPieChartModal(false)}
+                style={{
+                  padding: 8,
+                  backgroundColor: "#f1f5f9",
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ color: "#0f172a", fontWeight: "bold" }}>
+                  Đóng
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.pieChartWrapper}>
+              <CustomPieChart
+                data={getPieChartData()}
+                selectedCategory={selectedPieCategory}
+                onSelectCategory={setSelectedPieCategory}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal biểu đồ cột */}
+      <Modal
+        visible={showBarChartModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowBarChartModal(false)}
+      >
+        <View style={styles.pieModalOverlay}>
+          <View style={styles.pieModalBox}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Biểu đồ Thu / Chi tháng</Text>
+              <TouchableOpacity onPress={() => setShowBarChartModal(false)}>
+                <X color="#64748b" size={20} />
+              </TouchableOpacity>
+            </View>
+            {renderBarChartContent()}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -919,10 +1181,81 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
   },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#0f172a",
+  },
+  chartButton: {
+    padding: 8,
+    backgroundColor: "#eff6ff",
+    borderRadius: 8,
+  },
+  barChartContainer: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    paddingVertical: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  chartTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#334155",
+    marginLeft: 16,
+    marginBottom: 12,
+  },
+  pieModalOverlay: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  pieModalBox: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+    paddingBottom: 32,
+    paddingTop: 40,
+  },
+  pieChartWrapper: {
+    alignItems: "center",
+    paddingVertical: 10,
+    flex: 1,
+  },
+  barChartHeader: {
+    padding: 16,
+    alignItems: "center",
+  },
+  barTooltipText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#3b82f6",
+  },
+  barChartButtonContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  openBarChartBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#eff6ff",
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  openBarChartBtnText: {
+    color: "#3b82f6",
+    fontWeight: "bold",
+    fontSize: 16,
   },
   filterSection: {
     backgroundColor: "#ffffff",

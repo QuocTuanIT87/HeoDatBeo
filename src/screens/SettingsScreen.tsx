@@ -113,6 +113,11 @@ const SettingsScreen = () => {
     const trimmedName = newCategoryName.trim();
     if (!trimmedName || !profile) return;
 
+    if (trimmedName === 'Tiết kiệm' || trimmedName === 'Rút tiết kiệm') {
+      Alert.alert('Lỗi', 'Tên danh mục này đã được sử dụng cho hệ thống tiết kiệm. Vui lòng chọn tên khác.');
+      return;
+    }
+
     const current = profile.incomeCategories || DEFAULT_INCOME_CATEGORIES;
     if (current.includes(trimmedName)) {
       Alert.alert('Lỗi', 'Danh mục này đã tồn tại.');

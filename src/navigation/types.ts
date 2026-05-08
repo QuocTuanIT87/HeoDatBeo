@@ -13,4 +13,5 @@ export type RootStackParamList = {
   MainApp: NavigatorScreenParams<BottomTabParamList>;
   SavingHistory: undefined;
   Guide: undefined;
+  BarChart: { selectedMonth: string | null };
 };
