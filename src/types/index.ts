@@ -5,6 +5,7 @@ export interface Transaction {
   category: string;
   categorySnapshot?: string; // Snapshot tên danh mục tại thời điểm tạo giao dịch (YC 6)
   name?: string;            // Tên giao dịch tùy chỉnh (VD: "Nuôi heo béo")
+  note?: string;            // Ghi chú thêm cho giao dịch
   timestamp: number;
 }
 

@@ -73,6 +73,9 @@ const TransactionCard = React.memo(
             {displayName ? (
               <Text style={cardStyles.cardName}>{displayName}</Text>
             ) : null}
+            {item.note ? (
+              <Text style={cardStyles.cardNote}>{item.note}</Text>
+            ) : null}
           </View>
           <Text
             style={[
@@ -133,6 +136,17 @@ const cardStyles = StyleSheet.create({
     color: "#64748b",
     marginTop: 2,
     fontStyle: "italic",
+  },
+  cardNote: {
+    fontSize: 13,
+    color: "#475569",
+    fontStyle: "italic",
+    marginTop: 4,
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: "flex-start",
   },
   cardAmount: {
     fontSize: 18,
@@ -605,6 +619,28 @@ const StatisticsScreen = () => {
         baseCategory: categoryTotals[catName].baseCat,
       }))
       .sort((a, b) => b.population - a.population);
+  };
+
+  const getNoteDetailsForCategory = (catName: string) => {
+    const expenses = filteredTransactions.filter((tx) => tx.type === "expense");
+    const targetTxs = expenses.filter((tx) => {
+      const txCat = tx.categorySnapshot || tx.category;
+      // Nếu là group Khác trong biểu đồ tròn
+      if (catName === "Khác") {
+        return tx.category === "Khác";
+      }
+      return txCat === catName;
+    });
+
+    const noteGroups: Record<string, number> = {};
+    targetTxs.forEach((tx) => {
+      const noteLabel = tx.note?.trim() || "(Không có ghi chú)";
+      noteGroups[noteLabel] = (noteGroups[noteLabel] || 0) + tx.amount;
+    });
+
+    return Object.entries(noteGroups)
+      .map(([note, total]) => ({ note, total }))
+      .sort((a, b) => b.total - a.total);
   };
 
   const getBarChartData = () => {
@@ -1142,6 +1178,28 @@ const StatisticsScreen = () => {
                 onSelectCategory={setSelectedPieCategory}
               />
             </View>
+
+            {selectedPieCategory && (
+              <View style={styles.noteDetailsSection}>
+                <View style={styles.noteDetailsHeader}>
+                  <Text style={styles.noteDetailsTitle}>
+                    Chi tiết: <Text style={{ color: "#3b82f6" }}>{selectedPieCategory}</Text>
+                  </Text>
+                  <Text style={styles.noteDetailsCount}>
+                    {getNoteDetailsForCategory(selectedPieCategory).length} nội dung
+                  </Text>
+                </View>
+                <ScrollView style={styles.noteDetailsList} showsVerticalScrollIndicator={false}>
+                  {getNoteDetailsForCategory(selectedPieCategory).map((item, idx) => (
+                    <View key={idx} style={styles.noteDetailItem}>
+                      <Text style={styles.noteDetailText}>{item.note}</Text>
+                      <Text style={styles.noteDetailAmount}>{formatCurrency(item.total)} đ</Text>
+                    </View>
+                  ))}
+                  <View style={{ height: 20 }} />
+                </ScrollView>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -1227,7 +1285,61 @@ const styles = StyleSheet.create({
   pieChartWrapper: {
     alignItems: "center",
     paddingVertical: 10,
+    height: 480, // Cố định chiều cao cho phần biểu đồ và legend cũ
+  },
+  noteDetailsSection: {
     flex: 1,
+    backgroundColor: "#f8fafc",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    marginTop: -10,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  noteDetailsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  noteDetailsTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1e293b",
+  },
+  noteDetailsCount: {
+    fontSize: 13,
+    color: "#64748b",
+    backgroundColor: "#e2e8f0",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  noteDetailsList: {
+    flex: 1,
+  },
+  noteDetailItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  noteDetailText: {
+    fontSize: 15,
+    color: "#334155",
+    flex: 1,
+    marginRight: 10,
+  },
+  noteDetailAmount: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#1e293b",
   },
   barChartHeader: {
     padding: 16,
