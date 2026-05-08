@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { RootStackParamList } from './types';
-import SetupScreen from '../screens/SetupScreen';
-import BottomTabNavigator from './BottomTabNavigator';
-import SavingHistoryScreen from '../screens/SavingHistoryScreen';
-import GuideScreen from '../screens/GuideScreen';
-import { storage } from '../store/storage';
-import { View, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from "react";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { RootStackParamList } from "./types";
+import SetupScreen from "../screens/SetupScreen";
+import BottomTabNavigator from "./BottomTabNavigator";
+import SavingHistoryScreen from "../screens/SavingHistoryScreen";
+import GuideScreen from "../screens/GuideScreen";
+import { storage } from "../store/storage";
+import { View, ActivityIndicator } from "react-native";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -25,16 +25,16 @@ const RootNavigator = () => {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#d946ef" />
       </View>
     );
   }
 
   return (
-    <Stack.Navigator 
+    <Stack.Navigator
       screenOptions={{ headerShown: false }}
-      initialRouteName={hasProfile ? 'MainApp' : 'Setup'}
+      initialRouteName={hasProfile ? "MainApp" : "Setup"}
     >
       <Stack.Screen name="Setup" component={SetupScreen} />
       <Stack.Screen name="MainApp" component={BottomTabNavigator} />

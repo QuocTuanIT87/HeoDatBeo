@@ -5,6 +5,7 @@ export interface Transaction {
   category: string;
   categorySnapshot?: string; // Snapshot tên danh mục tại thời điểm tạo giao dịch (YC 6)
   name?: string;            // Tên giao dịch tùy chỉnh (VD: "Nuôi heo béo")
+  note?: string;            // Ghi chú thêm cho giao dịch
   timestamp: number;
 }
 
@@ -22,12 +23,21 @@ export interface TransactionDateIndex {
   years: number[];   // e.g. [2025, 2026]
 }
 
+export interface SavingHistoryItem {
+  year: number;
+  target: number;
+  achieved: number;
+  timestamp: number;
+}
+
 export interface UserProfile {
   name: string;
   initialBalance: number;
   initialBalanceTimestamp: number;
   savingTarget?: number;
   savingTargetTimestamp?: number;
+  savingYear?: number; // Năm của mục tiêu hiện tại (YC Mới)
+  savingHistory?: SavingHistoryItem[]; // Lịch sử tiết kiệm các năm trước
   incomeCategories?: string[];
   categoryBudgets?: CategoryBudget[]; // Danh mục chi kèm ngân sách
   hasSeenGuide?: boolean;

@@ -1,72 +1,73 @@
 # Heo Đất Béo 🐷
 
-**Heo Đất Béo** là một ứng dụng di động quản lý thu chi cá nhân và đặc biệt là tích lũy tiết kiệm hàng ngày một cách thông minh, đơn giản và trực quan. Lấy cảm hứng từ hình ảnh chú heo đất tuổi thơ, ứng dụng cung cấp giao diện sinh động với các mệnh giá tiền có sẵn giúp việc ghi nhận giao dịch trở nên nhanh chóng tựa như thao tác "đút tiền vào ống heo".
+**Heo Đất Béo** là một ứng dụng di động quản lý thu chi cá nhân và tích lũy tiết kiệm thông minh, trực quan và đầy kỷ luật. Lấy cảm hứng từ hình ảnh chú heo đất, ứng dụng giúp bạn ghi chép tài chính nhanh chóng và rèn luyện thói quen tiết kiệm thông qua các quy tắc chặt chẽ.
 
 ---
 
 ## Tính Năng Chính ✨
 
-1. **Quản lý Thu/Chi Nhanh Chóng:**
-   - 💰 Ghi nhận các giao dịch chi tiêu và thu nhập trong vài chạm.
-   - ⌨ Bảng chọn mệnh giá tiền cộng dồn thông minh (Được thiết kế highlight và đếm số lần chạm).
-   - 📁 Quản lý chi tiết theo từng danh mục (Ăn uống, Xăng cộ, Tiền trọ, Grab, v.v.).
+### 1. Quản lý Thu/Chi Nhanh Chóng
 
-2. **Heo Đất Tiết Kiệm (Mới):**
-   - 🎯 Thiết lập mục tiêu tiết kiệm cá nhân (hệ thống khóa thay đổi mục tiêu trong 14 ngày để tăng tính kiên nhẫn).
-   - 📥 Nạp/Rút tiền trực tiếp vào Heo Đất, tự động đồng bộ trừ/cộng ngược lại vào Số dư tổng.
-   - 📊 Thanh tiến độ hiển thị % hoàn thành mục tiêu trực quan.
+- 💰 **Ghi nhận tức thì**: Ghi lại các khoản thu nhập và chi tiêu chỉ trong vài giây.
+- ⌨ **Bảng mệnh giá thông minh**: Sử dụng các nút mệnh giá tiền phổ biến (10k, 20k, 50k, 100k...) giúp nhập liệu cực nhanh, hạn chế gõ phím.
+- 📁 **Danh mục linh hoạt**: Tùy chỉnh danh mục thu nhập và quản lý danh mục chi tiêu theo nhu cầu.
 
-3. **Thống Kê Trực Quan:**
-   - 📆 Bộ lọc đa dạng thời gian: Hôm nay, Tuần này, Tháng này, Năm nay, Tùy chỉnh (Chọn ngày Từ - Đến).
-   - 📝 Phân loại hiển thị theo loại giao dịch (Tất cả, Thu, Chi).
-   - 🗑 Hỗ trợ xem lại lịch sử và xóa/quản lý các giao dịch cũ.
+### 2. Hệ thống "Chia Tiền" (Hũ Ngân Sách) 🍯
 
-4. **Quản Lý Dữ Liệu Offline Bảo Mật:**
-   - 🔒 Dữ liệu hoàn toàn lưu trữ trên thiết bị của bạn bằng local storage (AsyncStorage).
-   - 🔄 Hỗ trợ sao lưu và phục hồi dữ liệu khi cần gỡ cài đặt hay đổi điện thoại.
+- 📥 **Phân bổ ngân sách**: Chia tổng số dư của bạn vào các "hũ" chi tiêu khác nhau (Ăn uống, Di chuyển, Nhà cửa...).
+- 📊 **Theo dõi tiến độ**: Thanh tiến độ trực quan hiển thị số tiền đã tiêu và số tiền còn lại trong mỗi danh mục.
+- 📅 **Ngày dự kiến tiêu hết**: Thiết lập ngày bạn dự tính sẽ dùng hết số tiền trong hũ. Hệ thống có cơ chế "cooldown" (15 ngày) để hạn chế việc thay đổi ngày liên tục, giúp bạn chi tiêu kỷ luật hơn.
+
+### 3. Heo Đất Tiết Kiệm 🐖
+
+- 🎯 **Mục tiêu tiết kiệm**: Thiết lập số tiền mục tiêu bạn muốn tích lũy. Hệ thống khóa quyền sửa mục tiêu trong **30 ngày** để giúp bạn kiên trì.
+- 📥 **Nạp Heo**: Nạp tiền từ số dư "Chưa phân bổ" vào Heo Đất.
+- 📤 **Rút tiền kỷ luật**:
+  - Chỉ được rút tối đa **500.000 đ** mỗi lần.
+  - Thời gian giữa 2 lần rút phải cách nhau ít nhất **7 ngày**.
+  - Giao diện đếm ngược ngày chờ và câu nói truyền cảm hứng khi đang trong thời gian "cooldown".
+- 📜 **Lịch sử nạp/rút**: Xem lại chi tiết lịch sử nuôi heo.
+
+### 4. Thống Kê & Biểu Đồ 📈
+
+- 🥧 **Biểu đồ tròn (Pie Chart)**: Trực quan hóa cơ cấu chi tiêu, tự động nhóm các danh mục nhỏ vào mục "Khác" để biểu đồ luôn rõ ràng.
+- 📆 **Bộ lọc đa dạng**: Xem thống kê theo Tháng, Năm hoặc khoảng thời gian tùy chỉnh (Từ ngày - Đến ngày).
+- 🔍 **Lọc chi tiết**: Lọc giao dịch theo từng danh mục cụ thể hoặc theo loại Thu/Chi.
+
+### 5. Quản Lý Dữ Liệu & Bảo Mật 🔒
+
+- 💾 **Lưu trữ Offline**: Dữ liệu nằm hoàn toàn trên thiết bị của bạn, không gửi lên server.
+- 🔄 **Sao lưu/Phục hồi**: Xuất dữ liệu ra file `.txt` để lưu trữ hoặc nhập lại khi chuyển thiết bị.
+- 🧹 **Khôi phục cài đặt gốc**: Xóa toàn bộ dữ liệu và bắt đầu lại từ đầu nếu muốn.
 
 ---
 
 ## Công Nghệ Sử Dụng 🛠️
 
-- **Framework:** React Native (Expo) - Phát triển đa nền tảng iOS & Android nhanh chóng.
-- **Ngôn ngữ:** TypeScript - Code chặt chẽ, an toàn với kiểu dữ liệu.
-- **Giao diện & Thành phần:** React Navigation (Botttom Tabs & Stack), Lucide-React-Native (Icons), @react-native-community/datetimepicker.
-- **Lưu trữ:** @react-native-async-storage/async-storage.
-- **Kiến trúc State:** State được quản lý cục bộ tại các Screen kết hợp API giao tiếp qua các hàm asynchrone của layer Storage.
+- **Framework**: React Native (Expo).
+- **Ngôn ngữ**: TypeScript.
+- **Icons**: Lucide-React-Native.
+- **Charts**: React Native SVG (Custom Pie Chart) & Gifted Charts.
+- **Storage**: AsyncStorage cho dữ liệu cục bộ.
 
 ---
 
 ## Hướng Dẫn Cài Đặt (Cho Developer) 🚀
 
-1. **Yêu cầu hệ thống:**
-   - [Node.js](https://nodejs.org/en/) bản LTS mới nhất.
-   - Điện thoại cài sẵn ứng dụng [Expo Go](https://expo.dev/client) hoặc trình giả lập (Android Emulator / iOS Simulator).
-
-2. **Cách chạy dự án:**
+1. **Yêu cầu hệ thống**: Node.js LTS, Expo Go app trên điện thoại.
+2. **Cách chạy**:
    ```bash
-   # Clone repository (nếu có) hoặc tải mã nguồn về máy.
-
-   # 1. Di chuyển vào thư mục dự án
-   cd HeoDatBeo
-
-   # 2. Cài đặt các thư viện cần thiết
    npm install
-   # Hoặc nếu dùng yarn: yarn install
-
-   # 3. Mở ứng dụng (Khởi động Expo Server)
    npx expo start
    ```
-   **Lưu ý:** Quét mã QR hiện trên terminal bằng camera (trên iOS) hoặc bằng app Expo Go (trên Android) để trải nghiệm trực tiếp app trên điện thoại.
 
 ---
 
-## Định Hướng & Hứa Hẹn Các Chức Năng Tiếp Theo 🎯
+## Định Hướng Phát Triển 🎯
 
-- [ ]  **Chỉnh sửa giao dịch (Edit Mode):** Sẽ không chỉ có nút xóa, mà bạn sẽ có thể sửa lại thông tin, số tiền và ngày giờ của mọi giao dịch.
-- [ ]  **Biểu đồ Thống Kê (Charts):** Nâng cấp màn hình thống kê bằng các biểu đồ tròn (Pie Charts) và biểu đồ cột để thấy thị phần chi tiêu theo các danh mục trực quan và sặc sỡ hơn.
-- [ ]  **Thông báo nhắc nhở:** Tính năng tạo thông báo nhắc nhở nạp tiền vào ống heo định kỳ (ví dụ: mỗi 8h tối hằng ngày).
-- [ ]  **Giao diện Dark Mode:** Hỗ trợ giao diện nền tối bảo vệ mắt và tiết kiệm pin.
+- [ ] **Thông báo nhắc nhở**: Nhắc nhở nuôi heo vào khung giờ cố định mỗi ngày.
+- [ ] **Giao diện Dark Mode**: Hỗ trợ nền tối.
 
 ---
-*Cảm ơn bạn đã sử dụng và đóng góp cho **Heo Đất Béo**! Để mỗi ngày trôi qua, Heo nhà bạn lại béo thêm một chút!* 🐷💕
+
+_Chúc bạn quản lý tài chính hiệu quả và nuôi được những chú Heo Đất thật béo!_ 🐷💕

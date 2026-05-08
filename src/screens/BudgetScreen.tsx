@@ -11,14 +11,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import {
   PlusCircle,
   Trash2,
   X,
   Wallet,
-  ArrowDownCircle,
-  Calendar,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { CategoryBudget, UserProfile } from "../types";
@@ -26,9 +23,7 @@ import { formatCurrency } from "../utils/format";
 import Keypad from "../components/Keypad";
 import { useIsFocused } from "@react-navigation/native";
 
-const COOLDOWN_DAYS = 15; // Số ngày cooldown để sửa ngày ước tính
-
-// Màn hình BudgetScreen: Quản lý chia tiền vào các danh mục chi tiêu
+// Màn hình BudgetScreen: Quản lý chia tiền vào các danh mục chi tiêu theo tháng
 const BudgetScreen = () => {
   const isFocused = useIsFocused();
 
@@ -41,21 +36,18 @@ const BudgetScreen = () => {
   const [allocAmount, setAllocAmount] = useState<number>(0);
   const [allocType, setAllocType] = useState<"deposit" | "withdraw">("deposit");
 
-  // Ngày ước tính tiêu hết (YC 4)
-  const [estimatedEndDate, setEstimatedEndDate] = useState<Date | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
   // Modal: Thêm danh mục mới
   const [addCatModalVisible, setAddCatModalVisible] = useState(false);
   const [newCatName, setNewCatName] = useState("");
 
-  // Modal: Sửa ngày ước tính (YC 4)
-  const [editDateModal, setEditDateModal] = useState(false);
-  const [editDateTarget, setEditDateTarget] = useState<CategoryBudget | null>(
-    null,
-  );
-  const [editDateValue, setEditDateValue] = useState<Date>(new Date());
-  const [showEditDatePicker, setShowEditDatePicker] = useState(false);
+  // Modal: Xác nhận xóa danh mục (Bảo mật cao)
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(false);
+  const [catToDelete, setCatToDelete] = useState<CategoryBudget | null>(null);
+  const [deleteInput, setDeleteInput] = useState("");
+  const [hasTxToDelete, setHasTxToDelete] = useState(false);
+
+  const now = new Date();
+  const currentMonthStr = `tháng ${now.getMonth() + 1}`;
 
   useEffect(() => {
     if (isFocused) {
@@ -66,23 +58,26 @@ const BudgetScreen = () => {
   const loadData = async () => {
     const p = await storage.getUserProfile();
     let cats = await storage.getCategoryBudgets();
+    const txs = await storage.getTransactions();
 
-    // Lazy migration: nếu có danh mục nào chưa có trường 'spent', tiến hành lấy giao dịch và tính toán 1 lần duy nhất
-    if (cats.some((c) => c.spent === undefined)) {
-      const txs = await storage.getTransactions();
-      const spentMap: Record<string, number> = {};
-      txs.forEach((tx) => {
-        if (tx.type === "expense") {
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    const spentMap: Record<string, number> = {};
+    txs.forEach((tx) => {
+      if (tx.type === "expense") {
+        const d = new Date(tx.timestamp);
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
           const catName = tx.categorySnapshot || tx.category;
           spentMap[catName] = (spentMap[catName] || 0) + tx.amount;
         }
-      });
-      cats = cats.map((c) => ({
-        ...c,
-        spent: c.spent !== undefined ? c.spent : spentMap[c.name] || 0,
-      }));
-      await storage.saveCategoryBudgets(cats);
-    }
+      }
+    });
+
+    cats = cats.map((c) => ({
+      ...c,
+      spent: spentMap[c.name] || 0,
+    }));
 
     setProfile(p);
     setBudgets(cats);
@@ -93,28 +88,11 @@ const BudgetScreen = () => {
     }
   };
 
-  // --- Phân bổ tiền vào danh mục ---
   const openAllocModal = (cat: CategoryBudget) => {
     setSelectedCat(cat);
     setAllocAmount(0);
     setAllocType("deposit");
-    setEstimatedEndDate(
-      cat.estimatedEndDate ? new Date(cat.estimatedEndDate) : null,
-    );
     setAllocModalVisible(true);
-  };
-
-  const canEditEstimatedDate = (cat: CategoryBudget): boolean => {
-    if (!cat.estimatedEndDateSetAt) return true;
-    const cooldownMs = COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
-    return Date.now() - cat.estimatedEndDateSetAt >= cooldownMs;
-  };
-
-  const getDaysUntilCanEdit = (cat: CategoryBudget): number => {
-    if (!cat.estimatedEndDateSetAt) return 0;
-    const cooldownMs = COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
-    const remaining = cooldownMs - (Date.now() - cat.estimatedEndDateSetAt);
-    return Math.max(0, Math.ceil(remaining / (24 * 60 * 60 * 1000)));
   };
 
   const handleAllocate = async () => {
@@ -137,27 +115,6 @@ const BudgetScreen = () => {
       return;
     }
 
-    // Kiểm tra ngày ước tính: nếu có chọn mới và được phép sửa
-    let newEstimatedEndDate = selectedCat.estimatedEndDate;
-    let newEstimatedEndDateSetAt = selectedCat.estimatedEndDateSetAt;
-
-    if (estimatedEndDate !== null) {
-      const dateTs = estimatedEndDate.getTime();
-      const isDifferent = dateTs !== selectedCat.estimatedEndDate;
-      const canEdit = canEditEstimatedDate(selectedCat);
-      if (isDifferent && !canEdit) {
-        Alert.alert(
-          "Không thể sửa ngày",
-          `Ngày ước tính chỉ có thể sửa sau ${getDaysUntilCanEdit(selectedCat)} ngày nữa.`,
-        );
-        return;
-      }
-      if (isDifferent && canEdit) {
-        newEstimatedEndDate = dateTs;
-        newEstimatedEndDateSetAt = Date.now();
-      }
-    }
-
     const updated = budgets.map((b) =>
       b.name === selectedCat.name
         ? {
@@ -166,8 +123,7 @@ const BudgetScreen = () => {
               allocType === "deposit"
                 ? b.budget + allocAmount
                 : b.budget - allocAmount,
-            estimatedEndDate: newEstimatedEndDate,
-            estimatedEndDateSetAt: newEstimatedEndDateSetAt,
+            spent: b.spent || 0,
           }
         : b,
     );
@@ -179,7 +135,6 @@ const BudgetScreen = () => {
       );
       setAllocModalVisible(false);
       setAllocAmount(0);
-      setEstimatedEndDate(null);
       Alert.alert(
         "Thành công",
         `Đã ${allocType === "deposit" ? "nạp" : "rút"} ${formatCurrency(allocAmount)} đ ${allocType === "deposit" ? "vào" : "từ"} "${selectedCat.name}".`,
@@ -187,15 +142,20 @@ const BudgetScreen = () => {
     }
   };
 
-  // --- Thêm danh mục mới ---
   const handleAddCategory = async () => {
     const name = newCatName.trim();
     if (!name) return;
+
+    if (name === "Tiết kiệm" || name === "Rút tiết kiệm") {
+      Alert.alert("Lỗi", "Tên danh mục này đã được sử dụng hệ thống.");
+      return;
+    }
+
     if (budgets.find((b) => b.name === name)) {
       Alert.alert("Lỗi", "Danh mục này đã tồn tại.");
       return;
     }
-    const updated = [...budgets, { name, budget: 0 }];
+    const updated = [...budgets, { name, budget: 0, spent: 0 }];
     const success = await storage.saveCategoryBudgets(updated);
     if (success) {
       setBudgets(updated);
@@ -204,97 +164,52 @@ const BudgetScreen = () => {
     }
   };
 
-  // --- Xóa danh mục ---
-  const handleDeleteCategory = (cat: CategoryBudget) => {
-    // Kiểm tra có giao dịch thuộc danh mục này không
-    storage.getTransactions().then((txs) => {
-      const hasTx = txs.some(
-        (t) => (t.categorySnapshot || t.category) === cat.name,
-      );
-      const extraMsg = hasTx
-        ? `\n\n⚠️ Danh mục này có giao dịch lịch sử. Các giao dịch đó sẽ được lưu trong danh mục "Khác" tại trang Thống kê.`
-        : "";
-      Alert.alert(
-        "Xác nhận xóa",
-        `Xóa danh mục "${cat.name}"? Số tiền ${formatCurrency(cat.budget)} đ sẽ được hoàn lại vào số dư chưa phân bổ.${extraMsg}`,
-        [
-          { text: "Hủy", style: "cancel" },
-          {
-            text: "Xóa",
-            style: "destructive",
-            onPress: async () => {
-              const updated = budgets.filter((b) => b.name !== cat.name);
-              const success = await storage.saveCategoryBudgets(updated);
-              if (success) {
-                setBudgets(updated);
-                setUnallocated((prev) => prev + cat.budget);
-
-                if (hasTx) {
-                  const updatedTxs = txs.map((t) => {
-                    if ((t.categorySnapshot || t.category) === cat.name) {
-                      return {
-                        ...t,
-                        category: "Khác",
-                        categorySnapshot: cat.name,
-                      };
-                    }
-                    return t;
-                  });
-                  await storage.updateTransactionsBulk(updatedTxs);
-                }
-              }
-            },
-          },
-        ],
-      );
-    });
+  const handleOpenDeleteConfirm = async (cat: CategoryBudget) => {
+    const txs = await storage.getTransactions();
+    const hasTx = txs.some(
+      (t) => (t.categorySnapshot || t.category) === cat.name,
+    );
+    setCatToDelete(cat);
+    setHasTxToDelete(hasTx);
+    setDeleteInput("");
+    setDeleteConfirmModal(true);
   };
 
-  // --- Sửa ngày ước tính (YC 4) ---
-  const openEditDateModal = (cat: CategoryBudget) => {
-    if (!canEditEstimatedDate(cat)) {
-      Alert.alert(
-        "Chưa thể sửa",
-        `Ngày ước tính chỉ có thể sửa sau ${getDaysUntilCanEdit(cat)} ngày nữa.`,
-      );
+  const handleFinalDelete = async () => {
+    if (!catToDelete) return;
+    const requiredText = `DELETE ${catToDelete.name}`;
+    if (deleteInput !== requiredText) {
+      Alert.alert("Sai cú pháp", `Vui lòng nhập chính xác: ${requiredText}`);
       return;
     }
-    setEditDateTarget(cat);
-    setEditDateValue(
-      cat.estimatedEndDate ? new Date(cat.estimatedEndDate) : new Date(),
-    );
-    setEditDateModal(true);
-  };
 
-  const handleSaveEstimatedDate = async () => {
-    if (!editDateTarget) return;
-    const updated = budgets.map((b) =>
-      b.name === editDateTarget.name
-        ? {
-            ...b,
-            estimatedEndDate: editDateValue.getTime(),
-            estimatedEndDateSetAt: Date.now(),
-          }
-        : b,
-    );
+    const updated = budgets.filter((b) => b.name !== catToDelete.name);
     const success = await storage.saveCategoryBudgets(updated);
     if (success) {
       setBudgets(updated);
-      setEditDateModal(false);
-      Alert.alert(
-        "Đã lưu",
-        `Ngày ước tính tiêu hết của "${editDateTarget.name}" đã được cập nhật.`,
-      );
+      setUnallocated((prev) => prev + catToDelete.budget);
+
+      if (hasTxToDelete) {
+        const txs = await storage.getTransactions();
+        const updatedTxs = txs.map((t) => {
+          if ((t.categorySnapshot || t.category) === catToDelete.name) {
+            return {
+              ...t,
+              category: "Khác",
+              categorySnapshot: catToDelete.name,
+            };
+          }
+          return t;
+        });
+        await storage.updateTransactionsBulk(updatedTxs);
+      }
+      setDeleteConfirmModal(false);
+      setCatToDelete(null);
+      Alert.alert("Thành công", `Đã xóa danh mục "${catToDelete.name}".`);
     }
   };
 
-  const formatDateShort = (ts: number) => {
-    const d = new Date(ts);
-    return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
-  };
-
-  const totalBalance =
-    budgets.reduce((sum, c) => sum + c.budget, 0) + unallocated;
+  const totalBalance = budgets.reduce((sum, c) => sum + c.budget, 0) + unallocated;
 
   return (
     <View style={styles.container}>
@@ -302,370 +217,183 @@ const BudgetScreen = () => {
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <Wallet color="#ffffff" size={26} />
-          <Text style={styles.headerTitle}>Chia Tiền</Text>
+          <Text style={styles.headerTitle}>Chia tiền chi tiêu {currentMonthStr}</Text>
         </View>
 
         <View style={styles.headerCards}>
           <View style={styles.headerCard}>
             <Text style={styles.headerCardLabel}>Số dư tổng</Text>
-            <Text style={styles.headerCardValue}>
-              {formatCurrency(totalBalance)} đ
-            </Text>
+            <Text style={styles.headerCardValue}>{formatCurrency(totalBalance)} đ</Text>
           </View>
           <View style={styles.headerDivider} />
           <View style={styles.headerCard}>
             <Text style={styles.headerCardLabel}>Chưa phân bổ</Text>
-            <Text
-              style={[
-                styles.headerCardValue,
-                { color: unallocated <= 0 ? "#fca5a5" : "#fcd34d" },
-              ]}
-            >
+            <Text style={[styles.headerCardValue, { color: unallocated <= 0 ? "#fca5a5" : "#fcd34d" }]}>
               {formatCurrency(unallocated)} đ
             </Text>
           </View>
         </View>
       </View>
 
-      <ScrollView
-        style={styles.body}
-        contentContainerStyle={styles.bodyContent}
-      >
+      <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Danh mục chi tiêu</Text>
-          <TouchableOpacity
-            style={styles.addCatBtn}
-            onPress={() => setAddCatModalVisible(true)}
-          >
+          <Text style={styles.sectionTitle}>Ngân sách tháng này</Text>
+          <TouchableOpacity style={styles.addCatBtn} onPress={() => setAddCatModalVisible(true)}>
             <PlusCircle color="#7c3aed" size={22} />
-            <Text style={styles.addCatText}>Thêm</Text>
+            <Text style={styles.addCatText}>Thêm túi</Text>
           </TouchableOpacity>
         </View>
 
         {budgets.length === 0 ? (
           <View style={styles.emptyBox}>
-            <Text style={styles.emptyText}>
-              Chưa có danh mục nào. Nhấn "Thêm" để tạo.
-            </Text>
+            <Text style={styles.emptyText}>Chưa có "túi chi tiêu" nào. Nhấn "Thêm" để tạo và bắt đầu chia tiền.</Text>
           </View>
         ) : (
           budgets.map((cat) => {
             const spent = cat.spent || 0;
             const total = cat.budget + spent;
-            const percentSpent =
-              total > 0
-                ? (spent / total) * 100
-                : cat.budget <= 0 && spent > 0
-                  ? 100
-                  : 0;
+            const percentSpent = total > 0 ? (spent / total) * 100 : (spent > 0 ? 100 : 0);
             const percentRemaining = 100 - percentSpent;
 
-            let progressColor = "#10b981"; // Xanh lá
-            if (percentRemaining < 20)
-              progressColor = "#ef4444"; // Đỏ (sắp hết)
-            else if (percentRemaining < 50) progressColor = "#f59e0b"; // Vàng (còn ít)
+            let progressColor = "#10b981"; 
+            if (percentRemaining < 20) progressColor = "#ef4444"; 
+            else if (percentRemaining < 50) progressColor = "#f59e0b";
 
             return (
-              <TouchableOpacity
-                key={cat.name}
-                style={styles.catCard}
-                onPress={() => openAllocModal(cat)}
-              >
+              <TouchableOpacity key={cat.name} style={styles.catCard} onPress={() => openAllocModal(cat)}>
                 <View style={styles.catInfo}>
-                  <Text style={styles.catName}>{cat.name}</Text>
-                  <Text
-                    style={[
-                      styles.catBudget,
-                      { color: cat.budget <= 0 ? "#ef4444" : "#10b981" },
-                    ]}
-                  >
-                    {formatCurrency(cat.budget)} đ
-                  </Text>
+                  <View style={styles.catNameRow}>
+                    <Text style={styles.catName}>{cat.name}</Text>
+                    <Text style={[styles.catBudget, { color: cat.budget <= 0 ? "#ef4444" : "#7c3aed" }]}>
+                      {formatCurrency(cat.budget)} đ
+                    </Text>
+                  </View>
 
-                  {/* Thanh tiến trình */}
                   <View style={styles.progressContainer}>
                     <View style={styles.progressTrack}>
                       <View
                         style={[
                           styles.progressFill,
-                          {
-                            width: `${Math.min(100, percentSpent)}%`,
-                            backgroundColor: progressColor,
-                          },
+                          { width: `${Math.min(100, percentSpent)}%`, backgroundColor: progressColor },
                         ]}
                       />
                     </View>
-                    <Text style={styles.progressText}>
-                      Đã tiêu {Math.round(percentSpent)}%
-                    </Text>
-                  </View>
-
-                  {/* Ngày ước tính tiêu hết (YC 4) */}
-                  <View style={styles.estimatedDateRow}>
-                    <Calendar
-                      color={cat.estimatedEndDate ? "#7c3aed" : "#94a3b8"}
-                      size={13}
-                    />
-                    {cat.estimatedEndDate ? (
-                      <Text style={styles.estimatedDateText}>
-                        Dự kiến hết: {formatDateShort(cat.estimatedEndDate)}
-                        {!canEditEstimatedDate(cat) && (
-                          <Text style={styles.cooldownHint}></Text>
-                        )}
-                      </Text>
-                    ) : (
-                      <Text style={styles.estimatedDateEmpty}>
-                        Chưa đặt ngày ước tính • Chạm để đặt
-                      </Text>
-                    )}
+                    <View style={styles.progressLabelRow}>
+                      <Text style={styles.progressText}>Đã dùng: {formatCurrency(spent)} đ</Text>
+                      <Text style={styles.progressPercent}>{Math.round(percentSpent)}%</Text>
+                    </View>
                   </View>
                 </View>
-                <View style={styles.catActions}>
-                  <TouchableOpacity
-                    style={styles.iconBtn}
-                    onPress={() => handleDeleteCategory(cat)}
-                  >
-                    <Trash2 color="#ef4444" size={18} />
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity style={styles.deleteBtn} onPress={() => handleOpenDeleteConfirm(cat)}>
+                  <Trash2 color="#cbd5e1" size={18} />
+                </TouchableOpacity>
               </TouchableOpacity>
             );
           })
         )}
-
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* === Modal: Nạp tiền vào danh mục === */}
-      <Modal
-        visible={allocModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setAllocModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
+      {/* Modal: Nạp/Rút tiền */}
+      <Modal visible={allocModalVisible} transparent animationType="slide" onRequestClose={() => setAllocModalVisible(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Quản lý "{selectedCat?.name}"
-              </Text>
+              <Text style={styles.modalTitle}>Phân bổ cho "{selectedCat?.name}"</Text>
               <TouchableOpacity onPress={() => setAllocModalVisible(false)}>
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.allocTabs}>
-              <TouchableOpacity
-                style={[
-                  styles.allocTab,
-                  allocType === "deposit" && styles.allocTabActiveDeposit,
-                ]}
-                onPress={() => setAllocType("deposit")}
-              >
-                <Text
-                  style={[
-                    styles.allocTabText,
-                    allocType === "deposit" && styles.allocTabTextActive,
-                  ]}
-                >
-                  Nạp thêm
-                </Text>
+              <TouchableOpacity style={[styles.allocTab, allocType === "deposit" && styles.allocTabActiveDeposit]} onPress={() => setAllocType("deposit")}>
+                <Text style={[styles.allocTabText, allocType === "deposit" && styles.allocTabTextActive]}>Nạp thêm</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.allocTab,
-                  allocType === "withdraw" && styles.allocTabActiveWithdraw,
-                ]}
-                onPress={() => setAllocType("withdraw")}
-              >
-                <Text
-                  style={[
-                    styles.allocTabText,
-                    allocType === "withdraw" && styles.allocTabTextActive,
-                  ]}
-                >
-                  Rút ra
-                </Text>
+              <TouchableOpacity style={[styles.allocTab, allocType === "withdraw" && styles.allocTabActiveWithdraw]} onPress={() => setAllocType("withdraw")}>
+                <Text style={[styles.allocTabText, allocType === "withdraw" && styles.allocTabTextActive]}>Rút ra</Text>
               </TouchableOpacity>
             </View>
 
-            {allocType === "deposit" ? (
-              <Text style={styles.modalSubtitle}>
-                Chưa phân bổ:{" "}
-                <Text style={styles.modalHighlight}>
-                  {formatCurrency(unallocated)} đ
-                </Text>
+            <Text style={styles.modalSubtitle}>
+              {allocType === "deposit" ? "Tiền chưa phân bổ: " : "Tiền trong túi: "}
+              <Text style={styles.modalHighlight}>
+                {formatCurrency(allocType === "deposit" ? unallocated : (selectedCat?.budget || 0))} đ
               </Text>
-            ) : (
-              <Text style={styles.modalSubtitle}>
-                Số dư danh mục:{" "}
-                <Text style={styles.modalHighlight}>
-                  {selectedCat ? formatCurrency(selectedCat.budget) : 0} đ
-                </Text>
-              </Text>
-            )}
+            </Text>
 
-            <View style={styles.amountDisplay}>
-              <Text style={styles.amountText}>
-                {formatCurrency(allocAmount)}
-              </Text>
-              <Text style={styles.currencyLabel}>VNĐ</Text>
+            <View style={styles.amountDisplayModal}>
+              <Text style={styles.amountTextModal}>{formatCurrency(allocAmount)}</Text>
+              <Text style={styles.currencyLabelModal}>VNĐ</Text>
             </View>
 
-            <Keypad
-              amount={allocAmount}
-              onAddAmount={(val) => setAllocAmount((prev) => prev + val)}
-              onClear={() => setAllocAmount(0)}
-            />
+            <Keypad amount={allocAmount} onAddAmount={(val) => setAllocAmount((prev) => prev + val)} onClear={() => setAllocAmount(0)} />
 
-            {/* Chọn ngày ước tính tiêu hết (YC 4) */}
-            <View style={styles.datePickerSection}>
-              <Text style={styles.datePickerLabel}>
-                <Calendar color="#7c3aed" size={15} /> Ngày ước tính tiêu hết
-              </Text>
-              {selectedCat && !canEditEstimatedDate(selectedCat) ? (
-                <View style={styles.dateLockedRow}>
-                  <Text style={styles.dateLockedText}>
-                    {selectedCat.estimatedEndDate
-                      ? formatDateShort(selectedCat.estimatedEndDate)
-                      : "Chưa đặt"}
-                  </Text>
-                  <Text style={styles.cooldownHintBlock}>
-                    Sửa được sau {getDaysUntilCanEdit(selectedCat!)} ngày
-                  </Text>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.datePickerBtn}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Calendar color="#7c3aed" size={16} />
-                  <Text style={styles.datePickerBtnText}>
-                    {estimatedEndDate
-                      ? formatDateShort(estimatedEndDate.getTime())
-                      : "Chọn ngày..."}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {showDatePicker && (
-              <DateTimePicker
-                value={estimatedEndDate ?? new Date()}
-                mode="date"
-                display="default"
-                minimumDate={new Date()}
-                onChange={(_, date) => {
-                  setShowDatePicker(Platform.OS === "ios");
-                  if (date) setEstimatedEndDate(date);
-                }}
-              />
-            )}
-
-            <TouchableOpacity
-              style={[
-                styles.confirmBtn,
-                allocType === "withdraw" && styles.confirmBtnWithdraw,
-              ]}
-              onPress={handleAllocate}
-            >
-              <Text style={styles.confirmBtnText}>
-                {allocType === "deposit" ? "Xác nhận nạp" : "Xác nhận rút"}
-              </Text>
+            <TouchableOpacity style={[styles.confirmBtn, allocType === "withdraw" && styles.confirmBtnWithdraw]} onPress={handleAllocate}>
+              <Text style={styles.confirmBtnText}>{allocType === "deposit" ? "Xác nhận nạp" : "Xác nhận rút"}</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* === Modal: Thêm danh mục === */}
-      <Modal
-        visible={addCatModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAddCatModalVisible(false)}
-      >
+      {/* Modal: Xác nhận xóa (Bảo mật) */}
+      <Modal visible={deleteConfirmModal} transparent animationType="fade" onRequestClose={() => setDeleteConfirmModal(false)}>
         <View style={styles.modalOverlayCenter}>
           <View style={styles.inputModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Thêm danh mục</Text>
-              <TouchableOpacity onPress={() => setAddCatModalVisible(false)}>
+              <Text style={[styles.modalTitle, { color: "#ef4444" }]}>Xác nhận xóa vĩnh viễn</Text>
+              <TouchableOpacity onPress={() => setDeleteConfirmModal(false)}>
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
             </View>
+            
+            <Text style={styles.deleteMsg}>
+              Bạn đang xóa túi <Text style={{ fontWeight: "bold" }}>"{catToDelete?.name}"</Text>. 
+              Hành động này sẽ hoàn trả <Text style={{ fontWeight: "bold", color: "#10b981" }}>{formatCurrency(catToDelete?.budget || 0)} đ</Text> vào số dư chưa phân bổ.
+            </Text>
+
+            {hasTxToDelete && (
+              <View style={styles.warningBox}>
+                <Text style={styles.warningText}>
+                  ⚠️ Lưu ý: Các giao dịch cũ của túi này sẽ được chuyển sang danh mục "Khác" để giữ lại lịch sử thống kê.
+                </Text>
+              </View>
+            )}
+
+            <Text style={styles.deleteLabel}>Nhập chính xác dòng chữ sau để xóa:</Text>
+            <Text style={styles.requiredText}>DELETE {catToDelete?.name}</Text>
+            
             <TextInput
-              style={styles.textInput}
-              placeholder="Tên danh mục..."
-              value={newCatName}
-              onChangeText={setNewCatName}
-              autoFocus
-              onSubmitEditing={handleAddCategory}
+              style={[styles.textInput, { borderColor: deleteInput === `DELETE ${catToDelete?.name}` ? "#10b981" : "#ef4444" }]}
+              placeholder="Nhập vào đây..."
+              value={deleteInput}
+              onChangeText={setDeleteInput}
+              autoCapitalize="none"
             />
+
             <TouchableOpacity
-              style={styles.confirmBtn}
-              onPress={handleAddCategory}
+              style={[styles.confirmBtn, { backgroundColor: deleteInput === `DELETE ${catToDelete?.name}` ? "#ef4444" : "#cbd5e1" }]}
+              onPress={handleFinalDelete}
+              disabled={deleteInput !== `DELETE ${catToDelete?.name}`}
             >
-              <Text style={styles.confirmBtnText}>Tạo danh mục</Text>
+              <Text style={styles.confirmBtnText}>Tôi chắc chắn muốn xóa</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* === Modal: Sửa ngày ước tính (YC 4) === */}
-      <Modal
-        visible={editDateModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setEditDateModal(false)}
-      >
+      {/* Modal: Thêm danh mục */}
+      <Modal visible={addCatModalVisible} transparent animationType="fade" onRequestClose={() => setAddCatModalVisible(false)}>
         <View style={styles.modalOverlayCenter}>
           <View style={styles.inputModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Ngày ước tính tiêu hết</Text>
-              <TouchableOpacity onPress={() => setEditDateModal(false)}>
+              <Text style={styles.modalTitle}>Thêm túi chi tiêu</Text>
+              <TouchableOpacity onPress={() => setAddCatModalVisible(false)}>
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalSubtitle}>
-              Danh mục:{" "}
-              <Text style={styles.modalHighlight}>{editDateTarget?.name}</Text>
-            </Text>
-
-            <TouchableOpacity
-              style={styles.datePickerBtn}
-              onPress={() => setShowEditDatePicker(true)}
-            >
-              <Calendar color="#7c3aed" size={16} />
-              <Text style={styles.datePickerBtnText}>
-                {formatDateShort(editDateValue.getTime())}
-              </Text>
-            </TouchableOpacity>
-
-            {showEditDatePicker && (
-              <DateTimePicker
-                value={editDateValue}
-                mode="date"
-                display="default"
-                minimumDate={new Date()}
-                onChange={(_, date) => {
-                  setShowEditDatePicker(Platform.OS === "ios");
-                  if (date) setEditDateValue(date);
-                }}
-              />
-            )}
-
-            <Text style={styles.cooldownInfo}>
-              * Sau khi lưu, ngày này chỉ có thể sửa lại sau {COOLDOWN_DAYS}{" "}
-              ngày.
-            </Text>
-
-            <TouchableOpacity
-              style={styles.confirmBtn}
-              onPress={handleSaveEstimatedDate}
-            >
-              <Text style={styles.confirmBtnText}>Lưu ngày</Text>
+            <TextInput style={styles.textInput} placeholder="Tên danh mục (vd: Ăn uống, Xăng xe...)" value={newCatName} onChangeText={setNewCatName} autoFocus onSubmitEditing={handleAddCategory} />
+            <TouchableOpacity style={styles.confirmBtn} onPress={handleAddCategory}>
+              <Text style={styles.confirmBtnText}>Tạo túi mới</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -675,358 +403,61 @@ const BudgetScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-  },
-  header: {
-    backgroundColor: "#7c3aed",
-    padding: 24,
-    paddingTop: 60,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 20,
-  },
-  headerTitle: {
-    color: "#ffffff",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  headerCards: {
-    flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.18)",
-    borderRadius: 16,
-    padding: 16,
-    alignItems: "center",
-  },
-  headerCard: {
-    flex: 1,
-  },
-  headerDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: "rgba(255,255,255,0.3)",
-    marginHorizontal: 12,
-  },
-  headerCardLabel: {
-    color: "#ede9fe",
-    fontSize: 13,
-    marginBottom: 4,
-  },
-  headerCardValue: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  body: {
-    flex: 1,
-  },
-  bodyContent: {
-    padding: 20,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1e293b",
-  },
-  addCatBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#ede9fe",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  addCatText: {
-    color: "#7c3aed",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  emptyBox: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 32,
-    alignItems: "center",
-    elevation: 1,
-  },
-  emptyText: {
-    color: "#94a3b8",
-    fontSize: 15,
-    textAlign: "center",
-  },
-  catCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-  },
-  catInfo: {
-    flex: 1,
-  },
-  catName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1e293b",
-    marginBottom: 4,
-  },
-  catBudget: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 6,
-  },
-  progressContainer: {
-    marginBottom: 10,
-    paddingRight: 16,
-  },
-  progressTrack: {
-    height: 6,
-    backgroundColor: "#e2e8f0",
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 3,
-  },
-  progressText: {
-    fontSize: 12,
-    color: "#64748b",
-    marginTop: 4,
-  },
-  estimatedDateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 2,
-  },
-  estimatedDateText: {
-    fontSize: 12,
-    color: "#7c3aed",
-    fontWeight: "500",
-  },
-  estimatedDateEmpty: {
-    fontSize: 12,
-    color: "#94a3b8",
-    fontStyle: "italic",
-  },
-  cooldownHint: {
-    fontSize: 11,
-    color: "#94a3b8",
-  },
-  catActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  allocBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#7c3aed",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  allocBtnText: {
-    color: "#ffffff",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  iconBtn: {
-    padding: 8,
-    backgroundColor: "#f8fafc",
-    borderRadius: 8,
-  },
-  // Modals
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15,23,42,0.6)",
-    justifyContent: "flex-end",
-  },
-  modalOverlayCenter: {
-    flex: 1,
-    backgroundColor: "rgba(15,23,42,0.6)",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-  },
-  modalContent: {
-    backgroundColor: "#ffffff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 24,
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-  },
-  inputModalContent: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    padding: 24,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#0f172a",
-    flex: 1,
-    marginRight: 8,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: "#64748b",
-    marginBottom: 16,
-  },
-  modalHighlight: {
-    color: "#7c3aed",
-    fontWeight: "600",
-  },
-  amountDisplay: {
-    backgroundColor: "#f5f3ff",
-    borderRadius: 16,
-    padding: 20,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#ddd6fe",
-  },
-  amountText: {
-    fontSize: 40,
-    fontWeight: "bold",
-    color: "#7c3aed",
-  },
-  currencyLabel: {
-    fontSize: 18,
-    color: "#64748b",
-    marginLeft: 8,
-    marginTop: 12,
-  },
-  // Date picker section (YC 4)
-  datePickerSection: {
-    marginTop: 16,
-    marginBottom: 4,
-  },
-  datePickerLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#334155",
-    marginBottom: 8,
-  },
-  datePickerBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#f5f3ff",
-    borderWidth: 1,
-    borderColor: "#ddd6fe",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  datePickerBtnText: {
-    color: "#7c3aed",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  dateLockedRow: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 10,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  dateLockedText: {
-    fontSize: 14,
-    color: "#475569",
-    fontWeight: "500",
-  },
-  cooldownHintBlock: {
-    fontSize: 12,
-    color: "#94a3b8",
-    marginTop: 2,
-    fontStyle: "italic",
-  },
-  cooldownInfo: {
-    fontSize: 12,
-    color: "#94a3b8",
-    marginTop: 12,
-    fontStyle: "italic",
-  },
-  confirmBtn: {
-    backgroundColor: "#7c3aed",
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: "center",
-    marginTop: 16,
-  },
-  confirmBtnWithdraw: {
-    backgroundColor: "#ef4444",
-  },
-  confirmBtnText: {
-    color: "#ffffff",
-    fontSize: 17,
-    fontWeight: "bold",
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
-    backgroundColor: "#f8fafc",
-    marginBottom: 8,
-  },
-  allocTabs: {
-    flexDirection: "row",
-    backgroundColor: "#f1f5f9",
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 16,
-  },
-  allocTab: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  allocTabActiveDeposit: {
-    backgroundColor: "#7c3aed",
-  },
-  allocTabActiveWithdraw: {
-    backgroundColor: "#ef4444",
-  },
-  allocTabText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748b",
-  },
-  allocTabTextActive: {
-    color: "#ffffff",
-  },
+  container: { flex: 1, backgroundColor: "#f8fafc" },
+  header: { backgroundColor: "#7c3aed", padding: 24, paddingTop: 60, borderBottomLeftRadius: 32, borderBottomRightRadius: 32, elevation: 4 },
+  headerTitleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20 },
+  headerTitle: { color: "#ffffff", fontSize: 22, fontWeight: "bold" },
+  headerCards: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 20, padding: 16, alignItems: "center" },
+  headerCard: { flex: 1 },
+  headerDivider: { width: 1, height: 35, backgroundColor: "rgba(255,255,255,0.3)", marginHorizontal: 12 },
+  headerCardLabel: { color: "#ede9fe", fontSize: 13, marginBottom: 4 },
+  headerCardValue: { color: "#ffffff", fontSize: 17, fontWeight: "bold" },
+  body: { flex: 1 },
+  bodyContent: { padding: 20 },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#1e293b" },
+  addCatBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#ede9fe", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  addCatText: { color: "#7c3aed", fontWeight: "600", fontSize: 14 },
+  emptyBox: { backgroundColor: "#ffffff", borderRadius: 16, padding: 32, alignItems: "center", borderStyle: "dashed", borderWidth: 1, borderColor: "#cbd5e1" },
+  emptyText: { color: "#94a3b8", fontSize: 15, textAlign: "center", lineHeight: 22 },
+  catCard: { backgroundColor: "#ffffff", borderRadius: 20, padding: 18, marginBottom: 14, flexDirection: "row", alignItems: "center", elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4 },
+  catInfo: { flex: 1 },
+  catNameRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  catName: { fontSize: 17, fontWeight: "bold", color: "#334155" },
+  catBudget: { fontSize: 16, fontWeight: "bold" },
+  progressContainer: { marginTop: 4 },
+  progressTrack: { height: 8, backgroundColor: "#f1f5f9", borderRadius: 4, overflow: "hidden" },
+  progressFill: { height: "100%", borderRadius: 4 },
+  progressLabelRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
+  progressText: { fontSize: 13, color: "#64748b" },
+  progressPercent: { fontSize: 13, fontWeight: "600", color: "#64748b" },
+  deleteBtn: { padding: 10, marginLeft: 10 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.7)", justifyContent: "flex-end" },
+  modalContent: { backgroundColor: "#ffffff", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40 },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
+  modalTitle: { fontSize: 19, fontWeight: "bold", color: "#0f172a" },
+  allocTabs: { flexDirection: "row", backgroundColor: "#f1f5f9", borderRadius: 12, padding: 4, marginBottom: 20 },
+  allocTab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 10 },
+  allocTabActiveDeposit: { backgroundColor: "#10b981" },
+  allocTabActiveWithdraw: { backgroundColor: "#ef4444" },
+  allocTabText: { fontWeight: "bold", color: "#64748b" },
+  allocTabTextActive: { color: "#ffffff" },
+  modalSubtitle: { fontSize: 15, color: "#64748b", marginBottom: 16 },
+  modalHighlight: { color: "#0f172a", fontWeight: "bold" },
+  amountDisplayModal: { backgroundColor: "#f8fafc", borderRadius: 16, padding: 20, alignItems: "center", flexDirection: "row", justifyContent: "center", marginBottom: 20, borderWidth: 1, borderColor: "#e2e8f0" },
+  amountTextModal: { fontSize: 32, fontWeight: "bold", color: "#0f172a" },
+  currencyLabelModal: { fontSize: 16, color: "#64748b", marginLeft: 8, marginTop: 8 },
+  confirmBtn: { backgroundColor: "#7c3aed", paddingVertical: 16, borderRadius: 16, alignItems: "center", marginTop: 24 },
+  confirmBtnWithdraw: { backgroundColor: "#ef4444" },
+  confirmBtnText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
+  modalOverlayCenter: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.6)", justifyContent: "center", alignItems: "center", padding: 20 },
+  inputModalContent: { backgroundColor: "#ffffff", borderRadius: 24, padding: 24, width: "100%", elevation: 20 },
+  textInput: { borderWidth: 1.5, borderColor: "#e2e8f0", borderRadius: 12, padding: 16, fontSize: 16, color: "#0f172a", marginBottom: 10, backgroundColor: "#f8fafc" },
+  deleteMsg: { fontSize: 14, color: "#475569", lineHeight: 22, marginBottom: 12 },
+  warningBox: { backgroundColor: "#fff7ed", padding: 12, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: "#fed7aa" },
+  warningText: { fontSize: 13, color: "#c2410c", lineHeight: 18 },
+  deleteLabel: { fontSize: 14, fontWeight: "600", color: "#334155", marginTop: 10, marginBottom: 4 },
+  requiredText: { fontSize: 16, fontWeight: "bold", color: "#ef4444", marginBottom: 12, backgroundColor: "#fef2f2", padding: 10, borderRadius: 8, textAlign: "center", borderStyle: "dashed", borderWidth: 1, borderColor: "#fca5a5" },
 });
 
 export default BudgetScreen;
