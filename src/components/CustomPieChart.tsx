@@ -16,9 +16,10 @@ type Props = {
   data: PieItem[];
   selectedCategory: string | null;
   onSelectCategory: (name: string) => void;
+  renderNoteDetails?: (name: string) => React.ReactNode;
 };
 
-const CustomPieChart: React.FC<Props> = ({ data, selectedCategory, onSelectCategory }) => {
+const CustomPieChart: React.FC<Props> = ({ data, selectedCategory, onSelectCategory, renderNoteDetails }) => {
   const total = data.reduce((sum, item) => sum + item.population, 0);
   if (total === 0) return <Text style={styles.emptyText}>Không có dữ liệu chi tiền</Text>;
 
@@ -169,21 +170,27 @@ const CustomPieChart: React.FC<Props> = ({ data, selectedCategory, onSelectCateg
         {data.filter(item => item.baseCategory !== "Khác" && item.name !== "Khác").map((item, index) => {
           const isSelfSelected = selectedCategory === item.name;
           return (
-            <TouchableOpacity
-              key={`main-${index}`}
-              style={[styles.listItem, isSelfSelected && styles.listItemSelected]}
-              onPress={() => onSelectCategory(item.name)}
-            >
-              <View style={styles.listLeft}>
-                <View style={[styles.colorDot, { backgroundColor: item.color }]} />
-                <Text style={[styles.listName, isSelfSelected && styles.listTextSelected]}>
-                  {item.name}
+            <View key={`main-group-${index}`}>
+              <TouchableOpacity
+                style={[styles.listItem, isSelfSelected && styles.listItemSelected]}
+                onPress={() => onSelectCategory(isSelfSelected ? "" : item.name)}
+              >
+                <View style={styles.listLeft}>
+                  <View style={[styles.colorDot, { backgroundColor: item.color }]} />
+                  <Text style={[styles.listName, isSelfSelected && styles.listTextSelected]}>
+                    {item.name}
+                  </Text>
+                </View>
+                <Text style={[styles.listAmount, isSelfSelected && styles.listTextSelected]}>
+                  {formatCurrency(item.population)} đ
                 </Text>
-              </View>
-              <Text style={[styles.listAmount, isSelfSelected && styles.listTextSelected]}>
-                {formatCurrency(item.population)} đ
-              </Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
+              {isSelfSelected && renderNoteDetails && (
+                <View style={styles.noteDetailsInList}>
+                  {renderNoteDetails(item.name)}
+                </View>
+              )}
+            </View>
           );
         })}
 
@@ -200,21 +207,27 @@ const CustomPieChart: React.FC<Props> = ({ data, selectedCategory, onSelectCateg
           const groupColor = "#64748b";
 
           return (
-            <TouchableOpacity
-              key={`other-${index}`}
-              style={[styles.listItem, isItemSelected && styles.listItemSelected]}
-              onPress={() => onSelectCategory(item.name)}
-            >
-              <View style={styles.listLeft}>
-                <View style={[styles.colorDot, { backgroundColor: groupColor }]} />
-                <Text style={[styles.listName, isItemSelected && styles.listTextSelected]}>
-                  {item.name}
+            <View key={`other-group-${index}`}>
+              <TouchableOpacity
+                style={[styles.listItem, isItemSelected && styles.listItemSelected]}
+                onPress={() => onSelectCategory(isSelfSelected ? "" : item.name)}
+              >
+                <View style={styles.listLeft}>
+                  <View style={[styles.colorDot, { backgroundColor: groupColor }]} />
+                  <Text style={[styles.listName, isItemSelected && styles.listTextSelected]}>
+                    {item.name}
+                  </Text>
+                </View>
+                <Text style={[styles.listAmount, isItemSelected && styles.listTextSelected]}>
+                  {formatCurrency(item.population)} đ
                 </Text>
-              </View>
-              <Text style={[styles.listAmount, isItemSelected && styles.listTextSelected]}>
-                {formatCurrency(item.population)} đ
-              </Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
+              {isSelfSelected && renderNoteDetails && (
+                <View style={styles.noteDetailsInList}>
+                  {renderNoteDetails(item.name)}
+                </View>
+              )}
+            </View>
           );
         })}
       </ScrollView>
@@ -278,6 +291,18 @@ const styles = StyleSheet.create({
   },
   listTextSelected: {
     color: '#ffffff',
+  },
+  noteDetailsInList: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 4,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    padding: 12,
+    marginTop: -4,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderTopWidth: 0,
+    marginBottom: 8,
   },
   otherHeaderContainer: {
     marginTop: 12,

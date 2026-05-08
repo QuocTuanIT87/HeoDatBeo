@@ -1,37 +1,43 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { storage } from '../store/storage';
-import { Transaction, UserProfile } from '../types';
+import { Transaction, UserProfile, SavingHistoryItem } from '../types';
 import { formatCurrency } from '../utils/format';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Trash2, Trophy, Clock } from 'lucide-react-native';
 
 const SavingHistoryScreen = () => {
   const isFocused = useIsFocused();
   const navigation = useNavigation();
+  
+  const [tab, setTab] = useState<'goals' | 'logs'>('goals');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [goalHistory, setGoalHistory] = useState<SavingHistoryItem[]>([]);
   const [displayLimit, setDisplayLimit] = useState<number>(10);
 
   useEffect(() => {
     if (isFocused) {
-      loadTransactions();
+      loadData();
     }
   }, [isFocused]);
 
-  const loadTransactions = async () => {
+  const loadData = async () => {
     const data = await storage.getTransactions();
     const p = await storage.getUserProfile();
     if (!p) return;
     
+    // Lọc log nạp rút
     const savingTxs = data.filter(t => 
       t.timestamp >= p.initialBalanceTimestamp &&
       (t.category === 'Tiết kiệm' || t.category === 'Rút tiết kiệm')
-    );
+    ).sort((a, b) => b.timestamp - a.timestamp);
+    
     setTransactions(savingTxs);
+    setGoalHistory(p.savingHistory || []);
     setDisplayLimit(10);
   };
 
-  const handleDelete = (tx: Transaction) => {
+  const handleDeleteLog = (tx: Transaction) => {
     const FIVE_MINUTES_MS = 5 * 60 * 1000;
     const elapsed = Date.now() - tx.timestamp;
     if (elapsed > FIVE_MINUTES_MS) {
@@ -56,23 +62,48 @@ const SavingHistoryScreen = () => {
           }
 
           const p = await storage.getUserProfile();
-          if (!p) { loadTransactions(); return; }
-
-          if (tx.type === 'expense' && tx.category === 'Tiết kiệm') {
-            const updatedProfile = { ...p, initialBalance: p.initialBalance + tx.amount };
-            await storage.saveUserProfile(updatedProfile);
-          } else if (tx.type === 'income' && tx.category === 'Rút tiết kiệm') {
-            const updatedProfile = { ...p, initialBalance: p.initialBalance - tx.amount };
-            await storage.saveUserProfile(updatedProfile);
+          if (p) {
+            if (tx.type === 'expense' && tx.category === 'Tiết kiệm') {
+              await storage.saveUserProfile({ ...p, initialBalance: p.initialBalance + tx.amount });
+            } else if (tx.type === 'income' && tx.category === 'Rút tiết kiệm') {
+              await storage.saveUserProfile({ ...p, initialBalance: p.initialBalance - tx.amount });
+            }
           }
-
-          loadTransactions();
+          loadData();
         }
       }
     ]);
   };
 
-  const renderItem = ({ item }: { item: Transaction }) => {
+  const renderGoalItem = (item: SavingHistoryItem) => {
+    const percent = item.target > 0 ? (item.achieved / item.target) * 100 : 0;
+    return (
+      <View key={item.year} style={styles.goalCard}>
+        <View style={styles.goalHeader}>
+          <Text style={styles.goalYear}>Năm {item.year}</Text>
+          <Trophy color={percent >= 100 ? "#f59e0b" : "#94a3b8"} size={20} />
+        </View>
+        <View style={styles.goalBody}>
+          <View style={styles.goalStat}>
+            <Text style={styles.goalStatLabel}>Mục tiêu</Text>
+            <Text style={styles.goalStatValue}>{formatCurrency(item.target)} đ</Text>
+          </View>
+          <View style={styles.goalStat}>
+            <Text style={styles.goalStatLabel}>Đạt được</Text>
+            <Text style={[styles.goalStatValue, { color: '#10b981' }]}>{formatCurrency(item.achieved)} đ</Text>
+          </View>
+        </View>
+        <View style={styles.progressContainer}>
+          <View style={[styles.progressBar, { width: `${Math.min(100, percent)}%`, backgroundColor: percent >= 100 ? '#10b981' : '#3b82f6' }]} />
+        </View>
+        <Text style={styles.goalFooter}>
+          Hoàn thành {percent.toFixed(1)}% mục tiêu năm
+        </Text>
+      </View>
+    );
+  };
+
+  const renderLogItem = ({ item }: { item: Transaction }) => {
     const dateStr = new Date(item.timestamp).toLocaleString('vi-VN', {
       year: 'numeric', month: '2-digit', day: '2-digit', 
       hour: '2-digit', minute: '2-digit'
@@ -95,17 +126,11 @@ const SavingHistoryScreen = () => {
         </View>
         <View style={styles.cardFooter}>
           <Text style={styles.cardDate}>{dateStr}</Text>
-          <View style={styles.actionRow}>
-            {canDelete ? (
-              <TouchableOpacity onPress={() => handleDelete(item)} style={styles.actionButton}>
-                <Trash2 color="#ef4444" size={20} />
-              </TouchableOpacity>
-            ) : (
-              <View style={[styles.actionButton, { opacity: 0.3 }]}>
-                <Trash2 color="#94a3b8" size={20} />
-              </View>
-            )}
-          </View>
+          {canDelete && (
+            <TouchableOpacity onPress={() => handleDeleteLog(item)} style={styles.actionButton}>
+              <Trash2 color="#ef4444" size={20} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
@@ -117,25 +142,55 @@ const SavingHistoryScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ArrowLeft color="#ffffff" size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lịch sử Nạp / Rút Tiết Kiệm</Text>
+        <Text style={styles.headerTitle}>Quá trình tiết kiệm</Text>
       </View>
-      <FlatList
-        data={transactions.slice(0, displayLimit)}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        onEndReached={() => {
-          if (displayLimit < transactions.length) {
-            setDisplayLimit(prev => prev + 10);
+
+      <View style={styles.tabBar}>
+        <TouchableOpacity 
+          style={[styles.tabItem, tab === 'goals' && styles.tabItemActive]} 
+          onPress={() => setTab('goals')}
+        >
+          <Trophy color={tab === 'goals' ? '#f59e0b' : '#64748b'} size={18} />
+          <Text style={[styles.tabText, tab === 'goals' && styles.tabTextActive]}>Mục tiêu năm</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tabItem, tab === 'logs' && styles.tabItemActive]} 
+          onPress={() => setTab('logs')}
+        >
+          <Clock color={tab === 'logs' ? '#f59e0b' : '#64748b'} size={18} />
+          <Text style={[styles.tabText, tab === 'logs' && styles.tabTextActive]}>Lịch sử Nạp/Rút</Text>
+        </TouchableOpacity>
+      </View>
+
+      {tab === 'goals' ? (
+        <ScrollView contentContainerStyle={styles.listContent}>
+          {goalHistory.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Chưa có lịch sử mục tiêu năm trước.</Text>
+            </View>
+          ) : (
+            goalHistory.sort((a,b) => b.year - a.year).map(renderGoalItem)
+          )}
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={transactions.slice(0, displayLimit)}
+          keyExtractor={item => item.id}
+          renderItem={renderLogItem}
+          contentContainerStyle={styles.listContent}
+          onEndReached={() => {
+            if (displayLimit < transactions.length) {
+              setDisplayLimit(prev => prev + 10);
+            }
+          }}
+          onEndReachedThreshold={0.5}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Chưa có lịch sử nạp/rút tiết kiệm.</Text>
+            </View>
           }
-        }}
-        onEndReachedThreshold={0.5}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Chưa có lịch sử nạp/rút tiết kiệm.</Text>
-          </View>
-        }
-      />
+        />
+      )}
     </View>
   );
 };
@@ -165,11 +220,97 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  tabBar: {
+    flexDirection: 'row',
+    margin: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 4,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  tabItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 8,
+    borderRadius: 8,
+  },
+  tabItemActive: {
+    backgroundColor: '#fffbeb',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  tabTextActive: {
+    color: '#f59e0b',
+  },
   listContent: {
     padding: 16,
-    gap: 12,
-    paddingBottom: 24,
+    gap: 16,
+    paddingBottom: 40,
   },
+  // Goal Card Styles
+  goalCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  goalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  goalYear: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  goalBody: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  goalStat: {
+    flex: 1,
+  },
+  goalStatLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 2,
+  },
+  goalStatValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  progressContainer: {
+    height: 8,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  goalFooter: {
+    fontSize: 12,
+    color: '#94a3b8',
+    textAlign: 'right',
+  },
+  // Log Card Styles
   card: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
@@ -201,12 +342,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  depositText: {
-    color: '#10b981',
-  },
-  withdrawText: {
-    color: '#ef4444',
-  },
+  depositText: { color: '#10b981' },
+  withdrawText: { color: '#ef4444' },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -216,21 +353,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94a3b8',
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  actionButton: {
-    padding: 4,
-  },
-  emptyContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: '#94a3b8',
-    fontSize: 16,
-  },
+  actionButton: { padding: 4 },
+  emptyContainer: { padding: 40, alignItems: 'center' },
+  emptyText: { color: '#94a3b8', fontSize: 15, textAlign: 'center' },
 });
 
 export default SavingHistoryScreen;

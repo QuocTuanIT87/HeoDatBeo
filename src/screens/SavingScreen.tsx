@@ -7,11 +7,10 @@ import {
   TextInput,
   ScrollView,
   Alert,
-  Modal,
 } from "react-native";
-import { PiggyBank, Edit2, Info, History } from "lucide-react-native";
+import { PiggyBank, Edit2, Info, History as HistoryIcon } from "lucide-react-native";
 import { storage } from "../store/storage";
-import { Transaction, UserProfile, CategoryBudget } from "../types";
+import { Transaction, UserProfile, CategoryBudget, SavingHistoryItem } from "../types";
 import { formatCurrency } from "../utils/format";
 import Keypad from "../components/Keypad";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
@@ -20,8 +19,8 @@ import { RootStackParamList } from "../navigation/types";
 
 const SavingScreen = () => {
   const isFocused = useIsFocused();
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [totalBalance, setTotalBalance] = useState<number>(0);
   const [unallocated, setUnallocated] = useState<number>(0);
@@ -35,6 +34,8 @@ const SavingScreen = () => {
   const [targetInput, setTargetInput] = useState<string>("");
   const [isEditingTarget, setIsEditingTarget] = useState(false);
 
+  const currentYear = new Date().getFullYear();
+
   useEffect(() => {
     if (isFocused) {
       loadData();
@@ -44,56 +45,66 @@ const SavingScreen = () => {
   const loadData = async () => {
     const p = await storage.getUserProfile();
     const cats = await storage.getCategoryBudgets();
-    setProfile(p);
+    
+    if (!p) return;
 
-    if (p) {
-      const transactions = await storage.getTransactions();
-      const validTransactions = transactions.filter(
-        (t) => t.timestamp >= p.initialBalanceTimestamp,
-      );
+    const transactions = await storage.getTransactions();
+    const validTransactions = transactions.filter(t => t.timestamp >= p.initialBalanceTimestamp);
 
-      // Tổng số dư = tổng các danh mục + số chưa phân bổ
-      const totalAllocated = cats.reduce(
-        (sum: number, c: CategoryBudget) => sum + c.budget,
-        0,
-      );
-      const unalloc = Math.max(0, p.initialBalance - totalAllocated);
-      setUnallocated(unalloc);
-      setTotalBalance(totalAllocated + unalloc);
+    // Tính tiết kiệm từ transactions (Tổng số tiền đang có trong Heo)
+    let calcSaving = 0;
+    validTransactions.forEach((t) => {
+      if (t.type === "expense" && t.category === "Tiết kiệm") calcSaving += t.amount;
+      else if (t.type === "income" && (t.category === "Tiết kiệm" || t.category === "Rút tiết kiệm")) calcSaving -= t.amount;
+    });
 
-      // Tính tiết kiệm từ transactions
-      let calcSaving = 0;
-      validTransactions.forEach((t) => {
-        if (t.type === "expense" && t.category === "Tiết kiệm")
-          calcSaving += t.amount;
-        else if (
-          t.type === "income" &&
-          (t.category === "Tiết kiệm" || t.category === "Rút tiết kiệm")
-        )
-          calcSaving -= t.amount;
-      });
-      setSavingBalance(calcSaving);
-
-      // Tính ngày chờ rút tiền
-      const withdrawals = transactions.filter(
-        (t) => t.category === "Rút tiết kiệm",
-      );
-      if (withdrawals.length > 0) {
-        const lastWithdrawal = Math.max(...withdrawals.map((t) => t.timestamp));
-        const diffMs = Date.now() - lastWithdrawal;
-        const diffDays = diffMs / (24 * 60 * 60 * 1000);
-        if (diffDays < 7) {
-          setCooldownRemainingDays(Math.ceil(7 - diffDays));
-        } else {
-          setCooldownRemainingDays(0);
-        }
-      } else {
-        setCooldownRemainingDays(0);
+    // --- KIỂM TRA CHUYỂN NĂM (ARCHIVE) ---
+    if (p.savingYear && p.savingYear < currentYear) {
+      const historyItem: SavingHistoryItem = {
+        year: p.savingYear,
+        target: p.savingTarget || 0,
+        achieved: calcSaving,
+        timestamp: Date.now()
+      };
+      const updatedProfile: UserProfile = {
+        ...p,
+        savingYear: currentYear,
+        savingTarget: undefined,
+        savingTargetTimestamp: undefined,
+        savingHistory: [...(p.savingHistory || []), historyItem]
+      };
+      await storage.saveUserProfile(updatedProfile);
+      setProfile(updatedProfile);
+      Alert.alert("Năm mới đã đến! 🧧", `Hệ thống đã lưu lại kết quả tiết kiệm năm ${p.savingYear} vào lịch sử. Hãy đặt mục tiêu mới cho năm ${currentYear} nhé!`);
+    } else {
+      setProfile(p);
+      if (!p.savingYear) {
+        // Lần đầu sử dụng hoặc migration
+        await storage.saveUserProfile({ ...p, savingYear: currentYear });
       }
+    }
 
-      if (p.savingTarget) {
-        setTargetInput(formatMoneyInput(p.savingTarget.toString()));
-      }
+    setSavingBalance(calcSaving);
+
+    // Tổng số dư = tổng các danh mục + số chưa phân bổ
+    const totalAllocated = cats.reduce((sum: number, c: CategoryBudget) => sum + c.budget, 0);
+    const unalloc = Math.max(0, p.initialBalance - totalAllocated);
+    setUnallocated(unalloc);
+    setTotalBalance(totalAllocated + unalloc);
+
+    // Tính ngày chờ rút tiền
+    const withdrawals = transactions.filter(t => t.category === "Rút tiết kiệm");
+    if (withdrawals.length > 0) {
+      const lastWithdrawal = Math.max(...withdrawals.map((t) => t.timestamp));
+      const diffMs = Date.now() - lastWithdrawal;
+      const diffDays = diffMs / (24 * 60 * 60 * 1000);
+      setCooldownRemainingDays(diffDays < 7 ? Math.ceil(7 - diffDays) : 0);
+    } else {
+      setCooldownRemainingDays(0);
+    }
+
+    if (p.savingTarget) {
+      setTargetInput(formatMoneyInput(p.savingTarget.toString()));
     }
   };
 
@@ -101,14 +112,6 @@ const SavingScreen = () => {
     const numericValue = text.replace(/[^0-9-]/g, "");
     if (!numericValue) return "";
     return parseInt(numericValue, 10).toLocaleString("vi-VN");
-  };
-
-  const handleAddAmount = (val: number) => {
-    setAmount((prev) => prev + val);
-  };
-
-  const handleClearAmount = () => {
-    setAmount(0);
   };
 
   const canEditTarget = () => {
@@ -137,20 +140,18 @@ const SavingScreen = () => {
         ...profile,
         savingTarget: numTarget,
         savingTargetTimestamp: Date.now(),
+        savingYear: currentYear,
       };
       await storage.saveUserProfile(updatedProfile);
       setProfile(updatedProfile);
       setIsEditingTarget(false);
-      Alert.alert("Thành công", "Đã lưu mục tiêu tiết kiệm.");
+      Alert.alert("Thành công", `Đã thiết lập mục tiêu tiết kiệm cho năm ${currentYear}.`);
     }
   };
 
   const executeTransaction = async () => {
     if (!profile?.savingTarget) {
-      Alert.alert(
-        "Thiếu thông tin",
-        "Vui lòng thiết lập mục tiêu tiết kiệm trước khi Nạp/Rút.",
-      );
+      Alert.alert("Chưa có mục tiêu", `Vui lòng đặt mục tiêu tiết kiệm cho năm ${currentYear} trước.`);
       setIsEditingTarget(true);
       return;
     }
@@ -161,52 +162,30 @@ const SavingScreen = () => {
     }
 
     if (type === "deposit" && amount > unallocated) {
-      Alert.alert(
-        "Lỗi",
-        `Số dư chưa phân bổ (${formatCurrency(unallocated)} đ) không đủ để nạp vào tiết kiệm.`,
-      );
+      Alert.alert("Lỗi", `Số dư chưa phân bổ (${formatCurrency(unallocated)} đ) không đủ.`);
       return;
     }
 
     if (type === "withdraw") {
       if (amount > 500000) {
-        Alert.alert(
-          "Không thể rút",
-          "Mỗi lần bạn chỉ được rút tối đa 500.000 đ.",
-        );
+        Alert.alert("Không thể rút", "Mỗi lần chỉ được rút tối đa 500.000 đ.");
         return;
       }
-
       if (amount > savingBalance) {
-        Alert.alert("Lỗi", "Số dư tiết kiệm không đủ để rút.");
+        Alert.alert("Lỗi", "Số dư tiết kiệm không đủ.");
+        return;
+      }
+      if (cooldownRemainingDays > 0) {
+        Alert.alert("Chưa thể rút", `Vui lòng đợi thêm ${cooldownRemainingDays} ngày nữa.`);
         return;
       }
 
-      const transactions = await storage.getTransactions();
-      const withdrawals = transactions.filter(
-        (t) => t.category === "Rút tiết kiệm",
-      );
-      if (withdrawals.length > 0) {
-        const lastWithdrawal = Math.max(...withdrawals.map((t) => t.timestamp));
-        const diffMs = Date.now() - lastWithdrawal;
-        const diffDays = diffMs / (24 * 60 * 60 * 1000);
-        if (diffDays < 7) {
-          const remainingDays = Math.ceil(7 - diffDays);
-          Alert.alert(
-            "Chưa thể rút",
-            `Bạn chỉ được rút tiết kiệm 7 ngày một lần. Vui lòng đợi thêm ${remainingDays} ngày nữa.`,
-          );
-          return;
-        }
-      }
-
-      // Hiển thị xác nhận rút tiền kèm thời gian
-      const now = new Date();
-      const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")} - ${now.getDate().toString().padStart(2, "0")}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getFullYear()}`;
+      const nowTs = new Date();
+      const timeStr = `${nowTs.getHours().toString().padStart(2, "0")}:${nowTs.getMinutes().toString().padStart(2, "0")} - ${nowTs.getDate().toString().padStart(2, "0")}/${(nowTs.getMonth() + 1).toString().padStart(2, "0")}/${nowTs.getFullYear()}`;
 
       Alert.alert(
         "Xác nhận rút tiền",
-        `Bạn đang thực hiện rút ${formatCurrency(amount)} đ từ Heo Đất vào lúc:\n${timeStr}.\n\nBạn chỉ có thể rút tối đa 500.000 đ mỗi lần và 7 ngày một lần.\n\nBạn có chắc chắn muốn rút không?`,
+        `Bạn rút ${formatCurrency(amount)} đ từ Heo Đất vào lúc:\n${timeStr}.\n\nBạn có chắc chắn muốn rút không?`,
         [
           { text: "Hủy bỏ", style: "cancel" },
           { text: "Đồng ý rút", onPress: () => performExecution() },
@@ -218,14 +197,10 @@ const SavingScreen = () => {
   };
 
   const performExecution = async () => {
-    // Cập nhật initial balance để tránh làm sai lệch số dư chưa phân bổ
     if (profile) {
       const updatedProfile = {
         ...profile,
-        initialBalance:
-          type === "deposit"
-            ? profile.initialBalance - amount
-            : profile.initialBalance + amount,
+        initialBalance: type === "deposit" ? profile.initialBalance - amount : profile.initialBalance + amount,
       };
       await storage.saveUserProfile(updatedProfile);
     }
@@ -236,76 +211,58 @@ const SavingScreen = () => {
       type: type === "deposit" ? "expense" : "income",
       amount,
       category: txCategory,
-      categorySnapshot: txCategory, // snapshot tên danh mục tại thời điểm tạo (YC 6)
-      name: type === "deposit" ? "Nuôi heo béo" : "Rút tiền từ Heo Đất", // YC 3: Tên hiển thị khi nạp heo
+      categorySnapshot: txCategory,
+      name: type === "deposit" ? "Nuôi heo béo" : "Rút tiền từ Heo Đất",
       timestamp: Date.now(),
     };
 
-    const success = await storage.saveTransaction(newTx);
-    if (success) {
-      Alert.alert(
-        "Thành công",
-        `Đã ${type === "deposit" ? "nạp vào" : "rút khỏi"} tiết kiệm.`,
-      );
-      setAmount(0);
-      loadData();
-    } else {
-      Alert.alert("Lỗi", "Không thể lưu giao dịch.");
-    }
+    await storage.saveTransaction(newTx);
+    setAmount(0);
+    loadData();
   };
 
   return (
     <View style={styles.container}>
-      {/* Header section */}
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <PiggyBank color="#ffffff" size={28} />
-            <Text style={styles.headerTitle}>Heo Đất</Text>
+            <Text style={styles.headerTitle}>Heo Đất {currentYear}</Text>
           </View>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("SavingHistory")}
-            style={styles.historyBtn}
-          >
-            <History color="#ffffff" size={24} />
+          <TouchableOpacity onPress={() => navigation.navigate("SavingHistory")} style={styles.historyBtn}>
+            <HistoryIcon color="#ffffff" size={24} />
           </TouchableOpacity>
         </View>
         <View style={styles.balancesContainer}>
           <View style={styles.balanceRow}>
             <Text style={styles.balanceLabel}>Số dư tổng</Text>
-            <Text style={styles.balanceAmount}>
-              {formatCurrency(totalBalance)} đ
-            </Text>
+            <Text style={styles.balanceAmount}>{formatCurrency(totalBalance)} đ</Text>
           </View>
           <View style={styles.balanceRowDivider} />
           <View style={styles.balanceRow}>
             <Text style={styles.balanceLabel}>Chưa phân bổ</Text>
-            <Text
-              style={[
-                styles.balanceAmount,
-                { color: unallocated <= 0 ? "#fca5a5" : "#ffffff" },
-              ]}
-            >
+            <Text style={[styles.balanceAmount, { color: unallocated <= 0 ? "#fca5a5" : "#ffffff" }]}>
               {formatCurrency(unallocated)} đ
             </Text>
           </View>
           <View style={styles.balanceRowDivider} />
           <View style={[styles.balanceRow, { marginBottom: 0 }]}>
-            <Text style={styles.balanceLabel}>Tiết kiệm</Text>
-            <Text style={[styles.balanceAmount, { color: "#fcd34d" }]}>
-              {formatCurrency(savingBalance)} đ
-            </Text>
+            <Text style={styles.balanceLabel}>Đang có trong Heo</Text>
+            <Text style={[styles.balanceAmount, { color: "#fcd34d" }]}>{formatCurrency(savingBalance)} đ</Text>
           </View>
         </View>
       </View>
 
-      <ScrollView
-        style={styles.body}
-        contentContainerStyle={styles.bodyContent}
-      >
-        {/* Target Section */}
+      <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
         <View style={styles.targetCard}>
-          <Text style={styles.sectionTitle}>Mục tiêu tiết kiệm</Text>
+          <View style={styles.targetHeader}>
+            <Text style={styles.sectionTitle}>Mục tiêu năm {currentYear}</Text>
+            {profile?.savingHistory && profile.savingHistory.length > 0 && (
+              <TouchableOpacity onPress={() => navigation.navigate("SavingHistory")} style={styles.viewHistoryBtn}>
+                <Text style={styles.viewHistoryText}>Xem lịch sử</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           {profile?.savingTarget ? (
             <View>
@@ -314,162 +271,70 @@ const SavingScreen = () => {
                   <TextInput
                     style={styles.targetInput}
                     keyboardType="numeric"
-                    value={formatMoneyInput(targetInput)}
-                    onChangeText={(text) =>
-                      setTargetInput(formatMoneyInput(text))
-                    }
+                    value={targetInput}
+                    onChangeText={(text) => setTargetInput(formatMoneyInput(text))}
                     placeholder="Nhập số tiền..."
                   />
-                  <TouchableOpacity
-                    style={styles.saveTargetBtn}
-                    onPress={handleSaveTarget}
-                  >
+                  <TouchableOpacity style={styles.saveTargetBtn} onPress={handleSaveTarget}>
                     <Text style={styles.saveTargetBtnText}>Lưu</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.cancelBtn}
-                    onPress={() => setIsEditingTarget(false)}
-                  >
+                  <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsEditingTarget(false)}>
                     <Text style={styles.cancelBtnText}>Hủy</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.targetDisplayRow}>
-                  <Text style={styles.targetValueText}>
-                    {formatCurrency(profile.savingTarget)} đ
-                  </Text>
+                  <Text style={styles.targetValueText}>{formatCurrency(profile.savingTarget)} đ</Text>
                   <TouchableOpacity
-                    style={[
-                      styles.editBtn,
-                      !canEditTarget() && styles.editBtnDisabled,
-                    ]}
+                    style={[styles.editBtn, !canEditTarget() && styles.editBtnDisabled]}
                     onPress={() => {
                       if (canEditTarget()) {
-                        setTargetInput(
-                          formatMoneyInput(profile.savingTarget!.toString()),
-                        );
+                        setTargetInput(formatMoneyInput(profile.savingTarget!.toString()));
                         setIsEditingTarget(true);
                       } else {
-                        Alert.alert(
-                          "Thông báo",
-                          `Bạn chỉ có thể chỉnh sửa mục tiêu sau ${getDaysUntilEdit()} ngày nữa.`,
-                        );
+                        Alert.alert("Thông báo", `Bạn chỉ có thể sửa mục tiêu sau ${getDaysUntilEdit()} ngày nữa.`);
                       }
                     }}
                   >
-                    <Edit2
-                      color={canEditTarget() ? "#3b82f6" : "#94a3b8"}
-                      size={18}
-                    />
+                    <Edit2 color={canEditTarget() ? "#3b82f6" : "#94a3b8"} size={18} />
                   </TouchableOpacity>
                 </View>
               )}
 
               <View style={styles.progressContainer}>
-                <View
-                  style={[
-                    styles.progressBar,
-                    {
-                      width: `${Math.min(100, Math.max(0, (savingBalance / profile.savingTarget) * 100))}%`,
-                    },
-                  ]}
-                />
+                <View style={[styles.progressBar, { width: `${Math.min(100, (savingBalance / profile.savingTarget) * 100)}%` }]} />
               </View>
-              <Text style={styles.progressText}>
-                Đạt được{" "}
-                {((savingBalance / profile.savingTarget) * 100).toFixed(1)}% mục
-                tiêu
-              </Text>
-
-              {!canEditTarget() && !isEditingTarget && (
-                <Text style={styles.cooldownText}>
-                  * Có thể sửa lại sau {getDaysUntilEdit()} ngày
-                </Text>
-              )}
+              <Text style={styles.progressText}>Đạt được {((savingBalance / profile.savingTarget) * 100).toFixed(1)}% mục tiêu</Text>
+              {!canEditTarget() && !isEditingTarget && <Text style={styles.cooldownText}>* Có thể sửa lại sau {getDaysUntilEdit()} ngày</Text>}
             </View>
           ) : (
             <View style={styles.targetEditRow}>
-              <TextInput
-                style={styles.targetInput}
-                keyboardType="numeric"
-                value={formatMoneyInput(targetInput)}
-                onChangeText={(text) => setTargetInput(formatMoneyInput(text))}
-                placeholder="Nhập mục tiêu..."
-              />
-              <TouchableOpacity
-                style={styles.saveTargetBtn}
-                onPress={handleSaveTarget}
-              >
-                <Text style={styles.saveTargetBtnText}>Lưu</Text>
+              <TextInput style={styles.targetInput} keyboardType="numeric" value={targetInput} onChangeText={(text) => setTargetInput(formatMoneyInput(text))} placeholder="Nhập mục tiêu năm mới..." />
+              <TouchableOpacity style={styles.saveTargetBtn} onPress={handleSaveTarget}>
+                <Text style={styles.saveTargetBtnText}>Đặt mục tiêu</Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
 
-        {/* Action Tabs (Deposit / Withdraw) */}
         <View style={styles.tabs}>
-          <TouchableOpacity
-            style={[styles.tab, type === "deposit" && styles.tabActiveDeposit]}
-            onPress={() => setType("deposit")}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                type === "deposit" && styles.tabTextActive,
-              ]}
-            >
-              Nạp Heo
-            </Text>
+          <TouchableOpacity style={[styles.tab, type === "deposit" && styles.tabActiveDeposit]} onPress={() => setType("deposit")}>
+            <Text style={[styles.tabText, type === "deposit" && styles.tabTextActive]}>Nạp Heo</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tab,
-              type === "withdraw" && styles.tabActiveWithdraw,
-            ]}
-            onPress={() => setType("withdraw")}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                type === "withdraw" && styles.tabTextActive,
-              ]}
-            >
-              Rút Tiền
-            </Text>
+          <TouchableOpacity style={[styles.tab, type === "withdraw" && styles.tabActiveWithdraw]} onPress={() => setType("withdraw")}>
+            <Text style={[styles.tabText, type === "withdraw" && styles.tabTextActive]}>Rút Tiền</Text>
           </TouchableOpacity>
         </View>
 
         {type === "withdraw" && cooldownRemainingDays > 0 ? (
           <View style={styles.cooldownContainer}>
             <View style={styles.cooldownCircle}>
-              <Text style={styles.cooldownBigNumber}>
-                {cooldownRemainingDays}
-              </Text>
+              <Text style={styles.cooldownBigNumber}>{cooldownRemainingDays}</Text>
               <Text style={styles.cooldownDaysLabel}>Ngày chờ</Text>
             </View>
-
             <View style={styles.withdrawNotice}>
               <Info color="#ef4444" size={16} />
-              <Text style={styles.withdrawNoticeText}>
-                Bạn chỉ có thể rút tiết kiệm mỗi 7 ngày một lần và một lần không
-                quá 500.000 đ.
-              </Text>
-            </View>
-
-            <View style={styles.motivationBox}>
-              <Text style={styles.motivationQuote}>"</Text>
-              <Text style={styles.motivationText}>
-                Tiết kiệm hôm nay, an nhàn ngày mai. Mỗi đồng tiền bạn giữ lại
-                là một viên gạch xây nên tương lai vững chắc!
-              </Text>
-              <Text
-                style={[
-                  styles.motivationQuote,
-                  { alignSelf: "flex-end", marginTop: -10 },
-                ]}
-              >
-                "
-              </Text>
+              <Text style={styles.withdrawNoticeText}>Bạn chỉ có thể rút tiết kiệm mỗi 7 ngày một lần.</Text>
             </View>
           </View>
         ) : (
@@ -477,56 +342,20 @@ const SavingScreen = () => {
             {type === "withdraw" && (
               <View style={styles.withdrawNotice}>
                 <Info color="#ef4444" size={16} />
-                <Text style={styles.withdrawNoticeText}>
-                  Bạn chỉ có thể rút tiết kiệm mỗi 7 ngày một lần và một lần
-                  không quá 500.000 đ.
-                </Text>
+                <Text style={styles.withdrawNoticeText}>Hạn mức rút tối đa: 500.000 đ / lần.</Text>
               </View>
             )}
-
-            {/* Amount Display */}
-            <View
-              style={[
-                styles.amountDisplay,
-                type === "withdraw"
-                  ? styles.borderWithdraw
-                  : styles.borderDeposit,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.amountText,
-                  type === "deposit" ? styles.depositText : styles.withdrawText,
-                ]}
-              >
-                {formatCurrency(amount)}
-              </Text>
+            <View style={[styles.amountDisplay, type === "withdraw" ? styles.borderWithdraw : styles.borderDeposit]}>
+              <Text style={[styles.amountText, type === "deposit" ? styles.depositText : styles.withdrawText]}>{formatCurrency(amount)}</Text>
               <Text style={styles.currencyLabel}>VNĐ</Text>
             </View>
-
-            {/* Keypad */}
             <Text style={styles.sectionTitle}>Chọn mệnh giá</Text>
-            <Keypad
-              amount={amount}
-              onAddAmount={handleAddAmount}
-              onClear={handleClearAmount}
-            />
-
-            {/* Execute Button */}
-            <TouchableOpacity
-              style={[
-                styles.saveButton,
-                type === "deposit" ? styles.saveDeposit : styles.saveWithdraw,
-              ]}
-              onPress={executeTransaction}
-            >
-              <Text style={styles.saveButtonText}>
-                {type === "deposit" ? "Xác Nhận Nạp" : "Xác Nhận Rút"}
-              </Text>
+            <Keypad amount={amount} onAddAmount={(v) => setAmount(p => p + v)} onClear={() => setAmount(0)} />
+            <TouchableOpacity style={[styles.saveButton, type === "deposit" ? styles.saveDeposit : styles.saveWithdraw]} onPress={executeTransaction}>
+              <Text style={styles.saveButtonText}>{type === "deposit" ? "Xác Nhận Nạp" : "Xác Nhận Rút"}</Text>
             </TouchableOpacity>
           </>
         )}
-
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
@@ -534,313 +363,60 @@ const SavingScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-  },
-  header: {
-    backgroundColor: "#f59e0b",
-    padding: 24,
-    paddingTop: 60,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  headerTitle: {
-    color: "#ffffff",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  historyBtn: {
-    padding: 8,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 12,
-  },
-  balancesContainer: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  balanceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  balanceRowDivider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    marginBottom: 8,
-  },
-  balanceLabel: {
-    color: "#fef3c7",
-    fontSize: 14,
-  },
-  balanceAmount: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "bold",
-    textAlign: "right",
-    flexShrink: 1,
-    marginLeft: 12,
-  },
-  body: {
-    flex: 1,
-  },
-  bodyContent: {
-    padding: 20,
-  },
-  targetCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#334155",
-    marginBottom: 12,
-  },
-  targetDisplayRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  targetValueText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#0f172a",
-  },
-  editBtn: {
-    padding: 8,
-    backgroundColor: "#eff6ff",
-    borderRadius: 8,
-  },
-  editBtnDisabled: {
-    backgroundColor: "#f1f5f9",
-  },
-  targetEditRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  targetInput: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  saveTargetBtn: {
-    backgroundColor: "#3b82f6",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  saveTargetBtnText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  cancelBtn: {
-    backgroundColor: "#ef4444",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  cancelBtnText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  progressContainer: {
-    height: 8,
-    backgroundColor: "#e2e8f0",
-    borderRadius: 4,
-    overflow: "hidden",
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  progressBar: {
-    height: "100%",
-    backgroundColor: "#10b981",
-  },
-  progressText: {
-    fontSize: 13,
-    color: "#64748b",
-  },
-  cooldownText: {
-    fontSize: 12,
-    color: "#ef4444",
-    marginTop: 8,
-    fontStyle: "italic",
-  },
-  tabs: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  tab: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  tabActiveDeposit: {
-    backgroundColor: "#f59e0b",
-  },
-  tabActiveWithdraw: {
-    backgroundColor: "#ef4444",
-  },
-  tabText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#64748b",
-  },
-  tabTextActive: {
-    color: "#ffffff",
-  },
-  withdrawNotice: {
-    flexDirection: "row",
-    backgroundColor: "#fef2f2",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 20,
-    alignItems: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "#fee2e2",
-  },
-  withdrawNoticeText: {
-    fontSize: 13,
-    color: "#b91c1c",
-    flex: 1,
-    lineHeight: 18,
-    fontWeight: "500",
-  },
-  amountDisplay: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 24,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 24,
-    borderWidth: 1,
-  },
-  borderDeposit: {
-    borderColor: "#f59e0b",
-    backgroundColor: "#fffbeb",
-  },
-  borderWithdraw: {
-    borderColor: "#ef4444",
-    backgroundColor: "#fef2f2",
-  },
-  amountText: {
-    fontSize: 48,
-    fontWeight: "bold",
-  },
-  depositText: {
-    color: "#f59e0b",
-  },
-  withdrawText: {
-    color: "#ef4444",
-  },
-  currencyLabel: {
-    fontSize: 20,
-    color: "#64748b",
-    marginLeft: 8,
-    marginTop: 16,
-  },
-  saveButton: {
-    marginTop: 24,
-    paddingVertical: 18,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-  saveDeposit: {
-    backgroundColor: "#f59e0b",
-  },
-  saveWithdraw: {
-    backgroundColor: "#ef4444",
-  },
-  saveButtonText: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  // Cooldown Styles
-  cooldownContainer: {
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-  cooldownCircle: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "#fee2e2",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 8,
-    borderColor: "#fecaca",
-    marginBottom: 30,
-  },
-  cooldownBigNumber: {
-    fontSize: 64,
-    fontWeight: "900",
-    color: "#ef4444",
-  },
-  cooldownDaysLabel: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#b91c1c",
-    textTransform: "uppercase",
-    marginTop: -5,
-  },
-  motivationBox: {
-    backgroundColor: "#ffffff",
-    padding: 24,
-    borderRadius: 20,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderStyle: "dashed",
-  },
-  motivationQuote: {
-    fontSize: 32,
-    color: "#cbd5e1",
-    fontWeight: "bold",
-    lineHeight: 32,
-  },
-  motivationText: {
-    fontSize: 16,
-    color: "#64748b",
-    textAlign: "center",
-    fontStyle: "italic",
-    lineHeight: 24,
-    paddingHorizontal: 10,
-  },
+  container: { flex: 1, backgroundColor: "#f8fafc" },
+  header: { backgroundColor: "#f59e0b", padding: 24, paddingTop: 60, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  headerTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 },
+  headerTitle: { color: "#ffffff", fontSize: 24, fontWeight: "bold" },
+  historyBtn: { padding: 8, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 12 },
+  balancesContainer: { backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 16, padding: 16 },
+  balanceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  balanceRowDivider: { height: 1, backgroundColor: "rgba(255,255,255,0.2)", marginBottom: 8 },
+  balanceLabel: { color: "#fef3c7", fontSize: 14 },
+  balanceAmount: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
+  body: { flex: 1 },
+  bodyContent: { padding: 20 },
+  targetCard: { backgroundColor: "#ffffff", borderRadius: 16, padding: 20, marginBottom: 24, elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
+  targetHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#334155" },
+  viewHistoryBtn: { backgroundColor: "#f1f5f9", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  viewHistoryText: { fontSize: 12, color: "#64748b", fontWeight: "600" },
+  targetDisplayRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
+  targetValueText: { fontSize: 24, fontWeight: "bold", color: "#0f172a" },
+  editBtn: { padding: 8, backgroundColor: "#eff6ff", borderRadius: 8 },
+  editBtnDisabled: { backgroundColor: "#f1f5f9" },
+  targetEditRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  targetInput: { flex: 1, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: "#cbd5e1", borderRadius: 8, padding: 12, fontSize: 16 },
+  saveTargetBtn: { backgroundColor: "#3b82f6", paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8 },
+  saveTargetBtnText: { color: "#fff", fontWeight: "bold" },
+  cancelBtn: { backgroundColor: "#ef4444", paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8 },
+  cancelBtnText: { color: "#fff", fontWeight: "bold" },
+  progressContainer: { height: 8, backgroundColor: "#e2e8f0", borderRadius: 4, overflow: "hidden", marginTop: 8, marginBottom: 8 },
+  progressBar: { height: "100%", backgroundColor: "#10b981" },
+  progressText: { fontSize: 13, color: "#64748b" },
+  cooldownText: { fontSize: 12, color: "#ef4444", marginTop: 8, fontStyle: "italic" },
+  tabs: { flexDirection: "row", backgroundColor: "#ffffff", borderRadius: 12, padding: 4, marginBottom: 20, elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
+  tab: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 12, borderRadius: 8 },
+  tabActiveDeposit: { backgroundColor: "#f59e0b" },
+  tabActiveWithdraw: { backgroundColor: "#ef4444" },
+  tabText: { fontSize: 16, fontWeight: "600", color: "#64748b" },
+  tabTextActive: { color: "#ffffff" },
+  withdrawNotice: { flexDirection: "row", backgroundColor: "#fef2f2", padding: 12, borderRadius: 12, marginBottom: 20, alignItems: "center", gap: 8, borderWidth: 1, borderColor: "#fee2e2" },
+  withdrawNoticeText: { fontSize: 13, color: "#b91c1c", flex: 1, lineHeight: 18, fontWeight: "500" },
+  amountDisplay: { backgroundColor: "#ffffff", borderRadius: 16, padding: 24, alignItems: "center", flexDirection: "row", justifyContent: "center", marginBottom: 24, borderWidth: 1 },
+  borderDeposit: { borderColor: "#f59e0b", backgroundColor: "#fffbeb" },
+  borderWithdraw: { borderColor: "#ef4444", backgroundColor: "#fef2f2" },
+  amountText: { fontSize: 48, fontWeight: "bold" },
+  depositText: { color: "#f59e0b" },
+  withdrawText: { color: "#ef4444" },
+  currencyLabel: { fontSize: 20, color: "#64748b", marginLeft: 8, marginTop: 16 },
+  saveButton: { marginTop: 24, paddingVertical: 18, borderRadius: 16, alignItems: "center" },
+  saveDeposit: { backgroundColor: "#f59e0b" },
+  saveWithdraw: { backgroundColor: "#ef4444" },
+  saveButtonText: { color: "#ffffff", fontSize: 18, fontWeight: "bold" },
+  cooldownContainer: { alignItems: "center", paddingVertical: 10 },
+  cooldownCircle: { width: 140, height: 140, borderRadius: 70, borderWidth: 8, borderColor: "#ef4444", justifyContent: "center", alignItems: "center", marginBottom: 20 },
+  cooldownBigNumber: { fontSize: 40, fontWeight: "bold", color: "#ef4444" },
+  cooldownDaysLabel: { fontSize: 14, color: "#94a3b8" },
 });
 
 export default SavingScreen;

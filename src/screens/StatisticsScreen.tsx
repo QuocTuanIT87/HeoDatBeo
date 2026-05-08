@@ -1176,30 +1176,21 @@ const StatisticsScreen = () => {
                 data={getPieChartData()}
                 selectedCategory={selectedPieCategory}
                 onSelectCategory={setSelectedPieCategory}
+                renderNoteDetails={(catName) => {
+                  const details = getNoteDetailsForCategory(catName);
+                  return (
+                    <View>
+                      {details.map((item, idx) => (
+                        <View key={idx} style={styles.inlineNoteItem}>
+                          <Text style={styles.inlineNoteText}>• {item.note}</Text>
+                          <Text style={styles.inlineNoteAmount}>{formatCurrency(item.total)} đ</Text>
+                        </View>
+                      ))}
+                    </View>
+                  );
+                }}
               />
             </View>
-
-            {selectedPieCategory && (
-              <View style={styles.noteDetailsSection}>
-                <View style={styles.noteDetailsHeader}>
-                  <Text style={styles.noteDetailsTitle}>
-                    Chi tiết: <Text style={{ color: "#3b82f6" }}>{selectedPieCategory}</Text>
-                  </Text>
-                  <Text style={styles.noteDetailsCount}>
-                    {getNoteDetailsForCategory(selectedPieCategory).length} nội dung
-                  </Text>
-                </View>
-                <ScrollView style={styles.noteDetailsList} showsVerticalScrollIndicator={false}>
-                  {getNoteDetailsForCategory(selectedPieCategory).map((item, idx) => (
-                    <View key={idx} style={styles.noteDetailItem}>
-                      <Text style={styles.noteDetailText}>{item.note}</Text>
-                      <Text style={styles.noteDetailAmount}>{formatCurrency(item.total)} đ</Text>
-                    </View>
-                  ))}
-                  <View style={{ height: 20 }} />
-                </ScrollView>
-              </View>
-            )}
           </View>
         </View>
       </Modal>
@@ -1285,60 +1276,21 @@ const styles = StyleSheet.create({
   pieChartWrapper: {
     alignItems: "center",
     paddingVertical: 10,
-    height: 480, // Cố định chiều cao cho phần biểu đồ và legend cũ
+    flex: 1, // Để danh sách chiếm hết phần còn lại
   },
-  noteDetailsSection: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    marginTop: -10,
-    elevation: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  noteDetailsHeader: {
+  inlineNoteItem: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+    paddingVertical: 4,
   },
-  noteDetailsTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1e293b",
-  },
-  noteDetailsCount: {
+  inlineNoteText: {
     fontSize: 13,
-    color: "#64748b",
-    backgroundColor: "#e2e8f0",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  noteDetailsList: {
+    color: "#475569",
     flex: 1,
   },
-  noteDetailItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-  },
-  noteDetailText: {
-    fontSize: 15,
-    color: "#334155",
-    flex: 1,
-    marginRight: 10,
-  },
-  noteDetailAmount: {
-    fontSize: 15,
-    fontWeight: "bold",
+  inlineNoteAmount: {
+    fontSize: 13,
+    fontWeight: "600",
     color: "#1e293b",
   },
   barChartHeader: {
