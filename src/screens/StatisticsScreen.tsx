@@ -10,6 +10,7 @@ import {
   ScrollView,
   Modal,
   Dimensions,
+  TextInput,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { storage } from "../store/storage";
@@ -21,7 +22,11 @@ import {
   X,
   PieChart as PieChartIcon,
   BarChart2,
+  MoreHorizontal,
+  PencilLine,
+  PenOff,
 } from "lucide-react-native";
+import Keypad from "../components/Keypad";
 import { BarChart } from "react-native-gifted-charts";
 import CustomPieChart from "../components/CustomPieChart";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -44,11 +49,11 @@ const DEFAULT_INCOME_CATEGORIES = ["Lương", "Khác"];
 // --- Component thẻ giao dịch — tách ra ngoài để React.memo hoạt động hiệu quả ---
 type TransactionCardProps = {
   item: Transaction;
-  onDelete: (tx: Transaction) => void;
+  onOpenOptions: (tx: Transaction) => void;
 };
 
 const TransactionCard = React.memo(
-  ({ item, onDelete }: TransactionCardProps) => {
+  ({ item, onOpenOptions }: TransactionCardProps) => {
     const dateStr = new Date(item.timestamp).toLocaleString("vi-VN", {
       year: "numeric",
       month: "2-digit",
@@ -57,13 +62,12 @@ const TransactionCard = React.memo(
       minute: "2-digit",
     });
     const isExpense = item.type === "expense";
-    // Nếu là số dư đầu tiên, hiển thị tên 'Số dư đầu tiên' thay vì 'Khác' làm danh mục
     const displayCategory =
       item.name === "Số dư đầu tiên"
         ? item.name
         : item.categorySnapshot || item.category;
     const displayName = item.name === "Số dư đầu tiên" ? undefined : item.name;
-    const canDelete = Date.now() - item.timestamp <= 5 * 60 * 1000;
+    const canAction = Date.now() - item.timestamp <= 3 * 24 * 60 * 60 * 1000;
 
     return (
       <View style={cardStyles.card}>
@@ -90,17 +94,13 @@ const TransactionCard = React.memo(
         <View style={cardStyles.cardFooter}>
           <Text style={cardStyles.cardDate}>{dateStr}</Text>
           <View style={cardStyles.actionRow}>
-            {canDelete ? (
+            {canAction && (
               <TouchableOpacity
-                onPress={() => onDelete(item)}
+                onPress={() => onOpenOptions(item)}
                 style={cardStyles.actionButton}
               >
-                <Trash2 color="#ef4444" size={20} />
+                <MoreHorizontal color="#94a3b8" size={20} />
               </TouchableOpacity>
-            ) : (
-              <View style={[cardStyles.actionButton, { opacity: 0.3 }]}>
-                <Trash2 color="#94a3b8" size={20} />
-              </View>
             )}
           </View>
         </View>
@@ -225,6 +225,13 @@ const StatisticsScreen = () => {
   const [customEndDate, setCustomEndDate] = useState<Date>(new Date());
   const [showPicker, setShowPicker] = useState<"start" | "end" | null>(null);
 
+  // Transaction options & edit state
+  const [selectedTxForAction, setSelectedTxForAction] = useState<Transaction | null>(null);
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editAmount, setEditAmount] = useState(0);
+  const editInputRef = React.useRef<TextInput>(null);
+
   useEffect(() => {
     if (isFocused) {
       loadTransactions();
@@ -269,6 +276,18 @@ const StatisticsScreen = () => {
     setCategoryBudgets(cats);
     setAvailableMonths(dateIndex.months);
     setAvailableYears(dateIndex.years);
+  };
+
+  const toggleInputMethod = async () => {
+    const newMethod = profile?.inputMethod === "manual" ? "keypad" : "manual";
+    if (profile) {
+      const updatedProfile = {
+        ...profile,
+        inputMethod: newMethod as "manual" | "keypad",
+      };
+      setProfile(updatedProfile);
+      await storage.saveUserProfile(updatedProfile);
+    }
   };
 
   const applyFilters = (
@@ -339,15 +358,14 @@ const StatisticsScreen = () => {
   };
 
   // YC 1, 2, 3: Hoàn tiền thông minh khi xóa giao dịch
-  const handleDelete = (tx: Transaction) => {
-    // YC 2: Chỉ được xóa trong vòng 5 phút kể từ khi lưu
-    const FIVE_MINUTES_MS = 5 * 60 * 1000;
+  const handleDelete = useCallback((tx: Transaction) => {
+    // YC 2: Chỉ được xóa trong vòng 3 ngày kể từ khi lưu
+    const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
     const elapsed = Date.now() - tx.timestamp;
-    if (elapsed > FIVE_MINUTES_MS) {
-      const minutesAgo = Math.floor(elapsed / 60000);
+    if (elapsed > THREE_DAYS_MS) {
       Alert.alert(
         "Không thể xóa",
-        `Giao dịch này được tạo cách đây ${minutesAgo} phút. Chỉ có thể xóa giao dịch trong vòng 5 phút kể từ khi lưu.`,
+        "Giao dịch đã quá 3 ngày, không thể xóa hoặc sửa."
       );
       return;
     }
@@ -395,14 +413,16 @@ const StatisticsScreen = () => {
                 };
                 await storage.saveUserProfile(updatedProfile);
 
-                // Nếu danh mục vẫn còn tồn tại → cộng tiền vào budget danh mục đó
+                // Nếu danh mục vẫn còn tồn tại
                 const existingCat = cats.find((b) => b.name === catName);
                 if (existingCat) {
+                  const isDirect = existingCat.type === "direct";
                   const updatedCats = cats.map((b) =>
                     b.name === catName
                       ? {
                           ...b,
-                          budget: b.budget + tx.amount,
+                          // Nếu là danh mục nạp tiền thì cộng lại budget, nếu là chi trực tiếp thì giữ nguyên budget (0)
+                          budget: isDirect ? b.budget : b.budget + tx.amount,
                           spent: Math.max(0, (b.spent || 0) - tx.amount),
                         }
                       : b,
@@ -434,6 +454,126 @@ const StatisticsScreen = () => {
         },
       ],
     );
+  }, []);
+
+  const handleOpenOptions = useCallback((tx: Transaction) => {
+    setSelectedTxForAction(tx);
+    setShowOptionsModal(true);
+  }, []);
+
+  const handleEditPress = () => {
+    if (!selectedTxForAction) return;
+    setEditAmount(selectedTxForAction.amount);
+    setShowOptionsModal(false);
+    setShowEditModal(true);
+  };
+
+  const executeEditTransaction = async () => {
+    if (!selectedTxForAction) return;
+    const tx = selectedTxForAction;
+    const oldAmount = tx.amount;
+    const newAmount = editAmount;
+
+    if (newAmount === 0) {
+      Alert.alert(
+        "Số tiền không hợp lệ",
+        "Số tiền không thể là 0đ. Nếu bạn muốn hủy giao dịch này, vui lòng sử dụng chức năng Xóa."
+      );
+      return;
+    }
+
+    const diff = newAmount - oldAmount;
+
+    if (diff === 0) {
+      setShowEditModal(false);
+      return;
+    }
+
+    const p = await storage.getUserProfile();
+    const cats = await storage.getCategoryBudgets();
+    if (!p) return;
+
+    const catName = tx.categorySnapshot || tx.category;
+
+    if (tx.type === "expense") {
+      // Logic sửa khoản chi
+      if (catName === "Tiết kiệm") {
+        // Tăng chi tiêu tiết kiệm -> giảm initialBalance
+        await storage.saveUserProfile({
+          ...p,
+          initialBalance: p.initialBalance - diff,
+        });
+      } else {
+        const cat = cats.find(b => b.name === catName);
+        if (cat) {
+          const isDirect = cat.type === 'direct';
+          if (isDirect) {
+            // Chi trực tiếp: kiểm tra unallocated balance
+            const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
+            const unallocated = Math.max(0, p.initialBalance - totalAllocated);
+            if (diff > unallocated) {
+              Alert.alert("Lỗi", "Số dư chưa phân bổ không đủ để thực hiện sửa đổi này.");
+              return;
+            }
+            // Cập nhật spent và initialBalance
+            const updatedCats = cats.map(b => b.name === catName ? { ...b, spent: (b.spent || 0) + diff } : b);
+            await storage.saveCategoryBudgets(updatedCats);
+            await storage.saveUserProfile({ ...p, initialBalance: p.initialBalance - diff });
+          } else {
+            // Chi nạp tiền (recharge): kiểm tra cat.budget
+            if (diff > cat.budget) {
+              Alert.alert("Lỗi", `Ngân sách danh mục "${catName}" không đủ. Còn lại: ${formatCurrency(cat.budget)} đ.`);
+              return;
+            }
+            // Cập nhật budget, spent và initialBalance
+            const updatedCats = cats.map(b => b.name === catName ? { 
+              ...b, 
+              budget: b.budget - diff,
+              spent: (b.spent || 0) + diff 
+            } : b);
+            await storage.saveCategoryBudgets(updatedCats);
+            await storage.saveUserProfile({ ...p, initialBalance: p.initialBalance - diff });
+          }
+        } else {
+          // Danh mục đã bị xóa: chỉ trừ/cộng vào initialBalance (coi như unallocated)
+          const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
+          const unallocated = Math.max(0, p.initialBalance - totalAllocated);
+          if (diff > unallocated) {
+            Alert.alert("Lỗi", "Số dư chưa phân bổ không đủ để thực hiện sửa đổi này.");
+            return;
+          }
+          await storage.saveUserProfile({ ...p, initialBalance: p.initialBalance - diff });
+        }
+      }
+    } else {
+      // Logic sửa khoản thu
+      if (catName === "Rút tiết kiệm") {
+        // Thu từ tiết kiệm: chỉ thay đổi initialBalance
+        await storage.saveUserProfile({ ...p, initialBalance: p.initialBalance + diff });
+      } else {
+        // Thu nhập bình thường: nếu giảm thu nhập, kiểm tra unallocated
+        if (diff < 0) {
+          const loss = Math.abs(diff);
+          const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
+          const unallocated = Math.max(0, p.initialBalance - totalAllocated);
+          if (loss > unallocated) {
+            Alert.alert("Lỗi", "Số dư chưa phân bổ không đủ để giảm khoản thu này.");
+            return;
+          }
+        }
+        await storage.saveUserProfile({ ...p, initialBalance: p.initialBalance + diff });
+      }
+    }
+
+    // Cập nhật transaction record
+    const allTxs = await storage.getTransactions();
+    const updatedTxs = allTxs.map(t => t.id === tx.id ? { ...t, amount: newAmount } : t);
+    await storage.updateTransactionsBulk(updatedTxs);
+
+    loadTransactions();
+    setShowEditModal(false);
+    setSelectedTxForAction(null);
+    Alert.alert("Thành công", "Đã cập nhật giao dịch.");
   };
 
   // Lấy danh sách các tên danh mục đã xóa có trong giao dịch (theo period + type hiện tại)
@@ -480,10 +620,10 @@ const StatisticsScreen = () => {
 
   const renderItem = useCallback(
     ({ item }: { item: Transaction }) => (
-      <TransactionCard item={item} onDelete={handleDelete} />
+      <TransactionCard item={item} onOpenOptions={handleOpenOptions} />
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [handleDelete],
+    [handleOpenOptions],
   );
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -974,23 +1114,10 @@ const StatisticsScreen = () => {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
-        // ListHeaderComponent={
-        //   period === "month" ? (
-        //     <View style={styles.barChartButtonContainer}>
-        //       <TouchableOpacity
-        //         style={styles.openBarChartBtn}
-        //         onPress={() => {
-        //           navigation.navigate("BarChart", {
-        //             selectedMonth,
-        //           });
-        //         }}
-        //       >
-        //         <BarChart2 color="#3b82f6" size={20} />
-        //         <Text style={styles.openBarChartBtnText}>Xem biểu đồ chi tiêu</Text>
-        //       </TouchableOpacity>
-        //     </View>
-        //   ) : null
-        // }
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
         onEndReached={() => {
           if (displayLimit < filteredTransactions.length) {
             setDisplayLimit((prev) => prev + 10);
@@ -1211,6 +1338,138 @@ const StatisticsScreen = () => {
               </TouchableOpacity>
             </View>
             {renderBarChartContent()}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Tùy chọn giao dịch (Sửa/Xóa) */}
+      <Modal
+        visible={showOptionsModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowOptionsModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowOptionsModal(false)}
+        >
+          <View style={styles.optionsBox}>
+            <Text style={styles.optionsTitle}>Tùy chọn giao dịch</Text>
+            <TouchableOpacity
+              style={styles.optionBtn}
+              onPress={handleEditPress}
+            >
+              <Text style={styles.optionTextEdit}>Sửa số tiền</Text>
+            </TouchableOpacity>
+            <View style={styles.optionDivider} />
+            <TouchableOpacity
+              style={styles.optionBtn}
+              onPress={() => {
+                setShowOptionsModal(false);
+                if (selectedTxForAction) handleDelete(selectedTxForAction);
+              }}
+            >
+              <Text style={styles.optionTextDelete}>Xóa giao dịch</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.optionCancelBtn}
+              onPress={() => setShowOptionsModal(false)}
+            >
+              <Text style={styles.optionCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <Modal
+        visible={showEditModal}
+        transparent
+        animationType="slide"
+        onShow={() => {
+          if (profile?.inputMethod === "manual") {
+            setTimeout(() => {
+              editInputRef.current?.focus();
+            }, 300);
+          }
+        }}
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View style={styles.editModalOverlay}>
+          <View style={styles.editModalBox}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Sửa số tiền</Text>
+              <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            {profile?.inputMethod === "manual" ? (
+              <View style={styles.manualInputWrapper}>
+                <TextInput
+                  ref={editInputRef}
+                  key={showEditModal ? "active" : "inactive"}
+                  style={styles.manualInput}
+                  keyboardType="numeric"
+                  placeholder="Nhập số tiền..."
+                  placeholderTextColor="#94a3b8"
+                  autoFocus
+                  showSoftInputOnFocus={true}
+                  value={
+                    editAmount === 0 ? "" : editAmount.toLocaleString("vi-VN")
+                  }
+                  onChangeText={(text) => {
+                    const numericValue = text.replace(/[^0-9]/g, "");
+                    setEditAmount(
+                      numericValue ? parseInt(numericValue, 10) : 0,
+                    );
+                  }}
+                />
+              </View>
+            ) : (
+              <>
+                <View style={styles.editAmountDisplay}>
+                  <Text
+                    style={[
+                      styles.editAmountText,
+                      selectedTxForAction?.type === "expense"
+                        ? styles.expenseText
+                        : styles.incomeText,
+                    ]}
+                  >
+                    {formatCurrency(editAmount)} đ
+                  </Text>
+                </View>
+
+                <View style={{ paddingHorizontal: 16 }}>
+                  <Keypad
+                    amount={editAmount}
+                    onAddAmount={(val) => setEditAmount((prev) => prev + val)}
+                    onClear={() => setEditAmount(0)}
+                  />
+                </View>
+              </>
+            )}
+
+            <View style={styles.inputMethodToggleRow}>
+              <TouchableOpacity
+                style={styles.quickToggleBtnCircle}
+                onPress={toggleInputMethod}
+              >
+                {profile?.inputMethod !== "manual" ? (
+                  <PencilLine size={18} color="#3b82f6" />
+                ) : (
+                  <PenOff size={18} color="#3b82f6" />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.editConfirmBtn}
+              onPress={executeEditTransaction}
+            >
+              <Text style={styles.editConfirmBtnText}>Xác nhận sửa</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1598,6 +1857,125 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "bold",
     color: "#0f172a",
+  },
+  // Options Modal Styles
+  optionsBox: {
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    width: "80%",
+    padding: 20,
+    alignItems: "center",
+  },
+  optionsTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#0f172a",
+    marginBottom: 20,
+  },
+  optionBtn: {
+    width: "100%",
+    paddingVertical: 15,
+    alignItems: "center",
+  },
+  optionTextEdit: {
+    fontSize: 17,
+    color: "#3b82f6",
+    fontWeight: "600",
+  },
+  optionTextDelete: {
+    fontSize: 17,
+    color: "#ef4444",
+    fontWeight: "600",
+  },
+  optionDivider: {
+    height: 1,
+    backgroundColor: "#f1f5f9",
+    width: "100%",
+  },
+  optionCancelBtn: {
+    marginTop: 10,
+    width: "100%",
+    paddingVertical: 15,
+    alignItems: "center",
+  },
+  optionCancelText: {
+    fontSize: 16,
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  // Edit Modal Styles
+  editModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    justifyContent: "flex-start",
+    paddingTop: 80,
+    paddingHorizontal: 12,
+  },
+  editModalBox: {
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    paddingBottom: 24,
+    width: "100%",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
+  inputMethodToggleRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    marginTop: 10,
+  },
+  quickToggleBtnCircle: {
+    backgroundColor: "#ffffff",
+    width: 34,
+    height: 34,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  manualInputWrapper: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+    marginTop: 10,
+  },
+  manualInput: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+    borderRadius: 16,
+    padding: 20,
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#0f172a",
+    textAlign: "center",
+  },
+  editAmountDisplay: {
+    paddingVertical: 30,
+    alignItems: "center",
+  },
+  editAmountText: {
+    fontSize: 40,
+    fontWeight: "bold",
+  },
+  editConfirmBtn: {
+    margin: 20,
+    backgroundColor: "#7c3aed",
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: "center",
+  },
+  editConfirmBtnText: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "bold",
   },
   modalScroll: {
     maxHeight: 340,

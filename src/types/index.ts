@@ -15,6 +15,7 @@ export interface CategoryBudget {
   spent?: number;    // Số tiền đã tiêu (được cache để tối ưu hiệu suất)
   estimatedEndDate?: number;      // Ngày ước tính tiêu hết (timestamp ms) (YC 4)
   estimatedEndDateSetAt?: number; // Timestamp lần cuối set estimatedEndDate, để cooldown 15 ngày
+  type?: 'recharge' | 'direct';   // Loại danh mục: nạp tiền để chi hoặc không cần nạp
 }
 
 // Index tháng/năm có giao dịch — dùng để hiển thị modal lọc nhanh mà không scan toàn bộ transactions
@@ -41,4 +42,5 @@ export interface UserProfile {
   incomeCategories?: string[];
   categoryBudgets?: CategoryBudget[]; // Danh mục chi kèm ngân sách
   hasSeenGuide?: boolean;
+  inputMethod?: 'keypad' | 'manual';
 }

@@ -38,13 +38,12 @@ const SavingHistoryScreen = () => {
   };
 
   const handleDeleteLog = (tx: Transaction) => {
-    const FIVE_MINUTES_MS = 5 * 60 * 1000;
+    const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
     const elapsed = Date.now() - tx.timestamp;
-    if (elapsed > FIVE_MINUTES_MS) {
-      const minutesAgo = Math.floor(elapsed / 60000);
+    if (elapsed > THREE_DAYS_MS) {
       Alert.alert(
         'Không thể xóa',
-        `Giao dịch này được tạo cách đây ${minutesAgo} phút. Chỉ có thể xóa giao dịch trong vòng 5 phút kể từ khi lưu.`
+        'Giao dịch nạp/rút tiết kiệm đã quá 3 ngày, không thể xóa.'
       );
       return;
     }
@@ -109,7 +108,7 @@ const SavingHistoryScreen = () => {
       hour: '2-digit', minute: '2-digit'
     });
     const isDeposit = item.category === 'Tiết kiệm';
-    const canDelete = (Date.now() - item.timestamp) <= 5 * 60 * 1000;
+    const canDelete = (Date.now() - item.timestamp) <= 3 * 24 * 60 * 60 * 1000;
 
     return (
       <View style={styles.card}>
