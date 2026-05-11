@@ -19,6 +19,8 @@ import {
   PencilLine,
   PenOff,
   X,
+  LayoutGrid,
+  Keyboard,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import {
@@ -209,8 +211,8 @@ const SavingScreen = () => {
       return;
     }
 
-    if (amount <= 0) {
-      Alert.alert("Chưa nhập số tiền", "Vui lòng nhập số tiền hợp lệ.");
+    if (amount < 1000) {
+      Alert.alert("Số tiền không đủ", "Vui lòng nhập số tiền ít nhất 1.000 đ.");
       return;
     }
 
@@ -304,22 +306,22 @@ const SavingScreen = () => {
               style={styles.eyeBtn}
             >
               {showAmount ? (
-                <Eye color="#ffffff" size={24} />
+                <Eye color="#ffffff" size={18} />
               ) : (
-                <EyeOff color="#ffffff" size={24} />
+                <EyeOff color="#ffffff" size={18} />
               )}
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => navigation.navigate("SavingHistory")}
               style={styles.historyBtn}
             >
-              <HistoryIcon color="#ffffff" size={24} />
+              <HistoryIcon color="#ffffff" size={18} />
             </TouchableOpacity>
           </View>
         </View>
         <View style={styles.balancesContainer}>
           <View style={styles.balanceRow}>
-            <Text style={styles.balanceLabel}>Số dư tổng</Text>
+            <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
             <Text style={styles.balanceAmount}>
               {showAmount ? `${formatCurrency(totalBalance)} đ` : "******"}
             </Text>
@@ -544,16 +546,16 @@ const SavingScreen = () => {
                   ? "Nhập số tiền"
                   : "Chọn mệnh giá"}
               </Text>
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 style={styles.quickToggleBtnCircle}
                 onPress={toggleInputMethod}
               >
-                {profile?.inputMethod !== "manual" ? (
-                  <PencilLine size={18} color="#3b82f6" />
+                {profile?.inputMethod === "manual" ? (
+                  <LayoutGrid color="#64748b" size={24} />
                 ) : (
-                  <PenOff size={18} color="#3b82f6" />
+                  <Keyboard color="#64748b" size={24} />
                 )}
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
 
             {profile?.inputMethod === "manual" ? (

@@ -10,6 +10,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  FlatList,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -29,6 +30,7 @@ import {
   EyeOff,
   PencilLine,
   PenOff,
+  ChevronRight,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { Transaction, UserProfile, CategoryBudget } from "../types";
@@ -52,12 +54,15 @@ const HomeScreen = () => {
 
   const [type, setType] = useState<"expense" | "income">("expense");
   const [amount, setAmount] = useState<number>(0);
-  const [category, setCategory] = useState<string>("");
 
-  // Modal lưu giao dịch
-  const [saveModalVisible, setSaveModalVisible] = useState(false);
-  const [modalCatInput, setModalCatInput] = useState("");
+  // Modal chọn danh mục
+  const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
+  // Modal ghi chú (sau khi chọn danh mục)
+  const [noteModalVisible, setNoteModalVisible] = useState(false);
+  const [selectedCategoryForSave, setSelectedCategoryForSave] =
+    useState<string>("");
   const [modalNoteInput, setModalNoteInput] = useState("");
+  const [modalCustomCatName, setModalCustomCatName] = useState("");
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [manualInputModalVisible, setManualInputModalVisible] = useState(false);
@@ -145,23 +150,56 @@ const HomeScreen = () => {
       Alert.alert("Chưa nhập số tiền", "Vui lòng nhập số tiền hợp lệ.");
       return;
     }
-    // Nếu chưa chọn danh mục, gán mặc định là "Khác" để người dùng có thể "lưu luôn"
-    setModalCatInput(category || "Khác");
+    setManualInputModalVisible(false);
     setModalNoteInput("");
-    setSaveModalVisible(true);
+    // Mở modal chọn danh mục
+    setCategoryPickerVisible(true);
   };
 
-  const handleConfirmSave = async () => {
-    const finalCat = modalCatInput.trim() || "Khác";
-    setSaveModalVisible(false);
-
-    // Nếu category đã chọn ở ngoài khớp với modal -> lưu chính chủ
-    // Nếu không (nhập tay hoặc dùng mặc định Khác) -> lưu dạng snapshot
-    if (category && category === finalCat) {
-      await performSave(finalCat, modalNoteInput);
-    } else {
-      await performSave("Khác", modalNoteInput, finalCat);
+  // Khi người dùng chọn danh mục từ modal
+  const handlePickCategory = (cat: string) => {
+    // Kiểm tra ngân sách sơ bộ
+    if (type === "expense") {
+      const catBudget = budgets.find((b) => b.name === cat);
+      // Danh mục "Khác" luôn chi từ tiền chưa phân bổ
+      if (cat === "Khác" || (catBudget && catBudget.type === "direct")) {
+        if (!profile) return;
+        const totalAllocated = budgets.reduce((sum, b) => sum + b.budget, 0);
+        const unallocated = Math.max(
+          0,
+          profile.initialBalance - totalAllocated,
+        );
+        if (amount > unallocated) {
+          Alert.alert(
+            "Tiền chưa phân bổ không đủ",
+            `Danh mục "Khác" chi từ tiền chưa phân bổ. Bạn chỉ còn ${formatCurrency(unallocated)} đ.`,
+          );
+          return;
+        }
+      } else if (catBudget && (catBudget.type || "recharge") === "recharge") {
+        if (amount > catBudget.budget) {
+          Alert.alert(
+            "Ngân sách không đủ",
+            `Danh mục "${cat}" chỉ còn ${formatCurrency(catBudget.budget)} đ.`,
+          );
+          return;
+        }
+      }
     }
+    setSelectedCategoryForSave(cat);
+    setModalCustomCatName("");
+    setCategoryPickerVisible(false);
+    setNoteModalVisible(true);
+  };
+
+  // Xác nhận lưu sau khi nhập ghi chú
+  const handleConfirmNote = async () => {
+    setNoteModalVisible(false);
+    const customLabel =
+      selectedCategoryForSave === "Khác" && modalCustomCatName.trim()
+        ? modalCustomCatName.trim()
+        : undefined;
+    await performSave(selectedCategoryForSave, modalNoteInput, customLabel);
   };
 
   const performSave = async (
@@ -229,6 +267,7 @@ const HomeScreen = () => {
           });
         }
       } else {
+        // Danh mục không có trong budgets (bao gồm "Khác") - chi từ tiền chưa phân bổ
         if (!profile) return;
         const totalAllocated = budgets.reduce((sum, b) => sum + b.budget, 0);
         const unallocated = Math.max(
@@ -284,26 +323,16 @@ const HomeScreen = () => {
     }
 
     setAmount(0);
-    setCategory("");
     loadData();
   };
 
   const incomeCategories =
     profile?.incomeCategories || DEFAULT_INCOME_CATEGORIES;
   const expenseCategories = budgets.map((b) => b.name);
-  const categories = type === "expense" ? expenseCategories : incomeCategories;
-
-  const selectedBudget = (() => {
-    if (type !== "expense" || !category) return null;
-    const cat = budgets.find((b) => b.name === category);
-    if (!cat) return null;
-    if (cat.type === "direct") {
-      if (!profile) return 0;
-      const totalAllocated = budgets.reduce((sum, b) => sum + b.budget, 0);
-      return Math.max(0, profile.initialBalance - totalAllocated);
-    }
-    return cat.budget;
-  })();
+  const pickerCategories =
+    type === "expense" ? expenseCategories : incomeCategories;
+  // Nút sáng lên khi có số tiền (> 0), Alert khi nhập < 1.000đ
+  const canProceed = amount > 0;
 
   return (
     <View style={styles.container}>
@@ -314,7 +343,7 @@ const HomeScreen = () => {
           <Text style={styles.accountValue}>{accountNumber}</Text>
         </View>
         <View style={styles.headerRow}>
-          <Text style={styles.balanceLabel}>Số dư tổng</Text>
+          <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
           <TouchableOpacity onPress={toggleShowBudgets} style={styles.eyeBtn}>
             {showBudgets ? (
               <Eye color="#ffffff" size={20} />
@@ -332,10 +361,7 @@ const HomeScreen = () => {
         <View style={styles.tabs}>
           <TouchableOpacity
             style={[styles.tab, type === "expense" && styles.tabActiveExpense]}
-            onPress={() => {
-              setType("expense");
-              setCategory("");
-            }}
+            onPress={() => setType("expense")}
           >
             <ArrowDownCircle
               color={type === "expense" ? "#ffffff" : "#ef4444"}
@@ -352,10 +378,7 @@ const HomeScreen = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, type === "income" && styles.tabActiveIncome]}
-            onPress={() => {
-              setType("income");
-              setCategory("");
-            }}
+            onPress={() => setType("income")}
           >
             <ArrowUpCircle
               color={type === "income" ? "#ffffff" : "#10b981"}
@@ -382,77 +405,6 @@ const HomeScreen = () => {
           style={styles.body}
           contentContainerStyle={styles.bodyContent}
         >
-          {type === "expense" && category && selectedBudget !== null && (
-            <View
-              style={[
-                styles.budgetHint,
-                {
-                  backgroundColor: selectedBudget <= 0 ? "#fef2f2" : "#f0fdf4",
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.budgetHintText,
-                  { color: selectedBudget <= 0 ? "#ef4444" : "#16a34a" },
-                ]}
-              >
-                "{category}" còn: {formatCurrency(selectedBudget)} đ
-              </Text>
-            </View>
-          )}
-
-          <Text style={styles.sectionTitle}>
-            {type === "expense" ? "Chọn danh mục chi" : "Nguồn thu"}
-          </Text>
-          {type === "expense" && budgets.length === 0 ? (
-            <View style={styles.noBudgetBox}>
-              <Text style={styles.noBudgetText}>
-                Chưa có danh mục chi. Vào tab "Chia Tiền" để tạo và phân bổ
-                tiền.
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.categoryContainer}>
-              {categories.map((cat) => {
-                const catBudget =
-                  type === "expense"
-                    ? budgets.find((b) => b.name === cat)
-                    : null;
-                const isSelected = category === cat;
-
-                const handlePress = () => {
-                  if (isSelected) {
-                    setCategory("");
-                    return;
-                  }
-                  // Cập nhật category
-                  setCategory(cat);
-                };
-
-                return (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[
-                      styles.categoryBadge,
-                      isSelected && styles.categoryBadgeActive,
-                    ]}
-                    onPress={handlePress}
-                  >
-                    <Text
-                      style={[
-                        styles.categoryText,
-                        isSelected && styles.categoryTextActive,
-                      ]}
-                    >
-                      {cat}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
-
           {profile?.inputMethod !== "manual" && (
             <View style={styles.amountDisplay}>
               <Text
@@ -467,18 +419,18 @@ const HomeScreen = () => {
             </View>
           )}
 
-          <View style={styles.inputMethodToggleRow}>
+          {/* <View style={styles.inputMethodToggleRow}>
             <TouchableOpacity
               style={styles.quickToggleBtnCircle}
               onPress={toggleInputMethod}
             >
-              {profile?.inputMethod !== "manual" ? (
-                <PencilLine size={18} color="#3b82f6" />
+              {profile?.inputMethod === "manual" ? (
+                <LayoutGrid color="#64748b" size={24} />
               ) : (
-                <PenOff size={18} color="#3b82f6" />
+                <Keyboard color="#64748b" size={24} />
               )}
             </TouchableOpacity>
-          </View>
+          </View> */}
 
           {profile?.inputMethod === "manual" ? (
             <View style={styles.manualInputSection}>
@@ -507,49 +459,222 @@ const HomeScreen = () => {
             <TouchableOpacity
               style={[
                 styles.saveButton,
-                type === "expense" ? styles.saveExpense : styles.saveIncome,
+                canProceed
+                  ? type === "expense"
+                    ? styles.saveExpense
+                    : styles.saveIncome
+                  : styles.saveDisabled,
                 { marginTop: 10, marginBottom: 40 },
               ]}
-              onPress={handleSave}
+              onPress={() => {
+                if (amount < 1000) {
+                  Alert.alert(
+                    "Số tiền không hợp lệ",
+                    "Vui lòng nhập số tiền ít nhất 1.000 đ.",
+                  );
+                  return;
+                }
+                handleSave();
+              }}
+              activeOpacity={canProceed ? 0.8 : 0.6}
             >
-              <Text style={styles.saveButtonText}>Lưu Giao Dịch</Text>
+              <Text style={styles.saveButtonText}>Tiếp Theo →</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {/* Modal chọn danh mục */}
       <Modal
-        visible={saveModalVisible}
+        visible={categoryPickerVisible}
         transparent
         animationType="slide"
-        onRequestClose={() => setSaveModalVisible(false)}
+        onRequestClose={() => setCategoryPickerVisible(false)}
+      >
+        <View style={styles.catPickerOverlay}>
+          <View style={styles.catPickerModal}>
+            <View style={styles.catPickerHeader}>
+              <View>
+                <Text style={styles.customCatTitle}>
+                  {type === "expense"
+                    ? "💸 Chọn danh mục chi"
+                    : "💰 Chọn nguồn thu"}
+                </Text>
+                <Text style={styles.catPickerSubtitle}>
+                  Số tiền: {formatCurrency(amount)} đ
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setCategoryPickerVisible(false)}>
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            {pickerCategories.length === 0 ? (
+              <View style={styles.emptyCatContainer}>
+                <Text style={styles.emptyCatText}>
+                  Chưa có danh mục. Vào tab "Chia Tiền" để tạo danh mục.
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={pickerCategories}
+                keyExtractor={(item) => item}
+                style={styles.catPickerList}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => {
+                  const catBudget =
+                    type === "expense"
+                      ? budgets.find((b) => b.name === item)
+                      : null;
+                  const remaining = (() => {
+                    if (!catBudget) return null;
+                    if (catBudget.type === "direct") {
+                      if (!profile) return 0;
+                      const totalAllocated = budgets.reduce(
+                        (s, b) => s + b.budget,
+                        0,
+                      );
+                      return Math.max(
+                        0,
+                        profile.initialBalance - totalAllocated,
+                      );
+                    }
+                    return catBudget.budget;
+                  })();
+                  return (
+                    <TouchableOpacity
+                      style={styles.catPickerItem}
+                      onPress={() => handlePickCategory(item)}
+                    >
+                      <Text style={styles.catPickerItemName}>{item}</Text>
+                      <View style={styles.catPickerItemRight}>
+                        {remaining !== null && (
+                          <Text
+                            style={[
+                              styles.catPickerItemBudget,
+                              remaining <= 0 && { color: "#ef4444" },
+                            ]}
+                          >
+                            {formatCurrency(remaining)} đ
+                          </Text>
+                        )}
+                        <ChevronRight color="#94a3b8" size={18} />
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }}
+                ItemSeparatorComponent={() => (
+                  <View style={styles.catPickerSeparator} />
+                )}
+                ListFooterComponent={() => {
+                  const totalAllocated = budgets.reduce(
+                    (s, b) => s + b.budget,
+                    0,
+                  );
+                  const unallocated = profile
+                    ? Math.max(0, profile.initialBalance - totalAllocated)
+                    : 0;
+                  return (
+                    <>
+                      <View style={styles.catPickerSeparator} />
+                      <TouchableOpacity
+                        style={[styles.catPickerItem, styles.catPickerItemKhac]}
+                        onPress={() => handlePickCategory("Khác")}
+                      >
+                        <View style={styles.catPickerKhacLabel}>
+                          <Text
+                            style={[
+                              styles.catPickerItemName,
+                              { color: "#7c3aed" },
+                            ]}
+                          >
+                            Khác
+                          </Text>
+                          <Text style={styles.catPickerKhacHint}>
+                            {type === "expense"
+                              ? "Chi từ tiền chưa phân bổ"
+                              : "Nguồn thu khác"}
+                          </Text>
+                        </View>
+                        <View style={styles.catPickerItemRight}>
+                          {type === "expense" && (
+                            <Text
+                              style={[
+                                styles.catPickerItemBudget,
+                                {
+                                  color:
+                                    unallocated <= 0 ? "#ef4444" : "#7c3aed",
+                                },
+                              ]}
+                            >
+                              {formatCurrency(unallocated)} đ
+                            </Text>
+                          )}
+                          <ChevronRight color="#7c3aed" size={18} />
+                        </View>
+                      </TouchableOpacity>
+                    </>
+                  );
+                }}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal ghi chú sau khi chọn danh mục */}
+      <Modal
+        visible={noteModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setNoteModalVisible(false)}
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <View style={styles.customCatModal}>
+          <View style={styles.noteModal}>
+            {/* Nút quay lại */}
+            <TouchableOpacity
+              style={styles.noteModalBackBtn}
+              onPress={() => {
+                setNoteModalVisible(false);
+                setCategoryPickerVisible(true);
+              }}
+            >
+              <Text style={styles.noteModalBackText}>
+                ← Quay lại chọn danh mục
+              </Text>
+            </TouchableOpacity>
+
             <Text style={styles.customCatTitle}>
               {type === "expense"
                 ? "💸 Hoàn tất chi tiền"
                 : "💰 Hoàn tất thu tiền"}
             </Text>
+            <Text style={styles.catPickerSubtitle}>
+              Danh mục:{" "}
+              {selectedCategoryForSave === "Khác" && modalCustomCatName.trim()
+                ? modalCustomCatName.trim()
+                : selectedCategoryForSave}{" "}
+              — {formatCurrency(amount)} đ
+            </Text>
 
-            <Text style={styles.modalFieldLabel}>Danh mục</Text>
-            <TextInput
-              style={[
-                styles.customCatInput,
-                category !== "" && {
-                  backgroundColor: "#f1f5f9",
-                  color: "#64748b",
-                },
-              ]}
-              placeholder="Nhập tên danh mục..."
-              placeholderTextColor="#94a3b8"
-              value={modalCatInput}
-              onChangeText={setModalCatInput}
-              editable={category === ""}
-            />
+            {selectedCategoryForSave === "Khác" && (
+              <>
+                <Text style={styles.modalFieldLabel}>
+                  Tên danh mục (không bắt buộc)
+                </Text>
+                <TextInput
+                  style={styles.modalNoteInput}
+                  placeholder={'Để trống sẽ lưu là "Khác"...'}
+                  placeholderTextColor="#94a3b8"
+                  value={modalCustomCatName}
+                  onChangeText={setModalCustomCatName}
+                  returnKeyType="done"
+                />
+              </>
+            )}
 
             <Text style={styles.modalFieldLabel}>Ghi chú (không bắt buộc)</Text>
             <TextInput
@@ -565,7 +690,7 @@ const HomeScreen = () => {
             <View style={styles.customCatActions}>
               <TouchableOpacity
                 style={styles.customCatCancelBtn}
-                onPress={() => setSaveModalVisible(false)}
+                onPress={() => setNoteModalVisible(false)}
               >
                 <Text style={styles.customCatCancelText}>Hủy</Text>
               </TouchableOpacity>
@@ -576,7 +701,7 @@ const HomeScreen = () => {
                     ? styles.customCatConfirmExpense
                     : styles.customCatConfirmIncome,
                 ]}
-                onPress={handleConfirmSave}
+                onPress={handleConfirmNote}
               >
                 <Text style={styles.customCatConfirmText}>Xác nhận lưu</Text>
               </TouchableOpacity>
@@ -618,14 +743,25 @@ const HomeScreen = () => {
             <TouchableOpacity
               style={[
                 styles.manualInputDoneBtn,
-                type === "expense" ? styles.saveExpense : styles.saveIncome,
+                canProceed
+                  ? type === "expense"
+                    ? styles.saveExpense
+                    : styles.saveIncome
+                  : styles.saveDisabled,
               ]}
               onPress={() => {
+                if (amount < 1000) {
+                  Alert.alert(
+                    "Số tiền không hợp lệ",
+                    "Vui lòng nhập số tiền ít nhất 1.000 đ.",
+                  );
+                  return;
+                }
                 setManualInputModalVisible(false);
                 setTimeout(handleSave, 300);
               }}
             >
-              <Text style={styles.manualInputDoneBtnText}>Lưu Giao Dịch</Text>
+              <Text style={styles.manualInputDoneBtnText}>Tiếp Theo →</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -847,6 +983,7 @@ const styles = StyleSheet.create({
   },
   saveExpense: { backgroundColor: "#ef4444" },
   saveIncome: { backgroundColor: "#10b981" },
+  saveDisabled: { backgroundColor: "#cbd5e1", elevation: 0, shadowOpacity: 0 },
   saveButtonText: { color: "#ffffff", fontSize: 18, fontWeight: "bold" },
   // Footer / Manual Input Styles
   footerAction: {
@@ -955,6 +1092,11 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     paddingHorizontal: 0,
   },
+  catPickerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    justifyContent: "flex-end",
+  },
   customCatModal: {
     backgroundColor: "#ffffff",
     borderTopLeftRadius: 32,
@@ -967,6 +1109,31 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     paddingBottom: 40,
+  },
+  noteModal: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    width: "100%",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    paddingBottom: 40,
+    minHeight: "60%",
+  },
+  noteModalBackBtn: {
+    alignSelf: "flex-start",
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+    marginBottom: 12,
+  },
+  noteModalBackText: {
+    color: "#3b82f6",
+    fontSize: 14,
+    fontWeight: "600",
   },
   customCatTitle: {
     fontSize: 18,
@@ -1083,6 +1250,90 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  // Category Picker Modal Styles
+  catPickerModal: {
+    backgroundColor: "#ffffff",
+    width: "100%",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    paddingBottom: 40,
+    elevation: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    marginTop: 80,
+    flex: 1,
+  },
+  catPickerKhacLabel: {
+    flex: 1,
+  },
+  catPickerKhacHint: {
+    fontSize: 12,
+    color: "#7c3aed",
+    opacity: 0.7,
+    marginTop: 2,
+  },
+  catPickerItemKhac: {
+    backgroundColor: "#f5f3ff",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    marginTop: 4,
+  },
+  catPickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 4,
+  },
+  catPickerSubtitle: {
+    fontSize: 13,
+    color: "#64748b",
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  catPickerList: {
+    marginTop: 8,
+    flex: 1,
+  },
+  catPickerItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+  },
+  catPickerItemName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0f172a",
+    flex: 1,
+  },
+  catPickerItemRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  catPickerItemBudget: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#10b981",
+  },
+  catPickerSeparator: {
+    height: 1,
+    backgroundColor: "#f1f5f9",
+  },
+  emptyCatContainer: {
+    paddingVertical: 32,
+    alignItems: "center",
+  },
+  emptyCatText: {
+    fontSize: 14,
+    color: "#94a3b8",
+    textAlign: "center",
+    lineHeight: 22,
   },
 });
 

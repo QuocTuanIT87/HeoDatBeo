@@ -31,6 +31,13 @@ export interface SavingHistoryItem {
   timestamp: number;
 }
 
+export interface CustomFund {
+  id: string;
+  name: string;
+  balance: number;
+  icon?: string;
+}
+
 export interface UserProfile {
   name: string;
   initialBalance: number;
@@ -41,6 +48,7 @@ export interface UserProfile {
   savingHistory?: SavingHistoryItem[]; // Lịch sử tiết kiệm các năm trước
   incomeCategories?: string[];
   categoryBudgets?: CategoryBudget[]; // Danh mục chi kèm ngân sách
+  customFunds?: CustomFund[]; // Quỹ tùy biến của người dùng
   hasSeenGuide?: boolean;
   inputMethod?: 'keypad' | 'manual';
 }

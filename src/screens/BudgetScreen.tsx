@@ -20,6 +20,8 @@ import {
   EyeOff,
   PencilLine,
   PenOff,
+  LayoutGrid,
+  Keyboard,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { CategoryBudget, UserProfile } from "../types";
@@ -336,18 +338,15 @@ const BudgetScreen = () => {
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.headerTitle}>Số dư chưa phân bổ</Text>
-            <Text style={styles.headerSubtitle}>
-              Dùng cho các khoản phát sinh
-            </Text>
           </View>
           <TouchableOpacity
             onPress={() => setShowAmount(!showAmount)}
             style={styles.eyeBtn}
           >
             {showAmount ? (
-              <Eye color="#ffffff" size={24} />
+              <Eye color="#ffffff" size={18} />
             ) : (
-              <EyeOff color="#ffffff" size={24} />
+              <EyeOff color="#ffffff" size={18} />
             )}
           </TouchableOpacity>
         </View>
@@ -361,9 +360,11 @@ const BudgetScreen = () => {
 
         <View style={styles.headerCards}>
           <View style={styles.headerCard}>
-            <Text style={styles.headerCardLabel}>Số dư tổng</Text>
+            <Text style={styles.headerCardLabel}>Quỹ Tiêu Sài</Text>
             <Text style={styles.headerCardValue}>
-              {showAmount ? `${formatCurrency(totalBalance)} đ` : "******"}
+              {showAmount
+                ? `${formatCurrency(totalBalance - unallocated)} đ`
+                : "******"}
             </Text>
           </View>
           <View style={styles.headerDivider} />
@@ -410,11 +411,9 @@ const BudgetScreen = () => {
         contentContainerStyle={styles.bodyContent}
       >
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            {activeTab === "recharge"
-              ? "Túi ngân sách của bạn"
-              : "Danh mục chi trực tiếp"}
-          </Text>
+          {/* <Text style={styles.sectionTitle}>
+            {activeTab === "recharge" ? "Danh mục" : "Danh mục chi trực tiếp"}
+          </Text> */}
           <TouchableOpacity
             style={styles.addCatBtn}
             onPress={() => {
@@ -423,7 +422,7 @@ const BudgetScreen = () => {
             }}
           >
             <PlusCircle color="#7c3aed" size={20} />
-            <Text style={styles.addCatText}>Thêm mới</Text>
+            <Text style={styles.addCatText}>Thêm mới danh mục chi tiêu</Text>
           </TouchableOpacity>
         </View>
 
@@ -525,18 +524,18 @@ const BudgetScreen = () => {
               </Text>
             </Text>
 
-            <View style={styles.inputMethodToggleRow}>
+            {/* <View style={styles.inputMethodToggleRow}>
               <TouchableOpacity
                 style={styles.quickToggleBtnCircle}
                 onPress={toggleInputMethod}
               >
-                {profile?.inputMethod !== "manual" ? (
-                  <PencilLine size={18} color="#3b82f6" />
+                {profile?.inputMethod === "manual" ? (
+                  <LayoutGrid color="#64748b" size={24} />
                 ) : (
-                  <PenOff size={18} color="#3b82f6" />
+                  <Keyboard color="#64748b" size={24} />
                 )}
               </TouchableOpacity>
-            </View>
+            </View> */}
 
             {profile?.inputMethod === "manual" ? (
               <View style={styles.manualInputWrapper}>
@@ -691,41 +690,10 @@ const BudgetScreen = () => {
               onSubmitEditing={handleAddCategory}
             />
 
-            <Text style={styles.typeLabel}>Kiểu danh mục:</Text>
-            <View style={styles.typeToggleRow}>
-              <TouchableOpacity
-                style={[
-                  styles.typeToggleBtn,
-                  newCatType === "recharge" && styles.typeToggleBtnActive,
-                ]}
-                onPress={() => setNewCatType("recharge")}
-              >
-                <Text
-                  style={[
-                    styles.typeToggleText,
-                    newCatType === "recharge" && styles.typeToggleTextActive,
-                  ]}
-                >
-                  Cần nạp tiền
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.typeToggleBtn,
-                  newCatType === "direct" && styles.typeToggleBtnActive,
-                ]}
-                onPress={() => setNewCatType("direct")}
-              >
-                <Text
-                  style={[
-                    styles.typeToggleText,
-                    newCatType === "direct" && styles.typeToggleTextActive,
-                  ]}
-                >
-                  Không cần nạp
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.typeLabel}>
+              Kiểu danh mục:{" "}
+              {newCatType === "direct" ? "Không cần nạp" : "Cần nạp tiền"}
+            </Text>
 
             <TouchableOpacity
               style={styles.confirmBtn}
@@ -882,11 +850,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
   },
   catName: { fontSize: 17, fontWeight: "bold", color: "#334155" },
   catBudget: { fontSize: 16, fontWeight: "bold" },
-  progressContainer: { marginTop: 4 },
+  progressContainer: { marginTop: 16 },
   progressTrack: {
     height: 8,
     backgroundColor: "#f1f5f9",

@@ -212,6 +212,8 @@ const StatisticsScreen = () => {
   const [selectedPieCategory, setSelectedPieCategory] = useState<string | null>(
     null,
   );
+  // Pie chart mode: "category" = theo danh mục, "note" = theo ghi chú
+  const [pieChartMode, setPieChartMode] = useState<"category" | "note">("category");
 
   // BarChart state
   const [selectedBarData, setSelectedBarData] = useState<{
@@ -301,9 +303,13 @@ const StatisticsScreen = () => {
     const now = new Date();
     let filtered = data;
 
-    // Bỏ qua giao dịch tiết kiệm khỏi Thống kê
+    // Bỏ qua giao dịch tiết kiệm và quỹ tùy chỉnh khỏi Thống kê
     filtered = filtered.filter(
-      (tx) => tx.category !== "Tiết kiệm" && tx.category !== "Rút tiết kiệm",
+      (tx) => 
+        tx.category !== "Tiết kiệm" && 
+        tx.category !== "Rút tiết kiệm" &&
+        tx.category !== "Xóa Quỹ" &&
+        !(profile?.customFunds || []).some(f => f.name === tx.category)
     );
 
     // Filter by Period
@@ -404,6 +410,17 @@ const StatisticsScreen = () => {
                   initialBalance: p.initialBalance + tx.amount,
                 };
                 await storage.saveUserProfile(updatedProfile);
+              } else if (p.customFunds && p.customFunds.some(f => f.name === catName)) {
+                // Xóa giao dịch nạp quỹ tùy chỉnh -> Trừ quỹ, cộng lại unallocated
+                const updatedFunds = p.customFunds.map(f => 
+                  f.name === catName ? { ...f, balance: Math.max(0, f.balance - tx.amount) } : f
+                );
+                const updatedProfile = {
+                  ...p,
+                  initialBalance: p.initialBalance + tx.amount,
+                  customFunds: updatedFunds
+                };
+                await storage.saveUserProfile(updatedProfile);
               } else {
                 // YC 1: Xóa giao dịch chi thường
                 // Cộng lại initialBalance để tổng số dư tăng
@@ -437,6 +454,17 @@ const StatisticsScreen = () => {
                 const updatedProfile = {
                   ...p,
                   initialBalance: p.initialBalance - tx.amount,
+                };
+                await storage.saveUserProfile(updatedProfile);
+              } else if (p.customFunds && p.customFunds.some(f => f.name === catName)) {
+                // Xóa giao dịch rút quỹ tùy chỉnh -> Cộng lại quỹ, trừ unallocated
+                const updatedFunds = p.customFunds.map(f => 
+                  f.name === catName ? { ...f, balance: f.balance + tx.amount } : f
+                );
+                const updatedProfile = {
+                  ...p,
+                  initialBalance: p.initialBalance - tx.amount,
+                  customFunds: updatedFunds
                 };
                 await storage.saveUserProfile(updatedProfile);
               } else {
@@ -503,6 +531,31 @@ const StatisticsScreen = () => {
           ...p,
           initialBalance: p.initialBalance - diff,
         });
+      } else if (p.customFunds && p.customFunds.some(f => f.name === catName)) {
+        // Sửa giao dịch nạp quỹ tùy chỉnh
+        const fund = p.customFunds.find(f => f.name === catName)!;
+        if (diff > 0) {
+          const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
+          const unallocated = Math.max(0, p.initialBalance - totalAllocated);
+          if (diff > unallocated) {
+            Alert.alert("Lỗi", "Số dư chưa phân bổ không đủ để nạp thêm.");
+            return;
+          }
+        } else if (diff < 0) {
+          const loss = Math.abs(diff);
+          if (loss > fund.balance) {
+            Alert.alert("Lỗi", `Số dư quỹ không đủ để giảm khoản nạp này.`);
+            return;
+          }
+        }
+        const updatedFunds = p.customFunds.map(f => 
+          f.name === catName ? { ...f, balance: f.balance + diff } : f
+        );
+        await storage.saveUserProfile({ 
+          ...p, 
+          initialBalance: p.initialBalance - diff,
+          customFunds: updatedFunds
+        });
       } else {
         const cat = cats.find(b => b.name === catName);
         if (cat) {
@@ -550,6 +603,31 @@ const StatisticsScreen = () => {
       if (catName === "Rút tiết kiệm") {
         // Thu từ tiết kiệm: chỉ thay đổi initialBalance
         await storage.saveUserProfile({ ...p, initialBalance: p.initialBalance + diff });
+      } else if (p.customFunds && p.customFunds.some(f => f.name === catName)) {
+        // Sửa giao dịch rút quỹ tùy chỉnh
+        const fund = p.customFunds.find(f => f.name === catName)!;
+        if (diff > 0) {
+          if (diff > fund.balance) {
+            Alert.alert("Lỗi", `Quỹ này không đủ số dư để rút thêm ${formatCurrency(diff)} đ.`);
+            return;
+          }
+        } else if (diff < 0) {
+          const loss = Math.abs(diff);
+          const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
+          const unallocated = Math.max(0, p.initialBalance - totalAllocated);
+          if (loss > unallocated) {
+            Alert.alert("Lỗi", "Số dư chưa phân bổ không đủ để giảm khoản rút này.");
+            return;
+          }
+        }
+        const updatedFunds = p.customFunds.map(f => 
+          f.name === catName ? { ...f, balance: f.balance - diff } : f
+        );
+        await storage.saveUserProfile({ 
+          ...p, 
+          initialBalance: p.initialBalance + diff,
+          customFunds: updatedFunds
+        });
       } else {
         // Thu nhập bình thường: nếu giảm thu nhập, kiểm tra unallocated
         if (diff < 0) {
@@ -759,6 +837,42 @@ const StatisticsScreen = () => {
         baseCategory: categoryTotals[catName].baseCat,
       }))
       .sort((a, b) => b.population - a.population);
+  };
+
+  // Thống kê theo ghi chú: nếu giao dịch có ghi chú thì dùng ghi chú đó, nếu không thì dùng tên danh mục
+  // Ghi chú trùng tên (bất kể hoa/thường, khoảng trắng) sẽ được cộng dồn
+  const getPieChartDataByNote = () => {
+    const expenses = filteredTransactions.filter((tx) => tx.type === "expense");
+    // key = normalized (trim+lowercase), value = { total, displayLabel, baseCat }
+    const noteTotals: Record<string, { total: number; displayLabel: string; baseCat: string }> = {};
+
+    const colors = [
+      "#ef4444", "#f97316", "#f59e0b", "#84cc16", "#10b981",
+      "#06b6d4", "#3b82f6", "#8b5cf6", "#d946ef", "#f43f5e", "#64748b",
+    ];
+
+    expenses.forEach((tx) => {
+      const catName = tx.categorySnapshot || tx.category;
+      const rawLabel = tx.note?.trim() || catName;
+      // Dùng normalized key để merge trùng (viết hoa/thường khác nhau → cộng chung)
+      const key = rawLabel.toLowerCase();
+      if (!noteTotals[key]) {
+        noteTotals[key] = { total: 0, displayLabel: rawLabel, baseCat: tx.category };
+      }
+      noteTotals[key].total += tx.amount;
+    });
+
+    const total = Object.values(noteTotals).reduce((sum, v) => sum + v.total, 0);
+    if (total === 0) return [];
+
+    return Object.values(noteTotals)
+      .sort((a, b) => b.total - a.total)
+      .map((entry, index) => ({
+        name: entry.displayLabel,
+        population: entry.total,
+        color: colors[index % colors.length],
+        baseCategory: entry.baseCat,
+      }));
   };
 
   const getNoteDetailsForCategory = (catName: string) => {
@@ -1279,14 +1393,20 @@ const StatisticsScreen = () => {
         visible={showPieChartModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowPieChartModal(false)}
+        onRequestClose={() => {
+          setShowPieChartModal(false);
+          setPieChartMode("category");
+        }}
       >
         <View style={styles.pieModalOverlay}>
           <View style={styles.pieModalBox}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Cơ cấu Chi Tiền</Text>
               <TouchableOpacity
-                onPress={() => setShowPieChartModal(false)}
+                onPress={() => {
+                  setShowPieChartModal(false);
+                  setPieChartMode("category");
+                }}
                 style={{
                   padding: 8,
                   backgroundColor: "#f1f5f9",
@@ -1298,24 +1418,74 @@ const StatisticsScreen = () => {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* Toggle Danh mục / Ghi chú */}
+            <View style={styles.pieModeToggle}>
+              <TouchableOpacity
+                style={[
+                  styles.pieModeBtn,
+                  pieChartMode === "category" && styles.pieModeBtnActive,
+                ]}
+                onPress={() => {
+                  setPieChartMode("category");
+                  setSelectedPieCategory(null);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.pieModeBtnText,
+                    pieChartMode === "category" && styles.pieModeBtnTextActive,
+                  ]}
+                >
+                  Theo danh mục
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.pieModeBtn,
+                  pieChartMode === "note" && styles.pieModeBtnActive,
+                ]}
+                onPress={() => {
+                  setPieChartMode("note");
+                  setSelectedPieCategory(null);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.pieModeBtnText,
+                    pieChartMode === "note" && styles.pieModeBtnTextActive,
+                  ]}
+                >
+                  Theo ghi chú
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.pieChartWrapper}>
               <CustomPieChart
-                data={getPieChartData()}
+                data={
+                  pieChartMode === "category"
+                    ? getPieChartData()
+                    : getPieChartDataByNote()
+                }
                 selectedCategory={selectedPieCategory}
                 onSelectCategory={setSelectedPieCategory}
-                renderNoteDetails={(catName) => {
-                  const details = getNoteDetailsForCategory(catName);
-                  return (
-                    <View>
-                      {details.map((item, idx) => (
-                        <View key={idx} style={styles.inlineNoteItem}>
-                          <Text style={styles.inlineNoteText}>• {item.note}</Text>
-                          <Text style={styles.inlineNoteAmount}>{formatCurrency(item.total)} đ</Text>
-                        </View>
-                      ))}
-                    </View>
-                  );
-                }}
+                renderNoteDetails={pieChartMode === "category"
+                  ? (catName) => {
+                    const details = getNoteDetailsForCategory(catName);
+                    return (
+                      <View>
+                        {details.map((item, idx) => (
+                          <View key={idx} style={styles.inlineNoteItem}>
+                            <Text style={styles.inlineNoteText}>• {item.note}</Text>
+                            <Text style={styles.inlineNoteAmount}>{formatCurrency(item.total)} đ</Text>
+                          </View>
+                        ))}
+                      </View>
+                    );
+                  }
+                  : undefined
+                }
               />
             </View>
           </View>
@@ -2003,6 +2173,33 @@ const styles = StyleSheet.create({
     color: "#94a3b8",
     fontSize: 15,
     paddingVertical: 32,
+  },
+  // Pie chart mode toggle styles
+  pieModeToggle: {
+    flexDirection: "row",
+    backgroundColor: "#f1f5f9",
+    borderRadius: 12,
+    padding: 4,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  pieModeBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: "center",
+    borderRadius: 10,
+  },
+  pieModeBtnActive: {
+    backgroundColor: "#3b82f6",
+  },
+  pieModeBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  pieModeBtnTextActive: {
+    color: "#ffffff",
   },
 });
 
