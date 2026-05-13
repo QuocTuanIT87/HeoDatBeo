@@ -21,6 +21,8 @@ import {
   PlusCircle,
   ArrowDownCircle,
   ArrowUpCircle,
+  PieChart,
+  BarChart3,
 } from "lucide-react-native";
 
 const GuideScreen = () => {
@@ -84,11 +86,38 @@ const GuideScreen = () => {
           <Text style={styles.sectionTitle}>2. Chia Tiền (Lập ngân sách)</Text>
           <Text style={styles.guideText}>
             Sau khi có tiền Chưa phân bổ, bạn sang tab{" "}
-            <Text style={{ fontWeight: "bold" }}>Chia Tiền</Text>. Tại đây, bạn
-            rút tiền từ "Chưa phân bổ" để nạp vào các danh mục cụ thể (như Ăn
-            uống, Xăng cộ). Khi nào các danh mục này có tiền thì bạn mới có thể
-            "Chi tiêu" chúng.
+            <Text style={{ fontWeight: "bold" }}>Chia Tiền</Text> để lập kế
+            hoạch chi tiêu. Hệ thống hỗ trợ 2 loại danh mục:
           </Text>
+
+          <View style={styles.noteItem}>
+            <Layers color="#7c3aed" size={20} />
+            <Text style={styles.noteText}>
+              <Text style={{ fontWeight: "bold", color: "#7c3aed" }}>
+                1. Danh mục Cần nạp tiền:
+              </Text>{" "}
+              Giống như một phong bì tiền mặt. Bạn phải nạp tiền vào phong bì
+              này trước khi tiêu. Tiền tiêu sẽ trừ vào số dư trong phong bì đó.
+              (Vd: Ăn uống, Xăng xe).
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.noteItem,
+              { backgroundColor: "#eff6ff", borderColor: "#bfdbfe" },
+            ]}
+          >
+            <PlusCircle color="#3b82f6" size={20} />
+            <Text style={[styles.noteText, { color: "#1e40af" }]}>
+              <Text style={{ fontWeight: "bold", color: "#3b82f6" }}>
+                2. Danh mục Chi trực tiếp:
+              </Text>{" "}
+              Tiền sẽ được trừ trực tiếp từ giỏ{" "}
+              <Text style={{ fontWeight: "bold" }}>"Chưa phân bổ"</Text>. Bạn
+              không cần nạp tiền vào danh mục này.
+            </Text>
+          </View>
 
           <View style={styles.mockupContainer}>
             <View style={styles.mockFlow}>
@@ -103,18 +132,31 @@ const GuideScreen = () => {
 
               <View style={styles.mockGrid}>
                 <TouchableOpacity style={styles.mockCategory}>
-                  <Text style={styles.mockCatName}>Ăn uống</Text>
+                  <Text style={styles.mockCatName}>Ăn uống (Nạp)</Text>
                   <Text style={styles.mockCatValue}>3,000,000 đ</Text>
                   <View style={styles.mockActionBadge}>
-                    <Text style={styles.mockActionBadgeText}>Nạp / Rút</Text>
+                    <Text style={styles.mockActionBadgeText}>Đã nạp</Text>
                   </View>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.mockCategory}>
-                  <Text style={styles.mockCatName}>Xăng cộ</Text>
-                  <Text style={styles.mockCatValue}>500,000 đ</Text>
-                  <View style={styles.mockActionBadge}>
-                    <Text style={styles.mockActionBadgeText}>Nạp / Rút</Text>
+                <TouchableOpacity
+                  style={[styles.mockCategory, { borderColor: "#3b82f6" }]}
+                >
+                  <Text style={styles.mockCatName}>Thuê nhà </Text>
+                  <Text style={[styles.mockCatValue, { color: "#3b82f6" }]}>
+                    - Trực tiếp -
+                  </Text>
+                  <View
+                    style={[
+                      styles.mockActionBadge,
+                      { backgroundColor: "#dbeafe" },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.mockActionBadgeText, { color: "#3b82f6" }]}
+                    >
+                      Dùng tiền chưa phân bổ
+                    </Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -299,9 +341,81 @@ const GuideScreen = () => {
           </Text>
         </View>
 
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>6. Thống kê trực quan</Text>
+          <Text style={styles.guideText}>
+            Ứng dụng tự động tổng hợp và vẽ biểu đồ từ lịch sử chi tiêu của bạn,
+            giúp bạn nhận diện những "lỗ hổng" tài chính dễ dàng.
+          </Text>
+
+          <View style={styles.mockupContainer}>
+            <View style={styles.mockChartBox}>
+              <View style={styles.mockChartHeader}>
+                <PieChart color="#7c3aed" size={20} />
+                <Text style={styles.mockChartTitle}>Cơ cấu chi tiêu</Text>
+              </View>
+
+              <View style={styles.mockPieContainer}>
+                <View style={styles.mockPieCircle}>
+                  <PieChart color="#7c3aed" size={40} />
+                </View>
+                <View style={styles.mockLegend}>
+                  <View style={styles.mockLegendItem}>
+                    <View
+                      style={[styles.legendDot, { backgroundColor: "#7c3aed" }]}
+                    />
+                    <Text style={styles.legendText}>Ăn uống: 60%</Text>
+                  </View>
+                  <View style={styles.mockLegendItem}>
+                    <View
+                      style={[styles.legendDot, { backgroundColor: "#10b981" }]}
+                    />
+                    <Text style={styles.legendText}>Tiền nhà: 25%</Text>
+                  </View>
+                  <View style={styles.mockLegendItem}>
+                    <View
+                      style={[styles.legendDot, { backgroundColor: "#f59e0b" }]}
+                    />
+                    <Text style={styles.legendText}>Khác: 15%</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.mockBarContainer}>
+                <View style={styles.mockBarHeader}>
+                  <BarChart3 color="#3b82f6" size={18} />
+                  <Text style={styles.mockChartTitleSmall}>Thu vs Chi</Text>
+                </View>
+                <View style={styles.mockBarRow}>
+                  <View style={styles.mockBarTrack}>
+                    <View
+                      style={[
+                        styles.mockBarFill,
+                        { width: "80%", backgroundColor: "#10b981" },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.mockBarLabel}>Thu</Text>
+                </View>
+                <View style={styles.mockBarRow}>
+                  <View style={styles.mockBarTrack}>
+                    <View
+                      style={[
+                        styles.mockBarFill,
+                        { width: "45%", backgroundColor: "#ef4444" },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.mockBarLabel}>Chi</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+
         {/* LƯU Ý KHÁC */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>6. Một số lưu ý quan trọng</Text>
+          <Text style={styles.sectionTitle}>7. Một số lưu ý quan trọng</Text>
           <View style={styles.noteItem}>
             <AlertCircle color="#f59e0b" size={20} />
             <Text style={styles.noteText}>
@@ -329,7 +443,7 @@ const GuideScreen = () => {
             <Text style={styles.noteText}>
               Bạn chỉ có thể <Text style={{ fontWeight: "bold" }}>xóa</Text>{" "}
               giao dịch vừa tạo trong vòng{" "}
-              <Text style={{ color: "#ef4444" }}>5 phút</Text>. Sau thời gian
+              <Text style={{ color: "#ef4444" }}>3 ngày</Text>. Sau thời gian
               này, giao dịch sẽ chốt sổ vĩnh viễn.
             </Text>
           </View>
@@ -367,7 +481,8 @@ const GuideScreen = () => {
               <Text style={{ fontWeight: "bold" }}>lịch sử giao dịch quỹ</Text>{" "}
               bằng cách nhấn icon{" "}
               <Text style={{ fontWeight: "bold" }}>đồng hồ 🕐</Text> ở góc phải
-              màn hình Quỹ. Các giao dịch này chỉ dùng để lưu vết, không thể xóa.
+              màn hình Quỹ. Các giao dịch này chỉ dùng để lưu vết, không thể
+              xóa.
             </Text>
           </View>
         </View>
@@ -541,6 +656,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#64748b",
     fontWeight: "bold",
+    textAlign: "center",
   },
   mockGuideSubText: {
     fontSize: 14,
@@ -670,6 +786,96 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: "#f1f5f9",
     lineHeight: 18,
+  },
+  mockChartBox: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  mockChartHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  mockChartTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#0f172a",
+  },
+  mockPieContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    marginBottom: 20,
+  },
+  mockPieCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+  },
+  mockLegend: {
+    gap: 4,
+  },
+  mockLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendText: {
+    fontSize: 12,
+    color: "#475569",
+  },
+  mockBarContainer: {
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+    paddingTop: 12,
+  },
+  mockBarHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 10,
+  },
+  mockChartTitleSmall: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#334155",
+  },
+  mockBarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 8,
+  },
+  mockBarTrack: {
+    flex: 1,
+    height: 8,
+    backgroundColor: "#f1f5f9",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  mockBarFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  mockBarLabel: {
+    width: 30,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
   },
 });
 
