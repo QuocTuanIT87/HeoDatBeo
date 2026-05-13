@@ -22,6 +22,7 @@ import {
   PenOff,
   LayoutGrid,
   Keyboard,
+  ArrowRightLeft,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { CategoryBudget, UserProfile } from "../types";
@@ -177,6 +178,24 @@ const BudgetScreen = () => {
       Alert.alert("Lỗi", "Danh mục này đã tồn tại.");
       return;
     }
+
+    const txs = await storage.getTransactions();
+    let hasUpdatedTx = false;
+    const updatedTxs = txs.map((tx) => {
+      if (tx.category === "Khác" && tx.categorySnapshot === name) {
+        hasUpdatedTx = true;
+        return {
+          ...tx,
+          category: name,
+        };
+      }
+      return tx;
+    });
+
+    if (hasUpdatedTx) {
+      await storage.updateTransactionsBulk(updatedTxs);
+    }
+
     const updated = [
       ...budgets,
       { name, budget: 0, spent: 0, type: newCatType },
@@ -259,6 +278,56 @@ const BudgetScreen = () => {
     await executeDeletion(catToDelete, hasTxToDelete);
   };
 
+  const handleSwitchCategoryType = (cat: CategoryBudget) => {
+    const isDirect = cat.type === "direct";
+    
+    if (isDirect) {
+      Alert.alert(
+        "Chuyển đổi danh mục",
+        `Bạn muốn chuyển "${cat.name}" thành danh mục Cần nạp tiền?`,
+        [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "Đồng ý",
+            onPress: async () => {
+              const updated = budgets.map((b) =>
+                b.name === cat.name ? { ...b, type: "recharge" as const } : b
+              );
+              const success = await storage.saveCategoryBudgets(updated);
+              if (success) {
+                setBudgets(updated);
+                Alert.alert("Thành công", `Đã chuyển "${cat.name}" thành Cần nạp tiền.`);
+              }
+            },
+          },
+        ]
+      );
+    } else {
+      Alert.alert(
+        "Chuyển đổi danh mục",
+        `Bạn muốn chuyển "${cat.name}" thành danh mục Chi trực tiếp?\n\nSố tiền còn lại trong túi (${formatCurrency(cat.budget)} đ) sẽ được hoàn trả vào tiền chưa phân bổ.`,
+        [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "Đồng ý",
+            onPress: async () => {
+              const returnedAmount = cat.budget;
+              const updated = budgets.map((b) =>
+                b.name === cat.name ? { ...b, budget: 0, type: "direct" as const } : b
+              );
+              const success = await storage.saveCategoryBudgets(updated);
+              if (success) {
+                setBudgets(updated);
+                setUnallocated((prev) => prev + returnedAmount);
+                Alert.alert("Thành công", `Đã chuyển "${cat.name}" thành Chi trực tiếp và hoàn lại ${formatCurrency(returnedAmount)} đ.`);
+              }
+            },
+          },
+        ]
+      );
+    }
+  };
+
   const totalBalance =
     budgets.reduce((sum, c) => sum + c.budget, 0) + unallocated;
 
@@ -322,12 +391,20 @@ const BudgetScreen = () => {
             </View>
           )}
         </View>
-        <TouchableOpacity
-          style={styles.deleteBtn}
-          onPress={() => handleOpenDeleteConfirm(cat)}
-        >
-          <Trash2 color="#cbd5e1" size={18} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <TouchableOpacity
+            style={{ padding: 10 }}
+            onPress={() => handleSwitchCategoryType(cat)}
+          >
+            <ArrowRightLeft color="#94a3b8" size={18} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => handleOpenDeleteConfirm(cat)}
+          >
+            <Trash2 color="#cbd5e1" size={18} />
+          </TouchableOpacity>
+        </View>
       </TouchableOpacity>
     );
   };

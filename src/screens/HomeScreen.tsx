@@ -13,6 +13,7 @@ import {
   FlatList,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import {
   Activity,
   History,
@@ -63,6 +64,33 @@ const HomeScreen = () => {
     useState<string>("");
   const [modalNoteInput, setModalNoteInput] = useState("");
   const [modalCustomCatName, setModalCustomCatName] = useState("");
+  const [txDate, setTxDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState<"date" | "time">("date");
+
+  const openDatePicker = (mode: "date" | "time") => {
+    setPickerMode(mode);
+    setShowDatePicker(true);
+  };
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setTxDate(selectedDate);
+    }
+  };
+
+  const formatTxDate = (d: Date) => {
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+  const formatTxTime = (d: Date) => {
+    const hh = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${min}`;
+  };
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [manualInputModalVisible, setManualInputModalVisible] = useState(false);
@@ -188,6 +216,7 @@ const HomeScreen = () => {
     }
     setSelectedCategoryForSave(cat);
     setModalCustomCatName("");
+    setTxDate(new Date());
     setCategoryPickerVisible(false);
     setNoteModalVisible(true);
   };
@@ -199,12 +228,13 @@ const HomeScreen = () => {
       selectedCategoryForSave === "Khác" && modalCustomCatName.trim()
         ? modalCustomCatName.trim()
         : undefined;
-    await performSave(selectedCategoryForSave, modalNoteInput, customLabel);
+    await performSave(selectedCategoryForSave, modalNoteInput, txDate, customLabel);
   };
 
   const performSave = async (
     chosenCategory: string,
     note: string,
+    transactionDate: Date,
     customLabel?: string,
   ) => {
     const amountToSave = amount;
@@ -294,7 +324,7 @@ const HomeScreen = () => {
         category: customLabel ? "Khác" : chosenCategory,
         categorySnapshot: customLabel ?? chosenCategory,
         note: finalNote,
-        timestamp: Date.now(),
+        timestamp: transactionDate.getTime(),
       };
       await storage.saveTransaction(newTx);
       Alert.alert("Thành công", "Đã lưu khoản chi.");
@@ -313,7 +343,7 @@ const HomeScreen = () => {
         category: customLabel ? "Khác" : chosenCategory,
         categorySnapshot: customLabel ?? chosenCategory,
         note: finalNote,
-        timestamp: Date.now(),
+        timestamp: transactionDate.getTime(),
       };
       await storage.saveTransaction(newTx);
       Alert.alert(
@@ -674,6 +704,32 @@ const HomeScreen = () => {
                   returnKeyType="done"
                 />
               </>
+            )}
+
+            <Text style={styles.modalFieldLabel}>Ngày giờ giao dịch</Text>
+            <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
+              <TouchableOpacity
+                style={styles.datePickerBtn}
+                onPress={() => openDatePicker("date")}
+              >
+                <Text style={styles.datePickerBtnText}>{formatTxDate(txDate)}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.datePickerBtn}
+                onPress={() => openDatePicker("time")}
+              >
+                <Text style={styles.datePickerBtnText}>{formatTxTime(txDate)}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={txDate}
+                mode={pickerMode}
+                is24Hour={true}
+                display="default"
+                onChange={handleDateChange}
+              />
             )}
 
             <Text style={styles.modalFieldLabel}>Ghi chú (không bắt buộc)</Text>
@@ -1153,6 +1209,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   customCatActions: { flexDirection: "row", gap: 12 },
+  datePickerBtn: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 14,
+    alignItems: "center",
+  },
+  datePickerBtnText: {
+    fontSize: 16,
+    color: "#0f172a",
+    fontWeight: "500",
+  },
   customCatCancelBtn: {
     flex: 1,
     paddingVertical: 14,

@@ -75,6 +75,14 @@ const FundScreen = () => {
     const transactions = await storage.getTransactions();
 
     if (p) {
+      if (p.customFunds === undefined) {
+        p.customFunds = [
+          { id: Date.now().toString() + "_1", name: "Quỹ Cho Vay", balance: 0 },
+          { id: Date.now().toString() + "_2", name: "Quỹ Khẩn Cấp", balance: 0 },
+          { id: Date.now().toString() + "_3", name: "Quỹ Đầu Tư", balance: 0 }
+        ];
+        await storage.saveUserProfile(p);
+      }
       setProfile(p);
 
       // Calculate total allocated (Quỹ Tiêu Sài)
@@ -202,7 +210,7 @@ const FundScreen = () => {
         id: Date.now().toString(),
         type: "income",
         amount: fundBalance,
-        category: "Xóa Quỹ",
+        category: `Xóa quỹ ${fundToDelete.name}`,
         note: `Thu hồi từ ${fundToDelete.name}`,
         timestamp: Date.now(),
       };
@@ -285,6 +293,18 @@ const FundScreen = () => {
 
     setAllocModalVisible(false);
     loadData();
+
+    const actionLabel = txType === "deposit" ? "Nạp tiền" : "Rút tiền";
+    const emoji = txType === "deposit" ? "✅" : "💸";
+    Alert.alert(
+      `${emoji} ${actionLabel} thành công`,
+      `Đã ${actionLabel.toLowerCase()} ${formatCurrency(amount)} đ ${
+        txType === "deposit"
+          ? `vào ${selectedFund.name}`
+          : `từ ${selectedFund.name}`
+      }.`,
+      [{ text: "OK", style: "default" }]
+    );
   };
 
   return (

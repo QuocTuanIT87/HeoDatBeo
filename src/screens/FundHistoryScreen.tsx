@@ -4,7 +4,7 @@ import { storage } from '../store/storage';
 import { Transaction } from '../types';
 import { formatCurrency } from '../utils/format';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Trash2, Wallet } from 'lucide-react-native';
+import { ArrowLeft, Wallet } from 'lucide-react-native';
 
 const FundHistoryScreen = () => {
   const isFocused = useIsFocused();
@@ -12,6 +12,7 @@ const FundHistoryScreen = () => {
   
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [displayLimit, setDisplayLimit] = useState<number>(20);
+  const [activeFundNames, setActiveFundNames] = useState<string[]>([]);
 
   useEffect(() => {
     if (isFocused) {
@@ -27,73 +28,19 @@ const FundHistoryScreen = () => {
     const fundTxs = data.filter(t => 
       t.timestamp >= p.initialBalanceTimestamp &&
       (
-        (p.customFunds && p.customFunds.some(f => f.name === t.category)) ||
-        t.category === "Xóa Quỹ"
+        t.category.startsWith("Xóa quỹ") ||
+        (t.name && (t.name.startsWith("Nạp vào ") || t.name.startsWith("Rút từ "))) ||
+        (p.customFunds && p.customFunds.some(f => f.name === t.category))
       )
     ).sort((a, b) => b.timestamp - a.timestamp);
     
     setTransactions(fundTxs);
     setDisplayLimit(20);
-  };
-
-  const handleDeleteLog = (tx: Transaction) => {
-    const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
-    const elapsed = Date.now() - tx.timestamp;
-    if (elapsed > THREE_DAYS_MS) {
-      Alert.alert(
-        'Không thể xóa',
-        'Giao dịch quỹ đã quá 3 ngày, không thể xóa.'
-      );
-      return;
+    if (p.customFunds) {
+      setActiveFundNames(p.customFunds.map(f => f.name));
+    } else {
+      setActiveFundNames([]);
     }
-
-    Alert.alert('Xác nhận xóa', 'Bạn có chắc chắn muốn xóa giao dịch này không?', [
-      { text: 'Hủy', style: 'cancel' },
-      { 
-        text: 'Xóa', 
-        style: 'destructive',
-        onPress: async () => {
-          const success = await storage.deleteTransaction(tx.id);
-          if (!success) {
-            Alert.alert('Lỗi', 'Không thể xóa giao dịch.');
-            return;
-          }
-
-          const p = await storage.getUserProfile();
-          if (p) {
-            if (tx.type === "expense") {
-              if (p.customFunds && p.customFunds.some(f => f.name === tx.category)) {
-                // Xóa nạp quỹ -> Trừ quỹ, cộng lại unallocated
-                const updatedFunds = p.customFunds.map(f => 
-                  f.name === tx.category ? { ...f, balance: Math.max(0, f.balance - tx.amount) } : f
-                );
-                await storage.saveUserProfile({
-                  ...p,
-                  initialBalance: p.initialBalance + tx.amount,
-                  customFunds: updatedFunds
-                });
-              }
-            } else if (tx.type === "income") {
-              if (tx.category === "Xóa Quỹ") {
-                // Xóa giao dịch "Xóa quỹ" -> Giảm unallocated, nhưng không khôi phục được quỹ đã xóa
-                await storage.saveUserProfile({ ...p, initialBalance: p.initialBalance - tx.amount });
-              } else if (p.customFunds && p.customFunds.some(f => f.name === tx.category)) {
-                // Xóa rút quỹ -> Cộng lại quỹ, trừ unallocated
-                const updatedFunds = p.customFunds.map(f => 
-                  f.name === tx.category ? { ...f, balance: f.balance + tx.amount } : f
-                );
-                await storage.saveUserProfile({
-                  ...p,
-                  initialBalance: p.initialBalance - tx.amount,
-                  customFunds: updatedFunds
-                });
-              }
-            }
-          }
-          loadData();
-        }
-      }
-    ]);
   };
 
   const renderLogItem = ({ item }: { item: Transaction }) => {
@@ -102,7 +49,6 @@ const FundHistoryScreen = () => {
       hour: '2-digit', minute: '2-digit'
     });
     const isDeposit = item.type === "expense";
-    const canDelete = (Date.now() - item.timestamp) <= 3 * 24 * 60 * 60 * 1000;
 
     return (
       <View style={styles.card}>
@@ -119,11 +65,6 @@ const FundHistoryScreen = () => {
         </View>
         <View style={styles.cardFooter}>
           <Text style={styles.cardDate}>{dateStr}</Text>
-          {canDelete && (
-            <TouchableOpacity onPress={() => handleDeleteLog(item)} style={styles.actionButton}>
-              <Trash2 color="#ef4444" size={20} />
-            </TouchableOpacity>
-          )}
         </View>
       </View>
     );
