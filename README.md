@@ -11,7 +11,7 @@
 - 💰 **Ghi nhận tức thì**: Ghi lại các khoản thu nhập và chi tiêu chỉ trong vài giây.
 - ⌨ **Bảng mệnh giá thông minh**: Sử dụng các nút mệnh giá tiền phổ biến (10k, 20k, 50k, 100k...) giúp nhập liệu cực nhanh, hạn chế gõ phím.
 - 📁 **Danh mục linh hoạt**: Tùy chỉnh danh mục thu nhập và quản lý danh mục chi tiêu theo nhu cầu.
-- ⏱️ **Sửa lỗi nhanh**: Cho phép xóa giao dịch trong vòng **5 phút** đầu tiên để đảm bảo tính trung thực của sổ sách.
+- ⏱️ **Sửa lỗi nhanh**: Cho phép xóa giao dịch trong vòng **3 ngày** đầu tiên để đảm bảo tính trung thực của sổ sách.
 
 ### 2. Hệ thống "Chia Tiền" (Hũ Ngân Sách) 🍯
 
@@ -27,7 +27,7 @@
   - Hạn mức: Chỉ được rút tối đa **500.000 đ** mỗi lần.
   - Giãn cách: Thời gian giữa 2 lần rút ít nhất **7 ngày**.
   - Giao diện đếm ngược ngày chờ trực quan.
-- 📜 **Lịch sử tiết kiệm nâng cao**: 
+- 📜 **Lịch sử tiết kiệm nâng cao**:
   - **Tab Mục tiêu**: Xem lại kết quả tiết kiệm của các năm trước (Mục tiêu vs Thực tế).
   - **Tab Nhật ký**: Theo dõi chi tiết từng lần nạp/rút trong năm hiện tại.
 
