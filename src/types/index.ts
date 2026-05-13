@@ -15,6 +15,7 @@ export interface CategoryBudget {
   spent?: number;    // Số tiền đã tiêu (được cache để tối ưu hiệu suất)
   estimatedEndDate?: number;      // Ngày ước tính tiêu hết (timestamp ms) (YC 4)
   estimatedEndDateSetAt?: number; // Timestamp lần cuối set estimatedEndDate, để cooldown 15 ngày
+  type?: 'recharge' | 'direct';   // Loại danh mục: nạp tiền để chi hoặc không cần nạp
 }
 
 // Index tháng/năm có giao dịch — dùng để hiển thị modal lọc nhanh mà không scan toàn bộ transactions
@@ -30,6 +31,13 @@ export interface SavingHistoryItem {
   timestamp: number;
 }
 
+export interface CustomFund {
+  id: string;
+  name: string;
+  balance: number;
+  icon?: string;
+}
+
 export interface UserProfile {
   name: string;
   initialBalance: number;
@@ -40,5 +48,7 @@ export interface UserProfile {
   savingHistory?: SavingHistoryItem[]; // Lịch sử tiết kiệm các năm trước
   incomeCategories?: string[];
   categoryBudgets?: CategoryBudget[]; // Danh mục chi kèm ngân sách
+  customFunds?: CustomFund[]; // Quỹ tùy biến của người dùng
   hasSeenGuide?: boolean;
+  inputMethod?: 'keypad' | 'manual';
 }
