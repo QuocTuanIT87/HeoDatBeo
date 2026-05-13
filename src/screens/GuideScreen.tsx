@@ -357,9 +357,7 @@ const GuideScreen = () => {
 
               <View style={styles.mockPieContainer}>
                 <View style={styles.mockPieCircle}>
-                  <View style={styles.mockPieSlice1} />
-                  <View style={styles.mockPieSlice2} />
-                  <View style={styles.mockPieSlice3} />
+                  <PieChart color="#7c3aed" size={40} />
                 </View>
                 <View style={styles.mockLegend}>
                   <View style={styles.mockLegendItem}>
@@ -818,32 +816,10 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     backgroundColor: "#f1f5f9",
-    overflow: "hidden",
-    position: "relative",
-  },
-  mockPieSlice1: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#7c3aed",
-    transform: [{ rotate: "0deg" }],
-    clipPath: "polygon(50% 50%, 100% 0, 100% 100%)",
-  },
-  mockPieSlice2: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#10b981",
-    transform: [{ rotate: "120deg" }],
-    clipPath: "polygon(50% 50%, 100% 0, 100% 100%)",
-  },
-  mockPieSlice3: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#f59e0b",
-    transform: [{ rotate: "240deg" }],
-    clipPath: "polygon(50% 50%, 100% 0, 100% 100%)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
   },
   mockLegend: {
     gap: 4,

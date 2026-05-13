@@ -153,10 +153,14 @@ const SettingsScreen = () => {
     const trimmedName = newCategoryName.trim();
     if (!trimmedName || !profile) return;
 
-    if (trimmedName === "Tiết kiệm" || trimmedName === "Rút tiết kiệm") {
+    if (
+      trimmedName === "Tiết kiệm" ||
+      trimmedName === "Rút tiết kiệm" ||
+      trimmedName === "Số dư đầu tiên"
+    ) {
       Alert.alert(
         "Lỗi",
-        "Tên danh mục này đã được sử dụng cho hệ thống tiết kiệm. Vui lòng chọn tên khác.",
+        `Tên danh mục "${trimmedName}" đã được hệ thống sử dụng. Vui lòng chọn tên khác.`,
       );
       return;
     }
@@ -166,12 +170,33 @@ const SettingsScreen = () => {
       Alert.alert("Lỗi", "Danh mục này đã tồn tại.");
       return;
     }
+
+    // Kiểm tra và đồng bộ giao dịch lịch sử
+    const txs = await storage.getTransactions();
+    const matches = txs.filter(
+      (t) => t.categorySnapshot === trimmedName && t.category === "Khác",
+    );
+
     const updatedProfile = {
       ...profile,
       incomeCategories: [...current, trimmedName],
     };
+
     const success = await storage.saveUserProfile(updatedProfile);
     if (success) {
+      if (matches.length > 0) {
+        const updatedTxs = txs.map((t) => {
+          if (t.categorySnapshot === trimmedName && t.category === "Khác") {
+            return { ...t, category: trimmedName };
+          }
+          return t;
+        });
+        await storage.updateTransactionsBulk(updatedTxs);
+        Alert.alert(
+          "Thành công",
+          `Đã thêm danh mục "${trimmedName}" và tự động đồng bộ ${matches.length} giao dịch cũ liên quan.`,
+        );
+      }
       setProfile(updatedProfile);
       setNewCategoryName("");
     }
