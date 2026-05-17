@@ -369,7 +369,7 @@ const SettingsScreen = () => {
         </TouchableOpacity>
 
         <View style={styles.footerInfo}>
-          <Text style={styles.versionText}>Phiên bản hiện tại : 4.0.0</Text>
+          <Text style={styles.versionText}>Phiên bản hiện tại : 5.0.0</Text>
           <Text style={styles.authorText}>
             Ứng dụng được phát triển bởi{" "}
             <Text style={styles.authorHighlight}>SatsBoy87</Text>
