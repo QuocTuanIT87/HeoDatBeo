@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   RefreshControl,
+  Image,
 } from "react-native";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
@@ -30,6 +31,25 @@ import { UserProfile, Transaction, CategoryBudget, CustomFund } from "../types";
 import { BottomTabParamList } from "../navigation/types";
 import Keypad from "../components/Keypad";
 
+const FUND_ICONS: Record<string, any> = {
+  default: require("../../assets/fund_icon/default.png"),
+  spending: require("../../assets/fund_icon/spending.png"),
+  save: require("../../assets/fund_icon/save.png"),
+  alarm: require("../../assets/fund_icon/alarm.png"),
+  application: require("../../assets/fund_icon/application.png"),
+  borrow: require("../../assets/fund_icon/borrow.png"),
+  buy: require("../../assets/fund_icon/buy.png"),
+  car: require("../../assets/fund_icon/car.png"),
+  earning: require("../../assets/fund_icon/earning.png"),
+  "gold-bars": require("../../assets/fund_icon/gold-bars.png"),
+  healthcare: require("../../assets/fund_icon/healthcare.png"),
+  land: require("../../assets/fund_icon/land.png"),
+  "laptop-screen": require("../../assets/fund_icon/laptop-screen.png"),
+  prevention: require("../../assets/fund_icon/prevention.png"),
+  travel: require("../../assets/fund_icon/travel.png"),
+  "wedding-couple": require("../../assets/fund_icon/wedding-couple.png"),
+};
+
 type FundScreenNavigationProp = BottomTabNavigationProp<
   BottomTabParamList,
   "Funds"
@@ -50,6 +70,11 @@ const FundScreen = () => {
   // Thêm Quỹ mới
   const [addFundModalVisible, setAddFundModalVisible] = useState(false);
   const [newFundName, setNewFundName] = useState("Quỹ ");
+  const [iconModalVisible, setIconModalVisible] = useState(false);
+  const [pendingFund, setPendingFund] = useState<{
+    id?: string;
+    name: string;
+  } | null>(null);
 
   // Nạp/Rút
   const [allocModalVisible, setAllocModalVisible] = useState(false);
@@ -78,8 +103,12 @@ const FundScreen = () => {
       if (p.customFunds === undefined) {
         p.customFunds = [
           { id: Date.now().toString() + "_1", name: "Quỹ Cho Vay", balance: 0 },
-          { id: Date.now().toString() + "_2", name: "Quỹ Khẩn Cấp", balance: 0 },
-          { id: Date.now().toString() + "_3", name: "Quỹ Đầu Tư", balance: 0 }
+          {
+            id: Date.now().toString() + "_2",
+            name: "Quỹ Khẩn Cấp",
+            balance: 0,
+          },
+          { id: Date.now().toString() + "_3", name: "Quỹ Đầu Tư", balance: 0 },
         ];
         await storage.saveUserProfile(p);
       }
@@ -155,17 +184,62 @@ const FundScreen = () => {
   };
 
   const handleAddFund = async () => {
-    if (newFundName.trim() === "Quỹ" || newFundName.trim() === "Quỹ") {
+    if (newFundName.trim() === "Quỹ" || newFundName.trim() === "") {
       Alert.alert("Lỗi", "Vui lòng nhập tên quỹ hợp lệ.");
       return;
     }
 
     if (!profile) return;
 
+    // Đóng modal tên quỹ và mở modal chọn icon
+    setPendingFund({ name: newFundName.trim() });
+    setAddFundModalVisible(false);
+    setIconModalVisible(true);
+  };
+
+  const openEditIconModal = (id: string, name: string) => {
+    setPendingFund({ id, name });
+    setIconModalVisible(true);
+  };
+
+  const handleSelectIcon = async (iconKey: string) => {
+    if (!profile) return;
+
+    if (pendingFund?.id) {
+      // Đang chỉnh sửa icon của quỹ đã có
+      let updatedProfile: UserProfile = { ...profile };
+      if (pendingFund.id === "spending") {
+        updatedProfile.spendingFundIcon = iconKey;
+      } else if (pendingFund.id === "saving") {
+        updatedProfile.savingFundIcon = iconKey;
+      } else {
+        const updatedFunds = (profile.customFunds || []).map((f) => {
+          if (f.id === pendingFund.id) {
+            return { ...f, icon: iconKey };
+          }
+          return f;
+        });
+        updatedProfile.customFunds = updatedFunds;
+      }
+
+      const success = await storage.saveUserProfile(updatedProfile);
+      if (success) {
+        setProfile(updatedProfile);
+        setPendingFund(null);
+        setIconModalVisible(false);
+        loadData();
+      }
+      return;
+    }
+
+    if (!pendingFund) return;
+
+    // Đang tạo quỹ mới
     const newFund: CustomFund = {
       id: Date.now().toString(),
-      name: newFundName.trim(),
+      name: pendingFund.name,
       balance: 0,
+      icon: iconKey,
     };
 
     const updatedProfile = {
@@ -176,8 +250,24 @@ const FundScreen = () => {
     const success = await storage.saveUserProfile(updatedProfile);
     if (success) {
       setProfile(updatedProfile);
-      setAddFundModalVisible(false);
+      setPendingFund(null);
+      setIconModalVisible(false);
       setNewFundName("Quỹ ");
+      loadData();
+    }
+  };
+
+  const handleCancelIcon = () => {
+    if (!pendingFund) {
+      setIconModalVisible(false);
+      return;
+    }
+
+    if (pendingFund.id) {
+      setPendingFund(null);
+      setIconModalVisible(false);
+    } else {
+      handleSelectIcon("default");
     }
   };
 
@@ -303,7 +393,7 @@ const FundScreen = () => {
           ? `vào ${selectedFund.name}`
           : `từ ${selectedFund.name}`
       }.`,
-      [{ text: "OK", style: "default" }]
+      [{ text: "OK", style: "default" }],
     );
   };
 
@@ -362,9 +452,18 @@ const FundScreen = () => {
           style={styles.fundCard}
           onPress={() => navigation.navigate("Budget")}
         >
-          <View style={[styles.fundIcon, { backgroundColor: "#f3e8ff" }]}>
-            <Layers color="#a855f7" size={24} />
-          </View>
+          <TouchableOpacity
+            style={[styles.fundIcon, { backgroundColor: "#f3e8ff" }]}
+            onPress={() => openEditIconModal("spending", "Quỹ Tiêu Sài")}
+          >
+            <Image
+              source={
+                FUND_ICONS[profile?.spendingFundIcon || "spending"] ||
+                FUND_ICONS["spending"]
+              }
+              style={{ width: 28, height: 28, resizeMode: "contain" }}
+            />
+          </TouchableOpacity>
           <View style={styles.fundInfo}>
             <Text style={styles.fundName}>Quỹ Tiêu Sài</Text>
             <Text style={styles.fundDesc}>Quản lý chi tiêu hằng ngày</Text>
@@ -382,9 +481,18 @@ const FundScreen = () => {
           style={styles.fundCard}
           onPress={() => navigation.navigate("Savings")}
         >
-          <View style={[styles.fundIcon, { backgroundColor: "#fef3c7" }]}>
-            <PiggyBank color="#f59e0b" size={24} />
-          </View>
+          <TouchableOpacity
+            style={[styles.fundIcon, { backgroundColor: "#fef3c7" }]}
+            onPress={() => openEditIconModal("saving", "Quỹ Tiết Kiệm")}
+          >
+            <Image
+              source={
+                FUND_ICONS[profile?.savingFundIcon || "save"] ||
+                FUND_ICONS["save"]
+              }
+              style={{ width: 28, height: 28, resizeMode: "contain" }}
+            />
+          </TouchableOpacity>
           <View style={styles.fundInfo}>
             <Text style={styles.fundName}>Quỹ Tiết Kiệm</Text>
             <Text style={styles.fundDesc}>Tích lũy tương lai</Text>
@@ -417,9 +525,17 @@ const FundScreen = () => {
             style={styles.fundCard}
             onPress={() => openAllocModal(fund)}
           >
-            <View style={[styles.fundIcon, { backgroundColor: "#e0f2fe" }]}>
-              <Wallet color="#0ea5e9" size={24} />
-            </View>
+            <TouchableOpacity
+              style={[styles.fundIcon, { backgroundColor: "#e0f2fe" }]}
+              onPress={() => openEditIconModal(fund.id, fund.name)}
+            >
+              <Image
+                source={
+                  FUND_ICONS[fund.icon || "default"] || FUND_ICONS["default"]
+                }
+                style={{ width: 28, height: 28, resizeMode: "contain" }}
+              />
+            </TouchableOpacity>
             <View style={styles.fundInfo}>
               <Text style={styles.fundName}>{fund.name}</Text>
               <Text style={styles.fundDesc}>Nhấn để nạp/rút</Text>
@@ -616,25 +732,39 @@ const FundScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeaderRow}>
-              <Text style={[styles.modalTitle, { color: "#ef4444" }]}>🗑 Xóa Quỹ</Text>
-              <TouchableOpacity onPress={() => setDeleteFundModalVisible(false)}>
+              <Text style={[styles.modalTitle, { color: "#ef4444" }]}>
+                🗑 Xóa Quỹ
+              </Text>
+              <TouchableOpacity
+                onPress={() => setDeleteFundModalVisible(false)}
+              >
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.deleteWarningBox}>
               <Text style={styles.deleteWarningText}>
-                ⚠️ Quỹ <Text style={{ fontWeight: "bold" }}>{fundToDelete?.name}</Text> sẽ bị xóa vĩnh viễn.
+                ⚠️ Quỹ{" "}
+                <Text style={{ fontWeight: "bold" }}>{fundToDelete?.name}</Text>{" "}
+                sẽ bị xóa vĩnh viễn.
               </Text>
               {(fundToDelete?.balance ?? 0) > 0 && (
                 <Text style={styles.deleteRefundText}>
-                  💰 Số dư <Text style={{ fontWeight: "bold" }}>{formatCurrency(fundToDelete?.balance ?? 0)} đ</Text> sẽ được hoàn về tiền chưa phân bổ.
+                  💰 Số dư{" "}
+                  <Text style={{ fontWeight: "bold" }}>
+                    {formatCurrency(fundToDelete?.balance ?? 0)} đ
+                  </Text>{" "}
+                  sẽ được hoàn về tiền chưa phân bổ.
                 </Text>
               )}
             </View>
 
             <Text style={styles.deleteHintText}>
-              Nhập <Text style={styles.deleteHintCode}>DELETE {fundToDelete?.name}</Text> để xác nhận:
+              Nhập{" "}
+              <Text style={styles.deleteHintCode}>
+                DELETE {fundToDelete?.name}
+              </Text>{" "}
+              để xác nhận:
             </Text>
             <TextInput
               style={styles.textInput}
@@ -655,13 +785,68 @@ const FundScreen = () => {
               <TouchableOpacity
                 style={[
                   styles.deleteConfirmBtn,
-                  deleteConfirmText.trim() !== `DELETE ${fundToDelete?.name}` && styles.bgDisabled,
+                  deleteConfirmText.trim() !== `DELETE ${fundToDelete?.name}` &&
+                    styles.bgDisabled,
                 ]}
                 onPress={handleConfirmDeleteFund}
               >
                 <Text style={styles.deleteConfirmText}>Xóa Quỹ</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal: Chọn Icon Quỹ */}
+      <Modal
+        visible={iconModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelIcon}
+      >
+        <View style={styles.modalOverlayCenter}>
+          <View style={styles.iconModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chọn biểu tượng quỹ</Text>
+              <TouchableOpacity onPress={handleCancelIcon}>
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.iconModalSubtitle}>
+              Chọn biểu tượng đại diện cho quỹ "{pendingFund?.name}"
+            </Text>
+
+            <ScrollView
+              contentContainerStyle={styles.iconGrid}
+              showsVerticalScrollIndicator={false}
+            >
+              {Object.keys(FUND_ICONS).map((iconKey) => {
+                return (
+                  <TouchableOpacity
+                    key={iconKey}
+                    style={styles.iconGridItem}
+                    onPress={() => handleSelectIcon(iconKey)}
+                  >
+                    <Image
+                      source={FUND_ICONS[iconKey]}
+                      style={styles.iconItemImage}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[
+                styles.confirmBtn,
+                { backgroundColor: "#64748b", marginTop: 16 },
+              ]}
+              onPress={handleCancelIcon}
+            >
+              <Text style={styles.confirmBtnText}>
+                {pendingFund?.id ? "Hủy" : "Tạo quỹ"}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -884,6 +1069,59 @@ const styles = StyleSheet.create({
   tabActiveWithdraw: { backgroundColor: "#ef4444", elevation: 2 },
   tabText: { fontSize: 15, fontWeight: "600", color: "#64748b" },
   tabTextActive: { color: "#ffffff" },
+  modalOverlayCenter: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  iconModalContent: {
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    padding: 24,
+    width: "100%",
+    maxHeight: "80%",
+    elevation: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  iconModalSubtitle: {
+    fontSize: 14,
+    color: "#64748b",
+    marginBottom: 20,
+  },
+  iconGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingVertical: 10,
+  },
+  iconGridItem: {
+    width: "22%",
+    aspectRatio: 1,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  iconItemImage: {
+    width: 38,
+    height: 38,
+    resizeMode: "contain",
+  },
 });
 
 export default FundScreen;

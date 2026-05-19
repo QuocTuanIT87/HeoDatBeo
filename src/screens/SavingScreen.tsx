@@ -21,6 +21,8 @@ import {
   X,
   LayoutGrid,
   Keyboard,
+  ArrowUpCircle,
+  ArrowDownCircle,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import {
@@ -470,6 +472,10 @@ const SavingScreen = () => {
             style={[styles.tab, type === "deposit" && styles.tabActiveDeposit]}
             onPress={() => setType("deposit")}
           >
+            <ArrowUpCircle
+              color={type === "deposit" ? "#ffffff" : "#10b981"}
+              size={20}
+            />
             <Text
               style={[
                 styles.tabText,
@@ -486,6 +492,10 @@ const SavingScreen = () => {
             ]}
             onPress={() => setType("withdraw")}
           >
+            <ArrowDownCircle
+              color={type === "withdraw" ? "#ffffff" : "#ef4444"}
+              size={20}
+            />
             <Text
               style={[
                 styles.tabText,
@@ -771,8 +781,8 @@ const styles = StyleSheet.create({
   tabs: {
     flexDirection: "row",
     backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 4,
+    borderRadius: 16,
+    padding: 6,
     marginBottom: 20,
     elevation: 2,
     shadowColor: "#000",
@@ -782,10 +792,12 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 12,
+    gap: 8,
   },
   tabActiveDeposit: { backgroundColor: "#f59e0b" },
   tabActiveWithdraw: { backgroundColor: "#ef4444" },

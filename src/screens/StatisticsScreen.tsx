@@ -11,6 +11,7 @@ import {
   Modal,
   Dimensions,
   TextInput,
+  Image,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { storage } from "../store/storage";
@@ -28,6 +29,7 @@ import {
 } from "lucide-react-native";
 import Keypad from "../components/Keypad";
 import { BarChart } from "react-native-gifted-charts";
+import { INCOME_ICONS, EXPENSE_ICONS, getIncomeIconSource } from "./HomeScreen";
 import CustomPieChart from "../components/CustomPieChart";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
@@ -47,13 +49,45 @@ const DEFAULT_EXPENSE_CATEGORIES = [
 const DEFAULT_INCOME_CATEGORIES = ["Lương", "Khác"];
 
 // --- Component thẻ giao dịch — tách ra ngoài để React.memo hoạt động hiệu quả ---
+const getTransactionIconSource = (
+  tx: Transaction,
+  profile: UserProfile | null,
+  categoryBudgets: CategoryBudget[]
+) => {
+  if (tx.name === "Số dư đầu tiên") {
+    return require("../../assets/income_icon/default.png");
+  }
+
+  if (tx.category === "Tiết kiệm" || tx.category === "Rút tiết kiệm") {
+    return require("../../assets/fund_icon/save.png");
+  }
+
+  if (
+    tx.category.startsWith("Xóa quỹ") ||
+    (tx.name && (tx.name.startsWith("Nạp vào ") || tx.name.startsWith("Rút từ ")))
+  ) {
+    return require("../../assets/fund_icon/default.png");
+  }
+
+  if (tx.type === "income") {
+    return getIncomeIconSource(tx.category, profile);
+  }
+
+  const match = categoryBudgets.find((c) => c.name === tx.category);
+  const iconKey = match?.icon || "default";
+  return EXPENSE_ICONS[iconKey] || EXPENSE_ICONS["default"];
+};
+
+// --- Component thẻ giao dịch — tách ra ngoài để React.memo hoạt động hiệu quả ---
 type TransactionCardProps = {
   item: Transaction;
   onOpenOptions: (tx: Transaction) => void;
+  profile: UserProfile | null;
+  categoryBudgets: CategoryBudget[];
 };
 
 const TransactionCard = React.memo(
-  ({ item, onOpenOptions }: TransactionCardProps) => {
+  ({ item, onOpenOptions, profile, categoryBudgets }: TransactionCardProps) => {
     const dateStr = new Date(item.timestamp).toLocaleString("vi-VN", {
       year: "numeric",
       month: "2-digit",
@@ -72,14 +106,27 @@ const TransactionCard = React.memo(
     return (
       <View style={cardStyles.card}>
         <View style={cardStyles.cardRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={cardStyles.cardCategory}>{displayCategory}</Text>
-            {displayName ? (
-              <Text style={cardStyles.cardName}>{displayName}</Text>
-            ) : null}
-            {item.note ? (
-              <Text style={cardStyles.cardNote}>{item.note}</Text>
-            ) : null}
+          <View style={cardStyles.cardLeftContainer}>
+            <View
+              style={[
+                cardStyles.iconWrapper,
+                { backgroundColor: isExpense ? "#fee2e2" : "#dcfce7" },
+              ]}
+            >
+              <Image
+                source={getTransactionIconSource(item, profile, categoryBudgets)}
+                style={cardStyles.categoryIcon}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={cardStyles.cardCategory}>{displayCategory}</Text>
+              {displayName ? (
+                <Text style={cardStyles.cardName}>{displayName}</Text>
+              ) : null}
+              {item.note ? (
+                <Text style={cardStyles.cardNote}>{item.note}</Text>
+              ) : null}
+            </View>
           </View>
           <Text
             style={[
@@ -174,6 +221,24 @@ const cardStyles = StyleSheet.create({
   actionButton: {
     padding: 4,
   },
+  cardLeftContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: 12,
+  },
+  iconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  categoryIcon: {
+    width: 26,
+    height: 26,
+    resizeMode: "contain",
+  },
 });
 
 const StatisticsScreen = () => {
@@ -213,7 +278,9 @@ const StatisticsScreen = () => {
     null,
   );
   // Pie chart mode: "category" = theo danh mục, "note" = theo ghi chú
-  const [pieChartMode, setPieChartMode] = useState<"category" | "note">("category");
+  const [pieChartMode, setPieChartMode] = useState<"category" | "note">(
+    "category",
+  );
 
   // BarChart state
   const [selectedBarData, setSelectedBarData] = useState<{
@@ -228,7 +295,8 @@ const StatisticsScreen = () => {
   const [showPicker, setShowPicker] = useState<"start" | "end" | null>(null);
 
   // Transaction options & edit state
-  const [selectedTxForAction, setSelectedTxForAction] = useState<Transaction | null>(null);
+  const [selectedTxForAction, setSelectedTxForAction] =
+    useState<Transaction | null>(null);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editAmount, setEditAmount] = useState(0);
@@ -305,11 +373,11 @@ const StatisticsScreen = () => {
 
     // Bỏ qua giao dịch tiết kiệm và quỹ tùy chỉnh khỏi Thống kê
     filtered = filtered.filter(
-      (tx) => 
-        tx.category !== "Tiết kiệm" && 
+      (tx) =>
+        tx.category !== "Tiết kiệm" &&
         tx.category !== "Rút tiết kiệm" &&
         tx.category !== "Xóa Quỹ" &&
-        !(profile?.customFunds || []).some(f => f.name === tx.category)
+        !(profile?.customFunds || []).some((f) => f.name === tx.category),
     );
 
     // Filter by Period
@@ -364,16 +432,33 @@ const StatisticsScreen = () => {
   };
 
   // YC 1, 2, 3: Hoàn tiền thông minh khi xóa giao dịch
-  const handleDelete = useCallback((tx: Transaction) => {
+  const handleDelete = useCallback(async (tx: Transaction) => {
     // YC 2: Chỉ được xóa trong vòng 3 ngày kể từ khi lưu
     const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
     const elapsed = Date.now() - tx.timestamp;
     if (elapsed > THREE_DAYS_MS) {
       Alert.alert(
         "Không thể xóa",
-        "Giao dịch đã quá 3 ngày, không thể xóa hoặc sửa."
+        "Giao dịch đã quá 3 ngày, không thể xóa hoặc sửa.",
       );
       return;
+    }
+
+    // Kiểm tra số dư chưa phân bổ nếu là giao dịch thu tiền
+    if (tx.type === "income") {
+      const p = await storage.getUserProfile();
+      const cats = await storage.getCategoryBudgets();
+      if (p) {
+        const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
+        const unallocated = p.initialBalance - totalAllocated;
+        if (tx.amount > unallocated) {
+          Alert.alert(
+            "Không thể xóa",
+            "Số tiền này đã được sử dụng hoặc phân bổ vào các Quỹ.",
+          );
+          return;
+        }
+      }
     }
 
     Alert.alert(
@@ -410,15 +495,20 @@ const StatisticsScreen = () => {
                   initialBalance: p.initialBalance + tx.amount,
                 };
                 await storage.saveUserProfile(updatedProfile);
-              } else if (p.customFunds && p.customFunds.some(f => f.name === catName)) {
+              } else if (
+                p.customFunds &&
+                p.customFunds.some((f) => f.name === catName)
+              ) {
                 // Xóa giao dịch nạp quỹ tùy chỉnh -> Trừ quỹ, cộng lại unallocated
-                const updatedFunds = p.customFunds.map(f => 
-                  f.name === catName ? { ...f, balance: Math.max(0, f.balance - tx.amount) } : f
+                const updatedFunds = p.customFunds.map((f) =>
+                  f.name === catName
+                    ? { ...f, balance: Math.max(0, f.balance - tx.amount) }
+                    : f,
                 );
                 const updatedProfile = {
                   ...p,
                   initialBalance: p.initialBalance + tx.amount,
-                  customFunds: updatedFunds
+                  customFunds: updatedFunds,
                 };
                 await storage.saveUserProfile(updatedProfile);
               } else {
@@ -456,15 +546,20 @@ const StatisticsScreen = () => {
                   initialBalance: p.initialBalance - tx.amount,
                 };
                 await storage.saveUserProfile(updatedProfile);
-              } else if (p.customFunds && p.customFunds.some(f => f.name === catName)) {
+              } else if (
+                p.customFunds &&
+                p.customFunds.some((f) => f.name === catName)
+              ) {
                 // Xóa giao dịch rút quỹ tùy chỉnh -> Cộng lại quỹ, trừ unallocated
-                const updatedFunds = p.customFunds.map(f => 
-                  f.name === catName ? { ...f, balance: f.balance + tx.amount } : f
+                const updatedFunds = p.customFunds.map((f) =>
+                  f.name === catName
+                    ? { ...f, balance: f.balance + tx.amount }
+                    : f,
                 );
                 const updatedProfile = {
                   ...p,
                   initialBalance: p.initialBalance - tx.amount,
-                  customFunds: updatedFunds
+                  customFunds: updatedFunds,
                 };
                 await storage.saveUserProfile(updatedProfile);
               } else {
@@ -505,7 +600,7 @@ const StatisticsScreen = () => {
     if (newAmount === 0) {
       Alert.alert(
         "Số tiền không hợp lệ",
-        "Số tiền không thể là 0đ. Nếu bạn muốn hủy giao dịch này, vui lòng sử dụng chức năng Xóa."
+        "Số tiền không thể là 0đ. Nếu bạn muốn hủy giao dịch này, vui lòng sử dụng chức năng Xóa.",
       );
       return;
     }
@@ -531,9 +626,12 @@ const StatisticsScreen = () => {
           ...p,
           initialBalance: p.initialBalance - diff,
         });
-      } else if (p.customFunds && p.customFunds.some(f => f.name === catName)) {
+      } else if (
+        p.customFunds &&
+        p.customFunds.some((f) => f.name === catName)
+      ) {
         // Sửa giao dịch nạp quỹ tùy chỉnh
-        const fund = p.customFunds.find(f => f.name === catName)!;
+        const fund = p.customFunds.find((f) => f.name === catName)!;
         if (diff > 0) {
           const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
           const unallocated = Math.max(0, p.initialBalance - totalAllocated);
@@ -548,67 +646,112 @@ const StatisticsScreen = () => {
             return;
           }
         }
-        const updatedFunds = p.customFunds.map(f => 
-          f.name === catName ? { ...f, balance: f.balance + diff } : f
+        const updatedFunds = p.customFunds.map((f) =>
+          f.name === catName ? { ...f, balance: f.balance + diff } : f,
         );
-        await storage.saveUserProfile({ 
-          ...p, 
+        await storage.saveUserProfile({
+          ...p,
           initialBalance: p.initialBalance - diff,
-          customFunds: updatedFunds
+          customFunds: updatedFunds,
         });
       } else {
-        const cat = cats.find(b => b.name === catName);
+        const cat = cats.find((b) => b.name === catName);
         if (cat) {
-          const isDirect = cat.type === 'direct';
+          const isDirect = cat.type === "direct";
           if (isDirect) {
             // Chi trực tiếp: kiểm tra unallocated balance
             const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
             const unallocated = Math.max(0, p.initialBalance - totalAllocated);
             if (diff > unallocated) {
-              Alert.alert("Lỗi", "Số dư chưa phân bổ không đủ để thực hiện sửa đổi này.");
+              Alert.alert(
+                "Lỗi",
+                "Số dư chưa phân bổ không đủ để thực hiện sửa đổi này.",
+              );
               return;
             }
             // Cập nhật spent và initialBalance
-            const updatedCats = cats.map(b => b.name === catName ? { ...b, spent: (b.spent || 0) + diff } : b);
+            const updatedCats = cats.map((b) =>
+              b.name === catName ? { ...b, spent: (b.spent || 0) + diff } : b,
+            );
             await storage.saveCategoryBudgets(updatedCats);
-            await storage.saveUserProfile({ ...p, initialBalance: p.initialBalance - diff });
+            await storage.saveUserProfile({
+              ...p,
+              initialBalance: p.initialBalance - diff,
+            });
           } else {
             // Chi nạp tiền (recharge): kiểm tra cat.budget
             if (diff > cat.budget) {
-              Alert.alert("Lỗi", `Ngân sách danh mục "${catName}" không đủ. Còn lại: ${formatCurrency(cat.budget)} đ.`);
+              Alert.alert(
+                "Lỗi",
+                `Ngân sách danh mục "${catName}" không đủ. Còn lại: ${formatCurrency(cat.budget)} đ.`,
+              );
               return;
             }
             // Cập nhật budget, spent và initialBalance
-            const updatedCats = cats.map(b => b.name === catName ? { 
-              ...b, 
-              budget: b.budget - diff,
-              spent: (b.spent || 0) + diff 
-            } : b);
+            const updatedCats = cats.map((b) =>
+              b.name === catName
+                ? {
+                    ...b,
+                    budget: b.budget - diff,
+                    spent: (b.spent || 0) + diff,
+                  }
+                : b,
+            );
             await storage.saveCategoryBudgets(updatedCats);
-            await storage.saveUserProfile({ ...p, initialBalance: p.initialBalance - diff });
+            await storage.saveUserProfile({
+              ...p,
+              initialBalance: p.initialBalance - diff,
+            });
           }
         } else {
           // Danh mục đã bị xóa: chỉ trừ/cộng vào initialBalance (coi như unallocated)
           const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
           const unallocated = Math.max(0, p.initialBalance - totalAllocated);
           if (diff > unallocated) {
-            Alert.alert("Lỗi", "Số dư chưa phân bổ không đủ để thực hiện sửa đổi này.");
+            Alert.alert(
+              "Lỗi",
+              "Số dư chưa phân bổ không đủ để thực hiện sửa đổi này.",
+            );
             return;
           }
-          await storage.saveUserProfile({ ...p, initialBalance: p.initialBalance - diff });
+          await storage.saveUserProfile({
+            ...p,
+            initialBalance: p.initialBalance - diff,
+          });
         }
       }
     } else {
       // Logic sửa khoản thu
       if (catName === "Rút tiết kiệm") {
         // Thu từ tiết kiệm: chỉ thay đổi initialBalance
-        await storage.saveUserProfile({ ...p, initialBalance: p.initialBalance + diff });
-      } else if (p.customFunds && p.customFunds.some(f => f.name === catName)) {
+        if (diff < 0) {
+          const loss = Math.abs(diff);
+          const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
+          const unallocated = Math.max(0, p.initialBalance - totalAllocated);
+          if (loss > unallocated) {
+            Alert.alert(
+              "Lỗi",
+              "Số dư chưa phân bổ không đủ để giảm khoản rút này.",
+            );
+            return;
+          }
+        }
+        await storage.saveUserProfile({
+          ...p,
+          initialBalance: p.initialBalance + diff,
+        });
+      } else if (
+        p.customFunds &&
+        p.customFunds.some((f) => f.name === catName)
+      ) {
         // Sửa giao dịch rút quỹ tùy chỉnh
-        const fund = p.customFunds.find(f => f.name === catName)!;
+        const fund = p.customFunds.find((f) => f.name === catName)!;
         if (diff > 0) {
           if (diff > fund.balance) {
-            Alert.alert("Lỗi", `Quỹ này không đủ số dư để rút thêm ${formatCurrency(diff)} đ.`);
+            Alert.alert(
+              "Lỗi",
+              `Quỹ này không đủ số dư để rút thêm ${formatCurrency(diff)} đ.`,
+            );
             return;
           }
         } else if (diff < 0) {
@@ -616,17 +759,20 @@ const StatisticsScreen = () => {
           const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
           const unallocated = Math.max(0, p.initialBalance - totalAllocated);
           if (loss > unallocated) {
-            Alert.alert("Lỗi", "Số dư chưa phân bổ không đủ để giảm khoản rút này.");
+            Alert.alert(
+              "Lỗi",
+              "Số dư chưa phân bổ không đủ để giảm khoản rút này.",
+            );
             return;
           }
         }
-        const updatedFunds = p.customFunds.map(f => 
-          f.name === catName ? { ...f, balance: f.balance - diff } : f
+        const updatedFunds = p.customFunds.map((f) =>
+          f.name === catName ? { ...f, balance: f.balance - diff } : f,
         );
-        await storage.saveUserProfile({ 
-          ...p, 
+        await storage.saveUserProfile({
+          ...p,
           initialBalance: p.initialBalance + diff,
-          customFunds: updatedFunds
+          customFunds: updatedFunds,
         });
       } else {
         // Thu nhập bình thường: nếu giảm thu nhập, kiểm tra unallocated
@@ -635,17 +781,25 @@ const StatisticsScreen = () => {
           const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
           const unallocated = Math.max(0, p.initialBalance - totalAllocated);
           if (loss > unallocated) {
-            Alert.alert("Lỗi", "Số dư chưa phân bổ không đủ để giảm khoản thu này.");
+            Alert.alert(
+              "Lỗi",
+              "Số dư chưa phân bổ không đủ để giảm khoản thu này.",
+            );
             return;
           }
         }
-        await storage.saveUserProfile({ ...p, initialBalance: p.initialBalance + diff });
+        await storage.saveUserProfile({
+          ...p,
+          initialBalance: p.initialBalance + diff,
+        });
       }
     }
 
     // Cập nhật transaction record
     const allTxs = await storage.getTransactions();
-    const updatedTxs = allTxs.map(t => t.id === tx.id ? { ...t, amount: newAmount } : t);
+    const updatedTxs = allTxs.map((t) =>
+      t.id === tx.id ? { ...t, amount: newAmount } : t,
+    );
     await storage.updateTransactionsBulk(updatedTxs);
 
     loadTransactions();
@@ -698,10 +852,15 @@ const StatisticsScreen = () => {
 
   const renderItem = useCallback(
     ({ item }: { item: Transaction }) => (
-      <TransactionCard item={item} onOpenOptions={handleOpenOptions} />
+      <TransactionCard
+        item={item}
+        onOpenOptions={handleOpenOptions}
+        profile={profile}
+        categoryBudgets={categoryBudgets}
+      />
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [handleOpenOptions],
+    [handleOpenOptions, profile, categoryBudgets],
   );
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -844,11 +1003,23 @@ const StatisticsScreen = () => {
   const getPieChartDataByNote = () => {
     const expenses = filteredTransactions.filter((tx) => tx.type === "expense");
     // key = normalized (trim+lowercase), value = { total, displayLabel, baseCat }
-    const noteTotals: Record<string, { total: number; displayLabel: string; baseCat: string }> = {};
+    const noteTotals: Record<
+      string,
+      { total: number; displayLabel: string; baseCat: string }
+    > = {};
 
     const colors = [
-      "#ef4444", "#f97316", "#f59e0b", "#84cc16", "#10b981",
-      "#06b6d4", "#3b82f6", "#8b5cf6", "#d946ef", "#f43f5e", "#64748b",
+      "#ef4444",
+      "#f97316",
+      "#f59e0b",
+      "#84cc16",
+      "#10b981",
+      "#06b6d4",
+      "#3b82f6",
+      "#8b5cf6",
+      "#d946ef",
+      "#f43f5e",
+      "#64748b",
     ];
 
     expenses.forEach((tx) => {
@@ -857,12 +1028,19 @@ const StatisticsScreen = () => {
       // Dùng normalized key để merge trùng (viết hoa/thường khác nhau → cộng chung)
       const key = rawLabel.toLowerCase();
       if (!noteTotals[key]) {
-        noteTotals[key] = { total: 0, displayLabel: rawLabel, baseCat: tx.category };
+        noteTotals[key] = {
+          total: 0,
+          displayLabel: rawLabel,
+          baseCat: tx.category,
+        };
       }
       noteTotals[key].total += tx.amount;
     });
 
-    const total = Object.values(noteTotals).reduce((sum, v) => sum + v.total, 0);
+    const total = Object.values(noteTotals).reduce(
+      (sum, v) => sum + v.total,
+      0,
+    );
     if (total === 0) return [];
 
     return Object.values(noteTotals)
@@ -1231,7 +1409,7 @@ const StatisticsScreen = () => {
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={5}
-        removeClippedSubviews={Platform.OS === 'android'}
+        removeClippedSubviews={Platform.OS === "android"}
         onEndReached={() => {
           if (displayLimit < filteredTransactions.length) {
             setDisplayLimit((prev) => prev + 10);
@@ -1470,21 +1648,26 @@ const StatisticsScreen = () => {
                 }
                 selectedCategory={selectedPieCategory}
                 onSelectCategory={setSelectedPieCategory}
-                renderNoteDetails={pieChartMode === "category"
-                  ? (catName) => {
-                    const details = getNoteDetailsForCategory(catName);
-                    return (
-                      <View>
-                        {details.map((item, idx) => (
-                          <View key={idx} style={styles.inlineNoteItem}>
-                            <Text style={styles.inlineNoteText}>• {item.note}</Text>
-                            <Text style={styles.inlineNoteAmount}>{formatCurrency(item.total)} đ</Text>
+                renderNoteDetails={
+                  pieChartMode === "category"
+                    ? (catName) => {
+                        const details = getNoteDetailsForCategory(catName);
+                        return (
+                          <View>
+                            {details.map((item, idx) => (
+                              <View key={idx} style={styles.inlineNoteItem}>
+                                <Text style={styles.inlineNoteText}>
+                                  • {item.note}
+                                </Text>
+                                <Text style={styles.inlineNoteAmount}>
+                                  {formatCurrency(item.total)} đ
+                                </Text>
+                              </View>
+                            ))}
                           </View>
-                        ))}
-                      </View>
-                    );
-                  }
-                  : undefined
+                        );
+                      }
+                    : undefined
                 }
               />
             </View>
