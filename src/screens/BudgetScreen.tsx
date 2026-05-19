@@ -10,6 +10,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import {
   PlusCircle,
@@ -30,6 +31,50 @@ import { formatCurrency } from "../utils/format";
 import Keypad from "../components/Keypad";
 import { useIsFocused } from "@react-navigation/native";
 
+export const EXPENSE_ICONS: Record<string, any> = {
+  badminton: require("../../assets/expense_icon/badminton.png"),
+  brand: require("../../assets/expense_icon/brand.png"),
+  bus: require("../../assets/expense_icon/bus.png"),
+  candies: require("../../assets/expense_icon/candies.png"),
+  "card-games": require("../../assets/expense_icon/card-games.png"),
+  cooking: require("../../assets/expense_icon/cooking.png"),
+  date: require("../../assets/expense_icon/date.png"),
+  default: require("../../assets/expense_icon/default.png"),
+  drink: require("../../assets/expense_icon/drink.png"),
+  "electric-car": require("../../assets/expense_icon/electric-car.png"),
+  "engine-oil": require("../../assets/expense_icon/engine-oil.png"),
+  "flash-card": require("../../assets/expense_icon/flash-card.png"),
+  "game-console": require("../../assets/expense_icon/game-console.png"),
+  "gas-stove": require("../../assets/expense_icon/gas-stove.png"),
+  "gift-card": require("../../assets/expense_icon/gift-card.png"),
+  gift: require("../../assets/expense_icon/gift.png"),
+  "hair-cut": require("../../assets/expense_icon/hair-cut.png"),
+  "interior-design": require("../../assets/expense_icon/interior-design.png"),
+  iphone: require("../../assets/expense_icon/iphone.png"),
+  jewelry: require("../../assets/expense_icon/jewelry.png"),
+  main_meal: require("../../assets/expense_icon/main_meal.png"),
+  moon: require("../../assets/expense_icon/moon.png"),
+  motorbike: require("../../assets/expense_icon/motorbike.png"),
+  other: require("../../assets/expense_icon/other.png"),
+  outreach: require("../../assets/expense_icon/outreach.png"),
+  "parking-car": require("../../assets/expense_icon/parking-car.png"),
+  party: require("../../assets/expense_icon/party.png"),
+  petrol: require("../../assets/expense_icon/petrol.png"),
+  private: require("../../assets/expense_icon/private.png"),
+  rent_house: require("../../assets/expense_icon/rent_house.png"),
+  review: require("../../assets/expense_icon/review.png"),
+  shoes: require("../../assets/expense_icon/shoes.png"),
+  smoothie: require("../../assets/expense_icon/smoothie.png"),
+  "teddy-bear": require("../../assets/expense_icon/teddy-bear.png"),
+  tent: require("../../assets/expense_icon/tent.png"),
+  "travel-luggage": require("../../assets/expense_icon/travel-luggage.png"),
+  "watching-a-movie": require("../../assets/expense_icon/watching-a-movie.png"),
+  wedding: require("../../assets/expense_icon/wedding.png"),
+  wrench: require("../../assets/expense_icon/wrench.png"),
+  wristwatch: require("../../assets/expense_icon/wristwatch.png"),
+};
+
+
 // Màn hình BudgetScreen: Quản lý chia tiền vào các danh mục chi tiêu theo tháng
 const BudgetScreen = () => {
   const isFocused = useIsFocused();
@@ -37,6 +82,16 @@ const BudgetScreen = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [budgets, setBudgets] = useState<CategoryBudget[]>([]);
   const [unallocated, setUnallocated] = useState<number>(0); // Số dư chưa phân bổ
+
+  // Modal: Chọn Icon
+  const [iconModalVisible, setIconModalVisible] = useState(false);
+  const [pendingCategory, setPendingCategory] = useState<{
+    name: string;
+    type: "recharge" | "direct";
+  } | null>(null);
+  const [editingCategory, setEditingCategory] = useState<CategoryBudget | null>(
+    null,
+  );
 
   const [allocModalVisible, setAllocModalVisible] = useState(false);
   const [selectedCat, setSelectedCat] = useState<CategoryBudget | null>(null);
@@ -179,6 +234,38 @@ const BudgetScreen = () => {
       return;
     }
 
+    // Chuyển sang bước chọn icon
+    setPendingCategory({ name, type: newCatType });
+    setAddCatModalVisible(false);
+    setIconModalVisible(true);
+  };
+
+  const openEditIconModal = (cat: CategoryBudget) => {
+    setEditingCategory(cat);
+    setPendingCategory(null);
+    setIconModalVisible(true);
+  };
+
+  const handleSelectIcon = async (iconKey: string) => {
+    if (editingCategory) {
+      const updated = budgets.map((b) => {
+        if (b.name === editingCategory.name) {
+          return { ...b, icon: iconKey };
+        }
+        return b;
+      });
+      const success = await storage.saveCategoryBudgets(updated);
+      if (success) {
+        setBudgets(updated);
+        setEditingCategory(null);
+        setIconModalVisible(false);
+      }
+      return;
+    }
+
+    if (!pendingCategory) return;
+    const { name, type } = pendingCategory;
+
     const txs = await storage.getTransactions();
     let hasUpdatedTx = false;
     const updatedTxs = txs.map((tx) => {
@@ -198,14 +285,15 @@ const BudgetScreen = () => {
 
     const updated = [
       ...budgets,
-      { name, budget: 0, spent: 0, type: newCatType },
+      { name, budget: 0, spent: 0, type, icon: iconKey },
     ];
     const success = await storage.saveCategoryBudgets(updated);
     if (success) {
       setBudgets(updated);
       setNewCatName("");
       setNewCatType("recharge");
-      setAddCatModalVisible(false);
+      setPendingCategory(null);
+      setIconModalVisible(false);
     }
   };
 
@@ -280,7 +368,7 @@ const BudgetScreen = () => {
 
   const handleSwitchCategoryType = (cat: CategoryBudget) => {
     const isDirect = cat.type === "direct";
-    
+
     if (isDirect) {
       Alert.alert(
         "Chuyển đổi danh mục",
@@ -291,16 +379,19 @@ const BudgetScreen = () => {
             text: "Đồng ý",
             onPress: async () => {
               const updated = budgets.map((b) =>
-                b.name === cat.name ? { ...b, type: "recharge" as const } : b
+                b.name === cat.name ? { ...b, type: "recharge" as const } : b,
               );
               const success = await storage.saveCategoryBudgets(updated);
               if (success) {
                 setBudgets(updated);
-                Alert.alert("Thành công", `Đã chuyển "${cat.name}" thành Cần nạp tiền.`);
+                Alert.alert(
+                  "Thành công",
+                  `Đã chuyển "${cat.name}" thành Cần nạp tiền.`,
+                );
               }
             },
           },
-        ]
+        ],
       );
     } else {
       Alert.alert(
@@ -313,17 +404,22 @@ const BudgetScreen = () => {
             onPress: async () => {
               const returnedAmount = cat.budget;
               const updated = budgets.map((b) =>
-                b.name === cat.name ? { ...b, budget: 0, type: "direct" as const } : b
+                b.name === cat.name
+                  ? { ...b, budget: 0, type: "direct" as const }
+                  : b,
               );
               const success = await storage.saveCategoryBudgets(updated);
               if (success) {
                 setBudgets(updated);
                 setUnallocated((prev) => prev + returnedAmount);
-                Alert.alert("Thành công", `Đã chuyển "${cat.name}" thành Chi trực tiếp và hoàn lại ${formatCurrency(returnedAmount)} đ.`);
+                Alert.alert(
+                  "Thành công",
+                  `Đã chuyển "${cat.name}" thành Chi trực tiếp và hoàn lại ${formatCurrency(returnedAmount)} đ.`,
+                );
               }
             },
           },
-        ]
+        ],
       );
     }
   };
@@ -343,6 +439,8 @@ const BudgetScreen = () => {
     else if (percentRemaining < 50) progressColor = "#f59e0b";
 
     const isDirect = cat.type === "direct";
+    const iconSource =
+      EXPENSE_ICONS[cat.icon || "default"] || EXPENSE_ICONS["default"];
 
     return (
       <TouchableOpacity
@@ -351,20 +449,29 @@ const BudgetScreen = () => {
         onPress={() => (isDirect ? null : openAllocModal(cat))}
         activeOpacity={isDirect ? 1 : 0.7}
       >
+        <TouchableOpacity
+          style={styles.catIconContainer}
+          onPress={() => openEditIconModal(cat)}
+        >
+          <Image source={iconSource} style={styles.catIcon} />
+        </TouchableOpacity>
         <View style={styles.catInfo}>
           <View style={styles.catNameRow}>
             <Text style={styles.catName}>{cat.name}</Text>
-            {!isDirect && (
-              <Text
-                style={[
-                  styles.catBudget,
-                  { color: cat.budget <= 0 ? "#ef4444" : "#7c3aed" },
-                ]}
-              >
-                {showAmount ? `${formatCurrency(cat.budget)} đ` : "******"}
-              </Text>
-            )}
           </View>
+          {!isDirect && (
+            <Text
+              style={[
+                styles.catBudget,
+                {
+                  color: cat.budget <= 0 ? "#ef4444" : "#7c3aed",
+                  marginTop: 4,
+                },
+              ]}
+            >
+              {showAmount ? `${formatCurrency(cat.budget)} đ` : "******"}
+            </Text>
+          )}
 
           {!isDirect && (
             <View style={styles.progressContainer}>
@@ -544,9 +651,20 @@ const BudgetScreen = () => {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Phân bổ cho "{selectedCat?.name}"
-              </Text>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+              >
+                <Image
+                  source={
+                    EXPENSE_ICONS[selectedCat?.icon || "default"] ||
+                    EXPENSE_ICONS["default"]
+                  }
+                  style={{ width: 28, height: 28, resizeMode: "contain" }}
+                />
+                <Text style={styles.modalTitle}>
+                  Phân bổ cho "{selectedCat?.name}"
+                </Text>
+              </View>
               <TouchableOpacity onPress={() => setAllocModalVisible(false)}>
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
@@ -777,6 +895,79 @@ const BudgetScreen = () => {
               onPress={handleAddCategory}
             >
               <Text style={styles.confirmBtnText}>Tạo danh mục mới</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal: Chọn Icon */}
+      <Modal
+        visible={iconModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() =>
+          handleSelectIcon(
+            editingCategory ? editingCategory.icon || "default" : "default",
+          )
+        }
+      >
+        <View style={styles.modalOverlayCenter}>
+          <View style={styles.iconModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chọn biểu tượng túi chi</Text>
+              <TouchableOpacity
+                onPress={() =>
+                  handleSelectIcon(
+                    editingCategory
+                      ? editingCategory.icon || "default"
+                      : "default",
+                  )
+                }
+              >
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.iconModalSubtitle}>
+              Chọn biểu tượng đại diện cho túi chi "
+              {pendingCategory?.name || editingCategory?.name}"
+            </Text>
+
+            <ScrollView
+              contentContainerStyle={styles.iconGrid}
+              showsVerticalScrollIndicator={false}
+            >
+              {Object.keys(EXPENSE_ICONS).map((iconKey) => {
+                return (
+                  <TouchableOpacity
+                    key={iconKey}
+                    style={styles.iconGridItem}
+                    onPress={() => handleSelectIcon(iconKey)}
+                  >
+                    <Image
+                      source={EXPENSE_ICONS[iconKey]}
+                      style={styles.iconItemImage}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[
+                styles.confirmBtn,
+                { backgroundColor: "#64748b", marginTop: 16 },
+              ]}
+              onPress={() =>
+                handleSelectIcon(
+                  editingCategory
+                    ? editingCategory.icon || "default"
+                    : "default",
+                )
+              }
+            >
+              <Text style={styles.confirmBtnText}>
+                {editingCategory ? "Hủy" : "Dùng biểu tượng mặc định"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1147,6 +1338,57 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#0f172a",
     textAlign: "center",
+  },
+  catIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#f5f3ff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
+  },
+  catIcon: {
+    width: 32,
+    height: 32,
+    resizeMode: "contain",
+  },
+  iconModalContent: {
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    padding: 24,
+    width: "100%",
+    maxHeight: "80%",
+    elevation: 20,
+  },
+  iconModalSubtitle: {
+    fontSize: 14,
+    color: "#64748b",
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  iconGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingVertical: 10,
+  },
+  iconGridItem: {
+    width: "22%",
+    aspectRatio: 1,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  iconItemImage: {
+    width: 38,
+    height: 38,
+    resizeMode: "contain",
   },
 });
 

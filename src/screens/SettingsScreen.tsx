@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from "react-native";
 import { writeAsStringAsync, readAsStringAsync } from "expo-file-system/legacy";
 import { Paths } from "expo-file-system";
@@ -36,6 +37,52 @@ import { UserProfile } from "../types";
 
 const DEFAULT_INCOME_CATEGORIES = ["Lương", "Thưởng", "Bán hàng"];
 
+export const INCOME_ICONS: Record<string, any> = {
+  bag: require("../../assets/income_icon/bag.png"),
+  bank: require("../../assets/income_icon/bank.png"),
+  chess: require("../../assets/income_icon/chess.png"),
+  coding: require("../../assets/income_icon/coding.png"),
+  deal: require("../../assets/income_icon/deal.png"),
+  default: require("../../assets/income_icon/default.png"),
+  developer: require("../../assets/income_icon/developer.png"),
+  driver: require("../../assets/income_icon/driver.png"),
+  game: require("../../assets/income_icon/game.png"),
+  "gas-pump": require("../../assets/income_icon/gas-pump.png"),
+  gem: require("../../assets/income_icon/gem.png"),
+  "gift-box": require("../../assets/income_icon/gift-box.png"),
+  "gold-price": require("../../assets/income_icon/gold-price.png"),
+  lease: require("../../assets/income_icon/lease.png"),
+  "live-streaming": require("../../assets/income_icon/live-streaming.png"),
+  lucky_money: require("../../assets/income_icon/lucky_money.png"),
+  other: require("../../assets/income_icon/other.png"),
+  profits: require("../../assets/income_icon/profits.png"),
+  salary: require("../../assets/income_icon/salary.png"),
+  salary_1: require("../../assets/income_icon/salary_1.png"),
+  sell: require("../../assets/income_icon/sell.png"),
+  selling: require("../../assets/income_icon/selling.png"),
+  "social-media": require("../../assets/income_icon/social-media.png"),
+  stock: require("../../assets/income_icon/stock.png"),
+  support_4g: require("../../assets/income_icon/support_4g.png"),
+  support_opening_dealer: require("../../assets/income_icon/support_opening_dealer.png"),
+  surprise: require("../../assets/income_icon/surprise.png"),
+  teacher: require("../../assets/income_icon/teacher.png"),
+};
+
+
+export const getIncomeIconSource = (
+  catName: string,
+  profile: UserProfile | null,
+) => {
+  const key = profile?.incomeCategoryIcons?.[catName];
+  if (key && INCOME_ICONS[key]) {
+    return INCOME_ICONS[key];
+  }
+  if (catName === "Lương") return INCOME_ICONS["salary"];
+  if (catName === "Thưởng") return INCOME_ICONS["gift-box"];
+  if (catName === "Bán hàng") return INCOME_ICONS["sell"];
+  return INCOME_ICONS["default"];
+};
+
 const SettingsScreen = () => {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
@@ -45,6 +92,10 @@ const SettingsScreen = () => {
   // Category Modal State (income only)
   const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+
+  // Modal Chọn Icon Thu nhập
+  const [isIconModalVisible, setIconModalVisible] = useState(false);
+  const [pendingCategoryName, setPendingCategoryName] = useState("");
 
   // Settings Modal State
   const [isSettingsModalVisible, setSettingsModalVisible] = useState(false);
@@ -171,19 +222,45 @@ const SettingsScreen = () => {
       return;
     }
 
-    // Kiểm tra và đồng bộ giao dịch lịch sử
-    const txs = await storage.getTransactions();
-    const matches = txs.filter(
-      (t) => t.categorySnapshot === trimmedName && t.category === "Khác",
-    );
+    // Mở modal chọn icon thu nhập
+    setPendingCategoryName(trimmedName);
+    setCategoryModalVisible(false);
+    setIconModalVisible(true);
+  };
 
-    const updatedProfile = {
-      ...profile,
-      incomeCategories: [...current, trimmedName],
-    };
+  const handleSelectIncomeIcon = async (iconKey: string) => {
+    if (!pendingCategoryName || !profile) return;
+    const trimmedName = pendingCategoryName;
 
-    const success = await storage.saveUserProfile(updatedProfile);
-    if (success) {
+    const current = profile.incomeCategories || DEFAULT_INCOME_CATEGORIES;
+    const currentIcons = profile.incomeCategoryIcons || {};
+
+    const isExisting = current.includes(trimmedName);
+
+    let updatedProfile;
+    if (isExisting) {
+      updatedProfile = {
+        ...profile,
+        incomeCategoryIcons: {
+          ...currentIcons,
+          [trimmedName]: iconKey,
+        },
+      };
+    } else {
+      const txs = await storage.getTransactions();
+      const matches = txs.filter(
+        (t) => t.categorySnapshot === trimmedName && t.category === "Khác",
+      );
+
+      updatedProfile = {
+        ...profile,
+        incomeCategories: [...current, trimmedName],
+        incomeCategoryIcons: {
+          ...currentIcons,
+          [trimmedName]: iconKey,
+        },
+      };
+
       if (matches.length > 0) {
         const updatedTxs = txs.map((t) => {
           if (t.categorySnapshot === trimmedName && t.category === "Khác") {
@@ -197,8 +274,34 @@ const SettingsScreen = () => {
           `Đã thêm danh mục "${trimmedName}" và tự động đồng bộ ${matches.length} giao dịch cũ liên quan.`,
         );
       }
+    }
+
+    const success = await storage.saveUserProfile(updatedProfile);
+    if (success) {
       setProfile(updatedProfile);
       setNewCategoryName("");
+      setPendingCategoryName("");
+      setIconModalVisible(false);
+      // Mở lại modal quản lý danh mục sau khi hoàn thành
+      setCategoryModalVisible(true);
+    }
+  };
+
+  const handleCancelIncomeIcon = () => {
+    if (!pendingCategoryName || !profile) {
+      setIconModalVisible(false);
+      setCategoryModalVisible(true);
+      return;
+    }
+    const current = profile.incomeCategories || DEFAULT_INCOME_CATEGORIES;
+    const isExisting = current.includes(pendingCategoryName);
+
+    if (isExisting) {
+      setPendingCategoryName("");
+      setIconModalVisible(false);
+      setCategoryModalVisible(true);
+    } else {
+      handleSelectIncomeIcon("default");
     }
   };
 
@@ -266,14 +369,29 @@ const SettingsScreen = () => {
     }
   };
 
-  const renderCategoryItem = ({ item }: { item: string }) => (
-    <View style={styles.categoryListItem}>
-      <Text style={styles.categoryListName}>{item}</Text>
-      <TouchableOpacity onPress={() => handleDeleteCategory(item)}>
-        <Trash2 color="#ef4444" size={20} />
-      </TouchableOpacity>
-    </View>
-  );
+  const renderCategoryItem = ({ item }: { item: string }) => {
+    const iconSource = getIncomeIconSource(item, profile);
+    return (
+      <View style={styles.categoryListItem}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <TouchableOpacity
+            style={styles.categoryIconContainer}
+            onPress={() => {
+              setPendingCategoryName(item);
+              setCategoryModalVisible(false);
+              setIconModalVisible(true);
+            }}
+          >
+            <Image source={iconSource} style={styles.categoryIcon} />
+          </TouchableOpacity>
+          <Text style={styles.categoryListName}>{item}</Text>
+        </View>
+        <TouchableOpacity onPress={() => handleDeleteCategory(item)}>
+          <Trash2 color="#ef4444" size={20} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const getActiveCategories = () => {
     return profile?.incomeCategories || DEFAULT_INCOME_CATEGORIES;
@@ -425,6 +543,7 @@ const SettingsScreen = () => {
               keyExtractor={(item) => item}
               renderItem={renderCategoryItem}
               contentContainerStyle={{ paddingBottom: 20 }}
+              showsVerticalScrollIndicator={false}
             />
           </View>
         </KeyboardAvoidingView>
@@ -498,6 +617,62 @@ const SettingsScreen = () => {
               onPress={() => setSettingsModalVisible(false)}
             >
               <Text style={styles.closeSettingsBtnText}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal: Chọn Icon Thu Nhập */}
+      <Modal
+        visible={isIconModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelIncomeIcon}
+      >
+        <View style={styles.modalOverlayCenter}>
+          <View style={styles.iconModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chọn biểu tượng thu nhập</Text>
+              <TouchableOpacity onPress={handleCancelIncomeIcon}>
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.iconModalSubtitle}>
+              Chọn biểu tượng đại diện cho nguồn thu "{pendingCategoryName}"
+            </Text>
+
+            <ScrollView
+              contentContainerStyle={styles.iconGrid}
+              showsVerticalScrollIndicator={false}
+            >
+              {Object.keys(INCOME_ICONS).map((iconKey) => {
+                return (
+                  <TouchableOpacity
+                    key={iconKey}
+                    style={styles.iconGridItem}
+                    onPress={() => handleSelectIncomeIcon(iconKey)}
+                  >
+                    <Image
+                      source={INCOME_ICONS[iconKey]}
+                      style={styles.iconItemImage}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[
+                styles.closeSettingsBtn,
+                { backgroundColor: "#64748b", marginTop: 16 },
+              ]}
+              onPress={handleCancelIncomeIcon}
+            >
+              <Text style={[styles.closeSettingsBtnText, { color: "#ffffff" }]}>
+                {profile?.incomeCategories?.includes(pendingCategoryName)
+                  ? "Hủy"
+                  : "Dùng biểu tượng mặc định"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -736,6 +911,56 @@ const styles = StyleSheet.create({
     color: "#1e293b",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  categoryIconContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: "#ecfdf5",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  categoryIcon: {
+    width: 26,
+    height: 26,
+    resizeMode: "contain",
+  },
+  iconModalContent: {
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    padding: 24,
+    width: "100%",
+    maxHeight: "80%",
+    elevation: 20,
+  },
+  iconModalSubtitle: {
+    fontSize: 14,
+    color: "#64748b",
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  iconGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingVertical: 10,
+  },
+  iconGridItem: {
+    width: "22%",
+    aspectRatio: 1,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  iconItemImage: {
+    width: 38,
+    height: 38,
+    resizeMode: "contain",
   },
 });
 

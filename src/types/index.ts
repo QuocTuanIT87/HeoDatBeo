@@ -16,6 +16,7 @@ export interface CategoryBudget {
   estimatedEndDate?: number;      // Ngày ước tính tiêu hết (timestamp ms) (YC 4)
   estimatedEndDateSetAt?: number; // Timestamp lần cuối set estimatedEndDate, để cooldown 15 ngày
   type?: 'recharge' | 'direct';   // Loại danh mục: nạp tiền để chi hoặc không cần nạp
+  icon?: string;     // Key biểu tượng từ assets/expense_icon
 }
 
 // Index tháng/năm có giao dịch — dùng để hiển thị modal lọc nhanh mà không scan toàn bộ transactions
@@ -47,8 +48,11 @@ export interface UserProfile {
   savingYear?: number; // Năm của mục tiêu hiện tại (YC Mới)
   savingHistory?: SavingHistoryItem[]; // Lịch sử tiết kiệm các năm trước
   incomeCategories?: string[];
+  incomeCategoryIcons?: Record<string, string>; // Mapping tên danh mục thu -> tên icon (YC Mới)
   categoryBudgets?: CategoryBudget[]; // Danh mục chi kèm ngân sách
   customFunds?: CustomFund[]; // Quỹ tùy biến của người dùng
+  spendingFundIcon?: string; // Icon cho Quỹ Tiêu Sài (Spending)
+  savingFundIcon?: string; // Icon cho Quỹ Tiết Kiệm (Saving)
   hasSeenGuide?: boolean;
   inputMethod?: 'keypad' | 'manual';
 }

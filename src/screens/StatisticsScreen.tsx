@@ -11,6 +11,7 @@ import {
   Modal,
   Dimensions,
   TextInput,
+  Image,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { storage } from "../store/storage";
@@ -28,6 +29,7 @@ import {
 } from "lucide-react-native";
 import Keypad from "../components/Keypad";
 import { BarChart } from "react-native-gifted-charts";
+import { INCOME_ICONS, EXPENSE_ICONS, getIncomeIconSource } from "./HomeScreen";
 import CustomPieChart from "../components/CustomPieChart";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
@@ -47,13 +49,45 @@ const DEFAULT_EXPENSE_CATEGORIES = [
 const DEFAULT_INCOME_CATEGORIES = ["Lương", "Khác"];
 
 // --- Component thẻ giao dịch — tách ra ngoài để React.memo hoạt động hiệu quả ---
+const getTransactionIconSource = (
+  tx: Transaction,
+  profile: UserProfile | null,
+  categoryBudgets: CategoryBudget[]
+) => {
+  if (tx.name === "Số dư đầu tiên") {
+    return require("../../assets/income_icon/default.png");
+  }
+
+  if (tx.category === "Tiết kiệm" || tx.category === "Rút tiết kiệm") {
+    return require("../../assets/fund_icon/save.png");
+  }
+
+  if (
+    tx.category.startsWith("Xóa quỹ") ||
+    (tx.name && (tx.name.startsWith("Nạp vào ") || tx.name.startsWith("Rút từ ")))
+  ) {
+    return require("../../assets/fund_icon/default.png");
+  }
+
+  if (tx.type === "income") {
+    return getIncomeIconSource(tx.category, profile);
+  }
+
+  const match = categoryBudgets.find((c) => c.name === tx.category);
+  const iconKey = match?.icon || "default";
+  return EXPENSE_ICONS[iconKey] || EXPENSE_ICONS["default"];
+};
+
+// --- Component thẻ giao dịch — tách ra ngoài để React.memo hoạt động hiệu quả ---
 type TransactionCardProps = {
   item: Transaction;
   onOpenOptions: (tx: Transaction) => void;
+  profile: UserProfile | null;
+  categoryBudgets: CategoryBudget[];
 };
 
 const TransactionCard = React.memo(
-  ({ item, onOpenOptions }: TransactionCardProps) => {
+  ({ item, onOpenOptions, profile, categoryBudgets }: TransactionCardProps) => {
     const dateStr = new Date(item.timestamp).toLocaleString("vi-VN", {
       year: "numeric",
       month: "2-digit",
@@ -72,14 +106,27 @@ const TransactionCard = React.memo(
     return (
       <View style={cardStyles.card}>
         <View style={cardStyles.cardRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={cardStyles.cardCategory}>{displayCategory}</Text>
-            {displayName ? (
-              <Text style={cardStyles.cardName}>{displayName}</Text>
-            ) : null}
-            {item.note ? (
-              <Text style={cardStyles.cardNote}>{item.note}</Text>
-            ) : null}
+          <View style={cardStyles.cardLeftContainer}>
+            <View
+              style={[
+                cardStyles.iconWrapper,
+                { backgroundColor: isExpense ? "#fee2e2" : "#dcfce7" },
+              ]}
+            >
+              <Image
+                source={getTransactionIconSource(item, profile, categoryBudgets)}
+                style={cardStyles.categoryIcon}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={cardStyles.cardCategory}>{displayCategory}</Text>
+              {displayName ? (
+                <Text style={cardStyles.cardName}>{displayName}</Text>
+              ) : null}
+              {item.note ? (
+                <Text style={cardStyles.cardNote}>{item.note}</Text>
+              ) : null}
+            </View>
           </View>
           <Text
             style={[
@@ -173,6 +220,24 @@ const cardStyles = StyleSheet.create({
   },
   actionButton: {
     padding: 4,
+  },
+  cardLeftContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: 12,
+  },
+  iconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  categoryIcon: {
+    width: 26,
+    height: 26,
+    resizeMode: "contain",
   },
 });
 
@@ -787,10 +852,15 @@ const StatisticsScreen = () => {
 
   const renderItem = useCallback(
     ({ item }: { item: Transaction }) => (
-      <TransactionCard item={item} onOpenOptions={handleOpenOptions} />
+      <TransactionCard
+        item={item}
+        onOpenOptions={handleOpenOptions}
+        profile={profile}
+        categoryBudgets={categoryBudgets}
+      />
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [handleOpenOptions],
+    [handleOpenOptions, profile, categoryBudgets],
   );
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
