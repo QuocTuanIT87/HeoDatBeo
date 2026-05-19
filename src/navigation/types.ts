@@ -16,4 +16,5 @@ export type RootStackParamList = {
   FundHistory: undefined;
   Guide: undefined;
   BarChart: { selectedMonth: string | null };
+  Profile: undefined;
 };

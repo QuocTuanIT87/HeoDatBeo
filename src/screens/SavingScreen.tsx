@@ -550,23 +550,6 @@ const SavingScreen = () => {
               </Text>
               <Text style={styles.currencyLabel}>VNĐ</Text>
             </View>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>
-                {profile?.inputMethod === "manual"
-                  ? "Nhập số tiền"
-                  : "Chọn mệnh giá"}
-              </Text>
-              {/* <TouchableOpacity
-                style={styles.quickToggleBtnCircle}
-                onPress={toggleInputMethod}
-              >
-                {profile?.inputMethod === "manual" ? (
-                  <LayoutGrid color="#64748b" size={24} />
-                ) : (
-                  <Keyboard color="#64748b" size={24} />
-                )}
-              </TouchableOpacity> */}
-            </View>
 
             {profile?.inputMethod === "manual" ? (
               <View style={styles.manualInputSection}>
@@ -586,20 +569,38 @@ const SavingScreen = () => {
                 amount={amount}
                 onAddAmount={(v) => setAmount((p) => p + v)}
                 onClear={() => setAmount(0)}
+                hideClearButton={true}
               />
             )}
             {profile?.inputMethod !== "manual" && (
-              <TouchableOpacity
-                style={[
-                  styles.saveButton,
-                  type === "deposit" ? styles.saveDeposit : styles.saveWithdraw,
-                ]}
-                onPress={executeTransaction}
-              >
-                <Text style={styles.saveButtonText}>
-                  {type === "deposit" ? "Xác Nhận Nạp" : "Xác Nhận Rút"}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.actionButtonRow}>
+                <TouchableOpacity
+                  disabled={amount === 0}
+                  style={[
+                    styles.saveButton,
+                    styles.actionNextBtn,
+                    amount > 0
+                      ? type === "deposit"
+                        ? styles.saveDeposit
+                        : styles.saveWithdraw
+                      : styles.saveDisabled,
+                  ]}
+                  onPress={executeTransaction}
+                  activeOpacity={amount > 0 ? 0.8 : 1}
+                >
+                  <Text style={styles.saveButtonText}>
+                    {type === "deposit" ? "Xác Nhận Nạp" : "Xác Nhận Rút"}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.cancelButton, styles.actionCancelBtn]}
+                  onPress={() => setAmount(0)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.cancelButtonText}>Hủy</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </>
         )}
@@ -824,7 +825,7 @@ const styles = StyleSheet.create({
   amountDisplay: {
     backgroundColor: "#ffffff",
     borderRadius: 16,
-    padding: 24,
+    padding: 14,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
@@ -842,15 +843,47 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     marginTop: 16,
   },
-  saveButton: {
+  actionButtonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
     marginTop: 24,
-    paddingVertical: 18,
+  },
+  actionNextBtn: {
+    flex: 3,
+    paddingVertical: 16,
     borderRadius: 16,
     alignItems: "center",
+    justifyContent: "center",
+  },
+  actionCancelBtn: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  saveButton: {
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
   saveDeposit: { backgroundColor: "#f59e0b" },
   saveWithdraw: { backgroundColor: "#ef4444" },
-  saveButtonText: { color: "#ffffff", fontSize: 18, fontWeight: "bold" },
+  saveDisabled: { backgroundColor: "#cbd5e1", elevation: 0, shadowOpacity: 0 },
+  saveButtonText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
+  cancelButton: {
+    backgroundColor: "#fee2e2",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  cancelButtonText: {
+    color: "#ef4444",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   cooldownContainer: { alignItems: "center", paddingVertical: 10 },
   cooldownCircle: {
     width: 140,

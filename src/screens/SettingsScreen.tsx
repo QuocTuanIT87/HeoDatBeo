@@ -32,8 +32,16 @@ import {
   X,
   BookOpen,
   Settings as SettingsIcon,
+  User,
+  Camera,
+  Calendar,
+  Briefcase,
+  GraduationCap,
+  Heart,
+  Link,
 } from "lucide-react-native";
 import { UserProfile } from "../types";
+import { scheduleTestNotification } from "../utils/notifications";
 
 const DEFAULT_INCOME_CATEGORIES = ["Lương", "Thưởng", "Bán hàng"];
 
@@ -67,7 +75,6 @@ export const INCOME_ICONS: Record<string, any> = {
   surprise: require("../../assets/income_icon/surprise.png"),
   teacher: require("../../assets/income_icon/teacher.png"),
 };
-
 
 export const getIncomeIconSource = (
   catName: string,
@@ -400,23 +407,31 @@ const SettingsScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Cài đặt & Sao lưu</Text>
+        <Text style={styles.headerTitle}>Cài đặt & Dữ liệu</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
         <TouchableOpacity
           style={styles.card}
+          onPress={() => (navigation as any).navigate("Profile")}
+        >
+          <View style={[styles.iconContainer, { backgroundColor: "#f3e8ff" }]}>
+            <User color="#a855f7" size={18} />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Thông tin cá nhân</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.card}
           onPress={() => setCategoryModalVisible(true)}
         >
           <View style={[styles.iconContainer, { backgroundColor: "#fef3c7" }]}>
-            <List color="#d97706" size={24} />
+            <List color="#d97706" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Quản lý danh mục thu</Text>
-            <Text style={styles.cardDesc}>
-              Thêm, bớt danh mục thu nhập. Danh mục chi được quản lý trong tab
-              "Chia Tiền".
-            </Text>
+            <Text style={styles.cardTitle}>Danh mục thu nhập</Text>
           </View>
         </TouchableOpacity>
 
@@ -425,13 +440,10 @@ const SettingsScreen = () => {
           onPress={() => setSettingsModalVisible(true)}
         >
           <View style={[styles.iconContainer, { backgroundColor: "#e0f2fe" }]}>
-            <SettingsIcon color="#0284c7" size={24} />
+            <SettingsIcon color="#0284c7" size={18} />
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.cardTitle}>Cài đặt nhập liệu</Text>
-            <Text style={styles.cardDesc}>
-              Tùy chọn cách thức nhập số tiền (Bàn phím hoặc Nhập tay).
-            </Text>
           </View>
         </TouchableOpacity>
 
@@ -440,54 +452,42 @@ const SettingsScreen = () => {
           onPress={() => (navigation as any).navigate("Guide")}
         >
           <View style={[styles.iconContainer, { backgroundColor: "#f0fdf4" }]}>
-            <BookOpen color="#16a34a" size={24} />
+            <BookOpen color="#16a34a" size={18} />
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.cardTitle}>Hướng dẫn sử dụng</Text>
-            <Text style={styles.cardDesc}>
-              Cách thức hoạt động và sử dụng các tính năng của Heo Đất Béo.
-            </Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.card} onPress={handleExport}>
           <View style={[styles.iconContainer, { backgroundColor: "#e0e7ff" }]}>
-            <Upload color="#4f46e5" size={24} />
+            <Upload color="#4f46e5" size={18} />
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.cardTitle}>Xuất dữ liệu (.txt)</Text>
-            <Text style={styles.cardDesc}>
-              Tạo file sao lưu dữ liệu hiện tại để lưu trữ.
-            </Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.card} onPress={handleImport}>
           <View style={[styles.iconContainer, { backgroundColor: "#dcfce7" }]}>
-            <Download color="#16a34a" size={24} />
+            <Download color="#16a34a" size={18} />
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.cardTitle}>Nhập dữ liệu (.txt)</Text>
-            <Text style={styles.cardDesc}>
-              Phục hồi dữ liệu từ file sao lưu trước đó.
-            </Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.card} onPress={handleReset}>
           <View style={[styles.iconContainer, { backgroundColor: "#fee2e2" }]}>
-            <Trash2 color="#dc2626" size={24} />
+            <Trash2 color="#dc2626" size={18} />
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.cardTitle}>Khôi phục cài đặt gốc</Text>
-            <Text style={styles.cardDesc}>
-              Xóa mọi dữ liệu và trở lại màn hình bắt đầu.
-            </Text>
           </View>
         </TouchableOpacity>
 
         <View style={styles.footerInfo}>
-          <Text style={styles.versionText}>Phiên bản hiện tại : 5.0.0</Text>
+          <Text style={styles.versionText}>Phiên bản hiện tại : 19.5.2026</Text>
           <Text style={styles.authorText}>
             Ứng dụng được phát triển bởi{" "}
             <Text style={styles.authorHighlight}>SatsBoy87</Text>
@@ -677,6 +677,7 @@ const SettingsScreen = () => {
           </View>
         </View>
       </Modal>
+
     </View>
   );
 };
@@ -704,7 +705,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#ffffff",
-    padding: 20,
+    padding: 12,
     borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
@@ -716,14 +717,14 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   iconContainer: {
-    padding: 12,
+    padding: 8,
     borderRadius: 12,
   },
   cardContent: {
     flex: 1,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "600",
     color: "#1e293b",
     marginBottom: 4,
@@ -821,8 +822,8 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   footerInfo: {
-    marginTop: 32,
     alignItems: "center",
+    marginTop: 52,
   },
   versionText: {
     fontSize: 14,
@@ -837,6 +838,8 @@ const styles = StyleSheet.create({
   authorHighlight: {
     fontWeight: "bold",
     color: "#3b82f6",
+    fontStyle: "italic",
+    fontSize: 15,
   },
   // Setting styles
   settingSectionTitle: {

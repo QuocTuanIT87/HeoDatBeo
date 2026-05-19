@@ -15,9 +15,18 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { storage } from "../store/storage";
-import { Transaction, UserProfile, CategoryBudget } from "../types";
+import {
+  Transaction,
+  UserProfile,
+  CategoryBudget,
+  NotificationHistoryItem,
+} from "../types";
 import { formatCurrency } from "../utils/format";
-import { useIsFocused, useNavigation } from "@react-navigation/native";
+import {
+  useIsFocused,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
 import {
   Trash2,
   X,
@@ -26,6 +35,7 @@ import {
   MoreHorizontal,
   PencilLine,
   PenOff,
+  History,
 } from "lucide-react-native";
 import Keypad from "../components/Keypad";
 import { BarChart } from "react-native-gifted-charts";
@@ -52,7 +62,7 @@ const DEFAULT_INCOME_CATEGORIES = ["Lương", "Khác"];
 const getTransactionIconSource = (
   tx: Transaction,
   profile: UserProfile | null,
-  categoryBudgets: CategoryBudget[]
+  categoryBudgets: CategoryBudget[],
 ) => {
   if (tx.name === "Số dư đầu tiên") {
     return require("../../assets/income_icon/default.png");
@@ -64,7 +74,8 @@ const getTransactionIconSource = (
 
   if (
     tx.category.startsWith("Xóa quỹ") ||
-    (tx.name && (tx.name.startsWith("Nạp vào ") || tx.name.startsWith("Rút từ ")))
+    (tx.name &&
+      (tx.name.startsWith("Nạp vào ") || tx.name.startsWith("Rút từ ")))
   ) {
     return require("../../assets/fund_icon/default.png");
   }
@@ -114,7 +125,11 @@ const TransactionCard = React.memo(
               ]}
             >
               <Image
-                source={getTransactionIconSource(item, profile, categoryBudgets)}
+                source={getTransactionIconSource(
+                  item,
+                  profile,
+                  categoryBudgets,
+                )}
                 style={cardStyles.categoryIcon}
               />
             </View>
@@ -241,16 +256,197 @@ const cardStyles = StyleSheet.create({
   },
 });
 
+const renderHistoryBody = (bodyStr: string) => {
+  const lines = bodyStr.split("\n");
+  let currentSection: "none" | "expense" | "income" = "none";
+
+  return (
+    <View style={{ gap: 4, marginTop: 4 }}>
+      {lines.map((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.includes("---")) return null;
+
+        if (trimmed.includes("bạn đã chi tiêu:")) {
+          currentSection = "expense";
+          return (
+            <Text
+              key={index}
+              style={{
+                fontWeight: "600",
+                color: "#475569",
+                marginTop: 4,
+                fontSize: 13,
+              }}
+            >
+              {trimmed}
+            </Text>
+          );
+        }
+
+        if (trimmed.includes("Bạn đã thu:")) {
+          currentSection = "income";
+          return (
+            <Text
+              key={index}
+              style={{
+                fontWeight: "600",
+                color: "#475569",
+                marginTop: 12,
+                fontSize: 13,
+              }}
+            >
+              {trimmed}
+            </Text>
+          );
+        }
+
+        if (trimmed.startsWith("- ")) {
+          const parts = trimmed.substring(2).split(": ");
+          const cat = parts[0];
+          const amt = parts
+            .slice(1)
+            .join(": ")
+            .replace("🔴 ", "")
+            .replace("🟢 ", "");
+          if (currentSection === "expense") {
+            return (
+              <View
+                key={index}
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  paddingLeft: 8,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#334155", fontSize: 14 }}>• {cat}</Text>
+                <Text
+                  style={{ color: "#ef4444", fontWeight: "600", fontSize: 14 }}
+                >
+                  {amt}
+                </Text>
+              </View>
+            );
+          } else if (currentSection === "income") {
+            return (
+              <View
+                key={index}
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  paddingLeft: 8,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#334155", fontSize: 14 }}>• {cat}</Text>
+                <Text
+                  style={{ color: "#10b981", fontWeight: "600", fontSize: 14 }}
+                >
+                  {amt}
+                </Text>
+              </View>
+            );
+          }
+        }
+
+        if (trimmed.startsWith("Tổng chi:")) {
+          const parts = trimmed.split(" | ");
+          return (
+            <View
+              key={index}
+              style={{
+                backgroundColor: "#f1f5f9",
+                padding: 12,
+                borderRadius: 8,
+                marginTop: 12,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              {parts.map((p, i) => {
+                const cleanP = p.replace("🔴 ", "").replace("🟢 ", "");
+                const isExpense = p.includes("Tổng chi");
+                const isIncome = p.includes("Tổng thu");
+                const pColor = isExpense
+                  ? "#ef4444"
+                  : isIncome
+                    ? "#10b981"
+                    : "#0f172a";
+                return (
+                  <Text
+                    key={i}
+                    style={{ fontWeight: "bold", color: pColor, fontSize: 14 }}
+                  >
+                    {cleanP}
+                  </Text>
+                );
+              })}
+            </View>
+          );
+        }
+
+        if (trimmed.startsWith("So với ngày trước:")) {
+          return (
+            <Text
+              key={index}
+              style={{
+                color: "#64748b",
+                fontStyle: "italic",
+                textAlign: "center",
+                marginTop: 8,
+                fontSize: 13,
+              }}
+            >
+              {trimmed}
+            </Text>
+          );
+        }
+
+        // Fallback for "Không có chi tiêu", "Không có thu nhập"
+        return (
+          <Text
+            key={index}
+            style={{
+              color: "#64748b",
+              fontStyle: "italic",
+              paddingLeft: 8,
+              fontSize: 14,
+            }}
+          >
+            {trimmed}
+          </Text>
+        );
+      })}
+    </View>
+  );
+};
+
 const StatisticsScreen = () => {
   const isFocused = useIsFocused();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<any>();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [categoryBudgets, setCategoryBudgets] = useState<CategoryBudget[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<
     Transaction[]
   >([]);
+
+  // Lịch sử báo cáo tài chính
+  const [showNotificationHistoryModal, setShowNotificationHistoryModal] =
+    useState(false);
+  const [notificationHistory, setNotificationHistory] = useState<
+    NotificationHistoryItem[]
+  >([]);
+  const [historyDisplayLimit, setHistoryDisplayLimit] = useState<number>(10);
+
+  const loadNotificationHistory = async () => {
+    const data = await storage.getNotificationHistory();
+    setNotificationHistory(data);
+    setHistoryDisplayLimit(10);
+  };
 
   const [period, setPeriod] = useState<FilterPeriod>("day");
   const [type, setType] = useState<FilterType>("all");
@@ -277,10 +473,11 @@ const StatisticsScreen = () => {
   const [selectedPieCategory, setSelectedPieCategory] = useState<string | null>(
     null,
   );
-  // Pie chart mode: "category" = theo danh mục, "note" = theo ghi chú
-  const [pieChartMode, setPieChartMode] = useState<"category" | "note">(
-    "category",
-  );
+  const [pieDetailLimit, setPieDetailLimit] = useState<number>(10);
+
+  useEffect(() => {
+    setPieDetailLimit(10);
+  }, [selectedPieCategory]);
 
   // BarChart state
   const [selectedBarData, setSelectedBarData] = useState<{
@@ -335,6 +532,14 @@ const StatisticsScreen = () => {
   useEffect(() => {
     if (categoryFilter !== "Khác") setDeletedCategoryFilter("all");
   }, [categoryFilter]);
+
+  useEffect(() => {
+    if (route.params?.openHistory) {
+      setShowNotificationHistoryModal(true);
+      // Clear the param so it doesn't reopen if screen re-renders
+      navigation.setParams({ openHistory: undefined });
+    }
+  }, [route.params?.openHistory, navigation]);
 
   const loadTransactions = async () => {
     const data = await storage.getTransactions();
@@ -998,81 +1203,14 @@ const StatisticsScreen = () => {
       .sort((a, b) => b.population - a.population);
   };
 
-  // Thống kê theo ghi chú: nếu giao dịch có ghi chú thì dùng ghi chú đó, nếu không thì dùng tên danh mục
-  // Ghi chú trùng tên (bất kể hoa/thường, khoảng trắng) sẽ được cộng dồn
-  const getPieChartDataByNote = () => {
+  const getNoteDetailsForCategory = (catName: string): Transaction[] => {
     const expenses = filteredTransactions.filter((tx) => tx.type === "expense");
-    // key = normalized (trim+lowercase), value = { total, displayLabel, baseCat }
-    const noteTotals: Record<
-      string,
-      { total: number; displayLabel: string; baseCat: string }
-    > = {};
-
-    const colors = [
-      "#ef4444",
-      "#f97316",
-      "#f59e0b",
-      "#84cc16",
-      "#10b981",
-      "#06b6d4",
-      "#3b82f6",
-      "#8b5cf6",
-      "#d946ef",
-      "#f43f5e",
-      "#64748b",
-    ];
-
-    expenses.forEach((tx) => {
-      const catName = tx.categorySnapshot || tx.category;
-      const rawLabel = tx.note?.trim() || catName;
-      // Dùng normalized key để merge trùng (viết hoa/thường khác nhau → cộng chung)
-      const key = rawLabel.toLowerCase();
-      if (!noteTotals[key]) {
-        noteTotals[key] = {
-          total: 0,
-          displayLabel: rawLabel,
-          baseCat: tx.category,
-        };
-      }
-      noteTotals[key].total += tx.amount;
-    });
-
-    const total = Object.values(noteTotals).reduce(
-      (sum, v) => sum + v.total,
-      0,
-    );
-    if (total === 0) return [];
-
-    return Object.values(noteTotals)
-      .sort((a, b) => b.total - a.total)
-      .map((entry, index) => ({
-        name: entry.displayLabel,
-        population: entry.total,
-        color: colors[index % colors.length],
-        baseCategory: entry.baseCat,
-      }));
-  };
-
-  const getNoteDetailsForCategory = (catName: string) => {
-    const expenses = filteredTransactions.filter((tx) => tx.type === "expense");
-    const targetTxs = expenses.filter((tx) => {
-      const txCat = tx.categorySnapshot || tx.category;
-      // Nếu là group Khác trong biểu đồ tròn
-      if (catName === "Khác") {
-        return tx.category === "Khác";
-      }
-      return txCat === catName;
-    });
-
-    const noteGroups: Record<string, number> = {};
-    targetTxs.forEach((tx) => {
-      const noteLabel = tx.note?.trim() || "(Không có ghi chú)";
-      noteGroups[noteLabel] = (noteGroups[noteLabel] || 0) + tx.amount;
-    });
-
-    return Object.entries(noteGroups)
-      .map(([note, total]) => ({ note, total }))
-      .sort((a, b) => b.total - a.total);
+    return expenses
+      .filter((tx) => {
+        const txCat = tx.categorySnapshot || tx.category;
+        return catName === "Khác" ? tx.category === "Khác" : txCat === catName;
+      })
+      .sort((a, b) => b.timestamp - a.timestamp);
   };
 
   const getBarChartData = () => {
@@ -1180,12 +1318,41 @@ const StatisticsScreen = () => {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>Thống kê</Text>
-          <TouchableOpacity
-            onPress={() => setShowPieChartModal(true)}
-            style={styles.chartButton}
-          >
-            <PieChartIcon color="#3b82f6" size={24} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <TouchableOpacity
+              onPress={() => {
+                loadNotificationHistory();
+                setShowNotificationHistoryModal(true);
+              }}
+              style={styles.chartButton}
+            >
+              {/* <History color="#0f172a" size={24} /> */}
+              <Image
+                source={require("../../assets/common_icons/accounting.png")}
+                style={{ width: 24, height: 24, resizeMode: "contain" }}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                if (type === "expense" && filteredTransactions.length > 0) {
+                  setShowPieChartModal(true);
+                }
+              }}
+              disabled={type !== "expense" || filteredTransactions.length === 0}
+              style={[
+                styles.chartButton,
+                (type !== "expense" || filteredTransactions.length === 0) && {
+                  opacity: 0.3,
+                },
+              ]}
+            >
+              <Image
+                source={require("../../assets/common_icons/pie-chart.png")}
+                style={{ width: 24, height: 24, resizeMode: "contain" }}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -1566,6 +1733,124 @@ const StatisticsScreen = () => {
         </TouchableOpacity>
       </Modal>
 
+      {/* Modal Lịch sử Báo cáo Tài chính */}
+      <Modal
+        visible={showNotificationHistoryModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowNotificationHistoryModal(false)}
+      >
+        <View style={styles.pieModalOverlay}>
+          <View style={styles.pieModalBox}>
+            <View style={styles.modalHeader}>
+              <Image
+                source={require("../../assets/common_icons/monitor.png")}
+                style={{ width: 24, height: 24, resizeMode: "contain" }}
+              />
+              <Text style={styles.modalTitle}>Lịch sử báo cáo</Text>
+              <TouchableOpacity
+                onPress={() => setShowNotificationHistoryModal(false)}
+                style={{
+                  padding: 8,
+                  backgroundColor: "#f1f5f9",
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ color: "#0f172a", fontWeight: "bold" }}>
+                  Đóng
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {notificationHistory.length === 0 ? (
+              <View
+                style={{
+                  flex: 1,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  padding: 24,
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#64748b",
+                    fontSize: 16,
+                    textAlign: "center",
+                    fontWeight: "600",
+                  }}
+                >
+                  Chưa có báo cáo tài chính nào.
+                </Text>
+                <Text
+                  style={{
+                    color: "#94a3b8",
+                    fontSize: 13,
+                    textAlign: "center",
+                    marginTop: 8,
+                  }}
+                >
+                  Báo cáo chi tiết hàng ngày sẽ tự động xuất hiện lúc 2:00 sáng
+                  và được lưu trữ tại đây!
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={notificationHistory.slice(0, historyDisplayLimit)}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+                showsVerticalScrollIndicator={false}
+                onEndReached={() => {
+                  if (historyDisplayLimit < notificationHistory.length) {
+                    setHistoryDisplayLimit((prev) => prev + 10);
+                  }
+                }}
+                onEndReachedThreshold={0.5}
+                renderItem={({ item }) => (
+                  <View
+                    style={{
+                      backgroundColor: "#f8fafc",
+                      borderRadius: 16,
+                      padding: 16,
+                      marginBottom: 16,
+                      borderWidth: 1,
+                      borderColor: "#e2e8f0",
+                      shadowColor: "#0f172a",
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.02,
+                      shadowRadius: 4,
+                      elevation: 1,
+                    }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        borderBottomWidth: 1,
+                        borderBottomColor: "#e2e8f0",
+                        paddingBottom: 8,
+                        marginBottom: 12,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontWeight: "700",
+                          color: "#0f172a",
+                          fontSize: 15,
+                        }}
+                      >
+                        {item.title}
+                      </Text>
+                    </View>
+                    {renderHistoryBody(item.body)}
+                  </View>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
       {/* Modal biểu đồ tròn */}
       <Modal
         visible={showPieChartModal}
@@ -1573,7 +1858,6 @@ const StatisticsScreen = () => {
         animationType="slide"
         onRequestClose={() => {
           setShowPieChartModal(false);
-          setPieChartMode("category");
         }}
       >
         <View style={styles.pieModalOverlay}>
@@ -1583,7 +1867,6 @@ const StatisticsScreen = () => {
               <TouchableOpacity
                 onPress={() => {
                   setShowPieChartModal(false);
-                  setPieChartMode("category");
                 }}
                 style={{
                   padding: 8,
@@ -1597,78 +1880,96 @@ const StatisticsScreen = () => {
               </TouchableOpacity>
             </View>
 
-            {/* Toggle Danh mục / Ghi chú */}
-            <View style={styles.pieModeToggle}>
-              <TouchableOpacity
-                style={[
-                  styles.pieModeBtn,
-                  pieChartMode === "category" && styles.pieModeBtnActive,
-                ]}
-                onPress={() => {
-                  setPieChartMode("category");
-                  setSelectedPieCategory(null);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.pieModeBtnText,
-                    pieChartMode === "category" && styles.pieModeBtnTextActive,
-                  ]}
-                >
-                  Theo danh mục
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.pieModeBtn,
-                  pieChartMode === "note" && styles.pieModeBtnActive,
-                ]}
-                onPress={() => {
-                  setPieChartMode("note");
-                  setSelectedPieCategory(null);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.pieModeBtnText,
-                    pieChartMode === "note" && styles.pieModeBtnTextActive,
-                  ]}
-                >
-                  Theo ghi chú
-                </Text>
-              </TouchableOpacity>
-            </View>
-
             <View style={styles.pieChartWrapper}>
               <CustomPieChart
-                data={
-                  pieChartMode === "category"
-                    ? getPieChartData()
-                    : getPieChartDataByNote()
-                }
+                data={getPieChartData()}
                 selectedCategory={selectedPieCategory}
                 onSelectCategory={setSelectedPieCategory}
-                renderNoteDetails={
-                  pieChartMode === "category"
-                    ? (catName) => {
-                        const details = getNoteDetailsForCategory(catName);
+                renderNoteDetails={(catName) => {
+                  const allTxs = getNoteDetailsForCategory(catName);
+                  if (allTxs.length === 0) {
+                    return (
+                      <Text
+                        style={{
+                          color: "#94a3b8",
+                          fontSize: 13,
+                          fontStyle: "italic",
+                          paddingVertical: 4,
+                        }}
+                      >
+                        Không có giao dịch nào
+                      </Text>
+                    );
+                  }
+                  const txs = allTxs.slice(0, pieDetailLimit);
+                  const hasMore = allTxs.length > pieDetailLimit;
+
+                  return (
+                    <View style={{ gap: 8 }}>
+                      {txs.map((tx) => {
+                        const txDateStr = new Date(
+                          tx.timestamp,
+                        ).toLocaleDateString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        });
+                        const iconSource = getTransactionIconSource(
+                          tx,
+                          profile,
+                          categoryBudgets,
+                        );
                         return (
-                          <View>
-                            {details.map((item, idx) => (
-                              <View key={idx} style={styles.inlineNoteItem}>
-                                <Text style={styles.inlineNoteText}>
-                                  • {item.note}
+                          <View
+                            key={tx.id}
+                            style={styles.pieDetailTxCard}
+                          >
+                            <View style={styles.pieDetailTxLeft}>
+                              <View style={styles.pieDetailIconWrapper}>
+                                <Image
+                                  source={iconSource}
+                                  style={styles.pieDetailIcon}
+                                />
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <Text
+                                  style={styles.pieDetailName}
+                                  numberOfLines={1}
+                                >
+                                  {tx.name || tx.categorySnapshot || tx.category}
                                 </Text>
-                                <Text style={styles.inlineNoteAmount}>
-                                  {formatCurrency(item.total)} đ
+                                {tx.note ? (
+                                  <Text
+                                    style={styles.pieDetailNote}
+                                    numberOfLines={1}
+                                  >
+                                    {tx.note}
+                                  </Text>
+                                ) : null}
+                                <Text style={styles.pieDetailDate}>
+                                  {txDateStr}
                                 </Text>
                               </View>
-                            ))}
+                            </View>
+                            <Text style={styles.pieDetailAmount}>
+                              -{formatCurrency(tx.amount)} đ
+                            </Text>
                           </View>
                         );
-                      }
-                    : undefined
-                }
+                      })}
+
+                      {hasMore ? (
+                        <TouchableOpacity
+                          style={styles.pieDetailLoadMoreBtn}
+                          onPress={() => setPieDetailLimit((prev) => prev + 10)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.pieDetailLoadMoreTxt}>Tải thêm</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  );
+                }}
               />
             </View>
           </View>
@@ -2357,32 +2658,69 @@ const styles = StyleSheet.create({
     fontSize: 15,
     paddingVertical: 32,
   },
-  // Pie chart mode toggle styles
-  pieModeToggle: {
+
+  pieDetailTxCard: {
     flexDirection: "row",
-    backgroundColor: "#f1f5f9",
-    borderRadius: 12,
-    padding: 4,
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  pieModeBtn: {
-    flex: 1,
-    paddingVertical: 8,
+    justifyContent: "space-between",
     alignItems: "center",
-    borderRadius: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
   },
-  pieModeBtnActive: {
-    backgroundColor: "#3b82f6",
+  pieDetailTxLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
   },
-  pieModeBtnText: {
+  pieDetailIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#fee2e2",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  pieDetailIcon: {
+    width: 18,
+    height: 18,
+    resizeMode: "contain",
+  },
+  pieDetailName: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#64748b",
+    color: "#1e293b",
   },
-  pieModeBtnTextActive: {
-    color: "#ffffff",
+  pieDetailNote: {
+    fontSize: 12,
+    color: "#64748b",
+    fontStyle: "italic",
+    marginTop: 2,
+  },
+  pieDetailDate: {
+    fontSize: 11,
+    color: "#94a3b8",
+    marginTop: 2,
+  },
+  pieDetailAmount: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#ef4444",
+  },
+  pieDetailLoadMoreBtn: {
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f8fafc",
+    borderRadius: 10,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  pieDetailLoadMoreTxt: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#64748b",
   },
 });
 

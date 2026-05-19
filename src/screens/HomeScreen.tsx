@@ -33,12 +33,22 @@ import {
   PencilLine,
   PenOff,
   ChevronRight,
+  Bell,
+  Copy,
+  Flame,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { Transaction, UserProfile, CategoryBudget } from "../types";
 import { formatCurrency } from "../utils/format";
 import Keypad from "../components/Keypad";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { Sparkles } from "lucide-react-native/icons";
+import {
+  calculateNewStreak,
+  StreakStatus,
+  getStreakLevel,
+  getStreakLevelImage,
+} from "../utils/streak";
 
 const HIDE_BALANCE_KEY = "@hideBalance";
 
@@ -46,47 +56,78 @@ const DEFAULT_INCOME_CATEGORIES = ["Lương", "Thưởng", "Bán hàng"];
 
 export const EXPENSE_ICONS: Record<string, any> = {
   badminton: require("../../assets/expense_icon/badminton.png"),
+  beer_mug: require("../../assets/expense_icon/beer-mug.png"),
+  bicycle: require("../../assets/expense_icon/bicycle.png"),
+  bill: require("../../assets/expense_icon/bill.png"),
+  bill_1: require("../../assets/expense_icon/bill_1.png"),
   brand: require("../../assets/expense_icon/brand.png"),
   bus: require("../../assets/expense_icon/bus.png"),
   candies: require("../../assets/expense_icon/candies.png"),
   "card-games": require("../../assets/expense_icon/card-games.png"),
+  "clean-clothes": require("../../assets/expense_icon/clean-clothes.png"),
+  competitors: require("../../assets/expense_icon/competitors.png"),
   cooking: require("../../assets/expense_icon/cooking.png"),
+  cosmetics: require("../../assets/expense_icon/cosmetics.png"),
   date: require("../../assets/expense_icon/date.png"),
   default: require("../../assets/expense_icon/default.png"),
   drink: require("../../assets/expense_icon/drink.png"),
   "electric-car": require("../../assets/expense_icon/electric-car.png"),
   "engine-oil": require("../../assets/expense_icon/engine-oil.png"),
   "flash-card": require("../../assets/expense_icon/flash-card.png"),
+  fried_rice: require("../../assets/expense_icon/fried-rice.png"),
   "game-console": require("../../assets/expense_icon/game-console.png"),
   "gas-stove": require("../../assets/expense_icon/gas-stove.png"),
   "gift-card": require("../../assets/expense_icon/gift-card.png"),
   gift: require("../../assets/expense_icon/gift.png"),
+  gloves: require("../../assets/expense_icon/gloves.png"),
   "hair-cut": require("../../assets/expense_icon/hair-cut.png"),
+  http: require("../../assets/expense_icon/http.png"),
+  "ice-cream": require("../../assets/expense_icon/ice-cream.png"),
   "interior-design": require("../../assets/expense_icon/interior-design.png"),
+  "interior-design_1": require("../../assets/expense_icon/interior-design_1.png"),
+  internet: require("../../assets/expense_icon/internet.png"),
+  internet_2: require("../../assets/expense_icon/internet_2.png"),
+  invoice: require("../../assets/expense_icon/invoice.png"),
   iphone: require("../../assets/expense_icon/iphone.png"),
   jewelry: require("../../assets/expense_icon/jewelry.png"),
+  keyboard: require("../../assets/expense_icon/keyboard.png"),
+  kitchen: require("../../assets/expense_icon/kitchen.png"),
+  lockers: require("../../assets/expense_icon/lockers.png"),
   main_meal: require("../../assets/expense_icon/main_meal.png"),
   moon: require("../../assets/expense_icon/moon.png"),
   motorbike: require("../../assets/expense_icon/motorbike.png"),
+  motorbike_1: require("../../assets/expense_icon/motorbike_1.png"),
+  motorcycle: require("../../assets/expense_icon/motorcycle.png"),
+  napkin: require("../../assets/expense_icon/napkin.png"),
+  noodle: require("../../assets/expense_icon/noodle.png"),
   other: require("../../assets/expense_icon/other.png"),
   outreach: require("../../assets/expense_icon/outreach.png"),
   "parking-car": require("../../assets/expense_icon/parking-car.png"),
   party: require("../../assets/expense_icon/party.png"),
   petrol: require("../../assets/expense_icon/petrol.png"),
+  pizza: require("../../assets/expense_icon/pizza.png"),
+  plugin: require("../../assets/expense_icon/plugin.png"),
+  premium: require("../../assets/expense_icon/premium.png"),
   private: require("../../assets/expense_icon/private.png"),
   rent_house: require("../../assets/expense_icon/rent_house.png"),
   review: require("../../assets/expense_icon/review.png"),
+  ring: require("../../assets/expense_icon/ring.png"),
+  shampoo: require("../../assets/expense_icon/shampoo.png"),
   shoes: require("../../assets/expense_icon/shoes.png"),
   smoothie: require("../../assets/expense_icon/smoothie.png"),
+  "strawberry-cake": require("../../assets/expense_icon/strawberry-cake.png"),
+  sweets: require("../../assets/expense_icon/sweets.png"),
   "teddy-bear": require("../../assets/expense_icon/teddy-bear.png"),
   tent: require("../../assets/expense_icon/tent.png"),
   "travel-luggage": require("../../assets/expense_icon/travel-luggage.png"),
+  tree: require("../../assets/expense_icon/tree.png"),
+  trophy: require("../../assets/expense_icon/trophy.png"),
   "watching-a-movie": require("../../assets/expense_icon/watching-a-movie.png"),
+  "water-tap": require("../../assets/expense_icon/water-tap.png"),
   wedding: require("../../assets/expense_icon/wedding.png"),
   wrench: require("../../assets/expense_icon/wrench.png"),
   wristwatch: require("../../assets/expense_icon/wristwatch.png"),
 };
-
 
 export const INCOME_ICONS: Record<string, any> = {
   bag: require("../../assets/income_icon/bag.png"),
@@ -119,8 +160,10 @@ export const INCOME_ICONS: Record<string, any> = {
   teacher: require("../../assets/income_icon/teacher.png"),
 };
 
-
-export const getIncomeIconSource = (catName: string, profile: UserProfile | null) => {
+export const getIncomeIconSource = (
+  catName: string,
+  profile: UserProfile | null,
+) => {
   const key = profile?.incomeCategoryIcons?.[catName];
   if (key && INCOME_ICONS[key]) {
     return INCOME_ICONS[key];
@@ -140,6 +183,11 @@ const HomeScreen = () => {
   const [budgets, setBudgets] = useState<CategoryBudget[]>([]);
   const [showBudgets, setShowBudgets] = useState(false);
   const [totalBalance, setTotalBalance] = useState<number>(0);
+  const [streakModalVisible, setStreakModalVisible] = useState(false);
+  const [streakModalData, setStreakModalData] = useState<{
+    count: number;
+    status: StreakStatus;
+  } | null>(null);
 
   const [type, setType] = useState<"expense" | "income">("expense");
   const [amount, setAmount] = useState<number>(0);
@@ -316,7 +364,12 @@ const HomeScreen = () => {
       selectedCategoryForSave === "Khác" && modalCustomCatName.trim()
         ? modalCustomCatName.trim()
         : undefined;
-    await performSave(selectedCategoryForSave, modalNoteInput, txDate, customLabel);
+    await performSave(
+      selectedCategoryForSave,
+      modalNoteInput,
+      txDate,
+      customLabel,
+    );
   };
 
   const performSave = async (
@@ -327,6 +380,9 @@ const HomeScreen = () => {
   ) => {
     const amountToSave = amount;
     const finalNote = note.trim() || undefined;
+
+    let nextProfile = profile ? { ...profile } : null;
+    if (!nextProfile) return;
 
     if (type === "expense") {
       const catBudget = budgets.find((b) => b.name === chosenCategory);
@@ -350,19 +406,14 @@ const HomeScreen = () => {
               : b,
           );
           await storage.saveCategoryBudgets(updatedBudgets);
-          if (profile) {
-            await storage.saveUserProfile({
-              ...profile,
-              initialBalance: profile.initialBalance - amountToSave,
-            });
-          }
+          nextProfile.initialBalance =
+            nextProfile.initialBalance - amountToSave;
         } else {
           // Loại "direct": chi từ tiền chưa phân bổ
-          if (!profile) return;
           const totalAllocated = budgets.reduce((sum, b) => sum + b.budget, 0);
           const unallocated = Math.max(
             0,
-            profile.initialBalance - totalAllocated,
+            nextProfile.initialBalance - totalAllocated,
           );
           if (amountToSave > unallocated) {
             Alert.alert(
@@ -371,26 +422,21 @@ const HomeScreen = () => {
             );
             return;
           }
-          // Cập nhật initialBalance, ngân sách túi direct không đổi (vì nó không quản lý ngân sách riêng)
-          // Nhưng ta vẫn cần cập nhật spent của túi direct để thống kê
           const updatedBudgets = budgets.map((b) =>
             b.name === chosenCategory
               ? { ...b, spent: (b.spent || 0) + amountToSave }
               : b,
           );
           await storage.saveCategoryBudgets(updatedBudgets);
-          await storage.saveUserProfile({
-            ...profile,
-            initialBalance: profile.initialBalance - amountToSave,
-          });
+          nextProfile.initialBalance =
+            nextProfile.initialBalance - amountToSave;
         }
       } else {
         // Danh mục không có trong budgets (bao gồm "Khác") - chi từ tiền chưa phân bổ
-        if (!profile) return;
         const totalAllocated = budgets.reduce((sum, b) => sum + b.budget, 0);
         const unallocated = Math.max(
           0,
-          profile.initialBalance - totalAllocated,
+          nextProfile.initialBalance - totalAllocated,
         );
         if (amountToSave > unallocated) {
           Alert.alert(
@@ -399,41 +445,51 @@ const HomeScreen = () => {
           );
           return;
         }
-        await storage.saveUserProfile({
-          ...profile,
-          initialBalance: profile.initialBalance - amountToSave,
-        });
+        nextProfile.initialBalance = nextProfile.initialBalance - amountToSave;
       }
+    } else {
+      nextProfile.initialBalance = nextProfile.initialBalance + amountToSave;
+    }
 
-      const newTx: Transaction = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        type: "expense",
-        amount: amountToSave,
-        category: customLabel ? "Khác" : chosenCategory,
-        categorySnapshot: customLabel ?? chosenCategory,
-        note: finalNote,
-        timestamp: transactionDate.getTime(),
-      };
-      await storage.saveTransaction(newTx);
+    // Tính toán giữ chuỗi
+    const streakResult = calculateNewStreak(
+      nextProfile.lastStreakTimestamp,
+      nextProfile.streakCount || 0,
+      transactionDate.getTime(),
+      nextProfile.streakRecoveriesCount,
+      nextProfile.lastRecoveryMonthYear,
+    );
+
+    nextProfile.streakRecoveriesCount = streakResult.newRecoveriesCount;
+    nextProfile.lastRecoveryMonthYear = streakResult.newRecoveryMonthYear;
+
+    if (streakResult.status !== "none") {
+      nextProfile.streakCount = streakResult.newStreakCount;
+      nextProfile.lastStreakTimestamp = transactionDate.getTime();
+      setStreakModalData({
+        count: streakResult.newStreakCount,
+        status: streakResult.status,
+      });
+      setStreakModalVisible(true);
+    }
+
+    // Lưu Profile & Giao dịch
+    await storage.saveUserProfile(nextProfile);
+
+    const newTx: Transaction = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      type: type,
+      amount: amountToSave,
+      category: customLabel ? "Khác" : chosenCategory,
+      categorySnapshot: customLabel ?? chosenCategory,
+      note: finalNote,
+      timestamp: transactionDate.getTime(),
+    };
+    await storage.saveTransaction(newTx);
+
+    if (type === "expense") {
       Alert.alert("Thành công", "Đã lưu khoản chi.");
     } else {
-      if (!profile) return;
-      const updatedProfile = {
-        ...profile,
-        initialBalance: profile.initialBalance + amountToSave,
-      };
-      await storage.saveUserProfile(updatedProfile);
-
-      const newTx: Transaction = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        type: "income",
-        amount: amountToSave,
-        category: customLabel ? "Khác" : chosenCategory,
-        categorySnapshot: customLabel ?? chosenCategory,
-        note: finalNote,
-        timestamp: transactionDate.getTime(),
-      };
-      await storage.saveTransaction(newTx);
       Alert.alert(
         "Thành công",
         'Đã lưu khoản thu. Vào tab "Chia Tiền" để phân bổ.',
@@ -455,24 +511,121 @@ const HomeScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.greeting}>Xin chào, {profile?.name} 👋</Text>
-        <View style={styles.accountRow}>
-          <Text style={styles.accountLabel}>Số tài khoản: </Text>
-          <Text style={styles.accountValue}>{accountNumber}</Text>
+        {/* Top bar with User Profile and quick settings/bell */}
+        <View style={styles.headerTopBar}>
+          <View style={styles.profileSection}>
+            <View style={styles.avatarContainer}>
+              {profile?.avatar ? (
+                <Image
+                  source={{ uri: profile.avatar }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {profile?.name ? profile.name.charAt(0).toUpperCase() : "U"}
+                </Text>
+              )}
+              <View style={styles.avatarStatus} />
+            </View>
+            <View style={styles.profileTextWrapper}>
+              <Text style={styles.greetingLabel}>Xin chào,</Text>
+              <Text style={styles.profileName} numberOfLines={1}>
+                {profile?.name || "Người dùng"}
+              </Text>
+            </View>
+          </View>
+
+          {profile?.streakCount ? (
+            <TouchableOpacity
+              onPress={() => {
+                const currentStreak = profile.streakCount || 0;
+                const level = getStreakLevel(currentStreak);
+                Alert.alert(
+                  "Chuỗi giữ lửa 🔥",
+                  `Bạn đang duy trì chuỗi ${currentStreak} ngày giữ lửa!\nCấp độ hiện tại: Cấp ${level}.\nHãy tiếp tục ghi chép giao dịch mỗi ngày để thăng cấp nhé.`,
+                );
+              }}
+              style={styles.streakHeaderChip}
+              activeOpacity={0.8}
+            >
+              <Flame color="#f97316" fill="#f97316" size={16} />
+              <Text style={styles.streakHeaderTxt}>{profile.streakCount}</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Guide" as never)}
+              style={styles.actionBtn}
+              activeOpacity={0.7}
+            >
+              <Sparkles color="#ffffff" size={20} />
+              <View style={styles.actionBadge} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                navigation.navigate("Settings" as never);
+              }}
+              style={styles.actionBtn}
+              activeOpacity={0.7}
+            >
+              <Settings color="#ffffff" size={20} />
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.headerRow}>
-          <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
-          <TouchableOpacity onPress={toggleShowBudgets} style={styles.eyeBtn}>
-            {showBudgets ? (
-              <Eye color="#ffffff" size={20} />
-            ) : (
-              <EyeOff color="#ffffff" size={20} />
-            )}
-          </TouchableOpacity>
+
+        {/* Bank Card / Account card */}
+        <View style={styles.bankCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardBrandWrapper}>
+              <Coins color="#f59e0b" size={18} />
+              <Text style={styles.cardBrandText}>HEO ĐẤT BÉO DIGITAL</Text>
+            </View>
+            <View style={styles.cardChip} />
+          </View>
+
+          <View style={styles.cardMiddle}>
+            <Text style={styles.cardAccountLabel}>TÀI KHOẢN NGUỒN</Text>
+            <View style={styles.accountNumberContainer}>
+              <Text style={styles.cardAccountNumber}>
+                {accountNumber
+                  ? accountNumber.replace(/(.{4})/g, "$1 ").trim()
+                  : "•••• •••• •••• ••••"}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert(
+                    "Sao chép",
+                    "Đã sao chép số tài khoản: " + accountNumber,
+                  );
+                }}
+                style={styles.copyBtn}
+              >
+                <Copy color="rgba(255,255,255,0.6)" size={14} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.cardBottom}>
+            <View>
+              <Text style={styles.cardBalanceLabel}>SỐ DƯ KHẢ DỤNG</Text>
+              <Text style={styles.cardBalanceAmount}>
+                {showBudgets ? `${formatCurrency(totalBalance)} đ` : "•••••• đ"}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={toggleShowBudgets}
+              style={styles.cardEyeBtn}
+              activeOpacity={0.7}
+            >
+              {showBudgets ? (
+                <Eye color="#ffffff" size={20} />
+              ) : (
+                <EyeOff color="#ffffff" size={20} />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-        <Text style={styles.totalAmount}>
-          {showBudgets ? `${formatCurrency(totalBalance)} đ` : "****** đ"}
-        </Text>
       </View>
 
       <View style={styles.tabSection}>
@@ -569,35 +722,46 @@ const HomeScreen = () => {
                 amount={amount}
                 onAddAmount={(val) => setAmount((prev) => prev + val)}
                 onClear={() => setAmount(0)}
+                hideClearButton={true}
               />
             </View>
           )}
 
           {profile?.inputMethod !== "manual" && (
-            <TouchableOpacity
-              style={[
-                styles.saveButton,
-                canProceed
-                  ? type === "expense"
-                    ? styles.saveExpense
-                    : styles.saveIncome
-                  : styles.saveDisabled,
-                { marginTop: 10, marginBottom: 40 },
-              ]}
-              onPress={() => {
-                if (amount < 1000) {
-                  Alert.alert(
-                    "Số tiền không hợp lệ",
-                    "Vui lòng nhập số tiền ít nhất 1.000 đ.",
-                  );
-                  return;
-                }
-                handleSave();
-              }}
-              activeOpacity={canProceed ? 0.8 : 0.6}
-            >
-              <Text style={styles.saveButtonText}>Tiếp Theo →</Text>
-            </TouchableOpacity>
+            <View style={styles.actionButtonRow}>
+              <TouchableOpacity
+                style={[
+                  styles.saveButton,
+                  styles.actionNextBtn,
+                  canProceed
+                    ? type === "expense"
+                      ? styles.saveExpense
+                      : styles.saveIncome
+                    : styles.saveDisabled,
+                ]}
+                onPress={() => {
+                  if (amount < 1000) {
+                    Alert.alert(
+                      "Số tiền không hợp lệ",
+                      "Vui lòng nhập số tiền ít nhất 1.000 đ.",
+                    );
+                    return;
+                  }
+                  handleSave();
+                }}
+                activeOpacity={canProceed ? 0.8 : 0.6}
+              >
+                <Text style={styles.saveButtonText}>Tiếp Theo →</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.cancelButton, styles.actionCancelBtn]}
+                onPress={() => setAmount(0)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelButtonText}>Hủy</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -661,18 +825,37 @@ const HomeScreen = () => {
                   })();
                   const iconSource =
                     type === "expense"
-                      ? (catBudget && catBudget.icon
-                          ? EXPENSE_ICONS[catBudget.icon]
-                          : EXPENSE_ICONS["default"])
+                      ? catBudget && catBudget.icon
+                        ? EXPENSE_ICONS[catBudget.icon]
+                        : EXPENSE_ICONS["default"]
                       : getIncomeIconSource(item, profile);
                   return (
                     <TouchableOpacity
                       style={styles.catPickerItem}
                       onPress={() => handlePickCategory(item)}
                     >
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-                        <Image source={iconSource} style={{ width: 24, height: 24, resizeMode: "contain" }} />
-                        <Text style={styles.catPickerItemName} numberOfLines={1}>{item}</Text>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 10,
+                          flex: 1,
+                        }}
+                      >
+                        <Image
+                          source={iconSource}
+                          style={{
+                            width: 24,
+                            height: 24,
+                            resizeMode: "contain",
+                          }}
+                        />
+                        <Text
+                          style={styles.catPickerItemName}
+                          numberOfLines={1}
+                        >
+                          {item}
+                        </Text>
                       </View>
                       <View style={styles.catPickerItemRight}>
                         {remaining !== null && (
@@ -708,10 +891,25 @@ const HomeScreen = () => {
                         style={[styles.catPickerItem, styles.catPickerItemKhac]}
                         onPress={() => handlePickCategory("Khác")}
                       >
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 10,
+                            flex: 1,
+                          }}
+                        >
                           <Image
-                            source={type === "expense" ? EXPENSE_ICONS["other"] : INCOME_ICONS["other"]}
-                            style={{ width: 24, height: 24, resizeMode: "contain" }}
+                            source={
+                              type === "expense"
+                                ? EXPENSE_ICONS["other"]
+                                : INCOME_ICONS["other"]
+                            }
+                            style={{
+                              width: 24,
+                              height: 24,
+                              resizeMode: "contain",
+                            }}
                           />
                           <View style={styles.catPickerKhacLabel}>
                             <Text
@@ -815,13 +1013,17 @@ const HomeScreen = () => {
                 style={styles.datePickerBtn}
                 onPress={() => openDatePicker("date")}
               >
-                <Text style={styles.datePickerBtnText}>{formatTxDate(txDate)}</Text>
+                <Text style={styles.datePickerBtnText}>
+                  {formatTxDate(txDate)}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.datePickerBtn}
                 onPress={() => openDatePicker("time")}
               >
-                <Text style={styles.datePickerBtnText}>{formatTxTime(txDate)}</Text>
+                <Text style={styles.datePickerBtnText}>
+                  {formatTxTime(txDate)}
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -926,6 +1128,73 @@ const HomeScreen = () => {
         </View>
       )}
 
+      {/* Modal giữ chuỗi (Streak) */}
+      <Modal
+        visible={streakModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStreakModalVisible(false)}
+      >
+        <View style={styles.streakModalOverlay}>
+          <View style={styles.streakModalContent}>
+            {/* Status Title */}
+            <Text style={styles.streakModalStatus}>
+              {streakModalData?.status === "increased"
+                ? "🔥 ĐÃ TĂNG CHUỖI GIỮ LỬA!"
+                : streakModalData?.status === "preserved"
+                  ? "✨ CHUỖI LỬA ĐÃ ĐƯỢC DUY TRÌ!"
+                  : "🆕 BẮT ĐẦU CHUỖI LỬA MỚI!"}
+            </Text>
+
+            {/* Streak count display */}
+            <Text style={styles.streakModalCount}>
+              {streakModalData?.count || 1} ngày
+            </Text>
+
+            {/* Level Flame Image */}
+            {streakModalData && (
+              <Image
+                source={getStreakLevelImage(
+                  getStreakLevel(streakModalData.count),
+                )}
+                style={styles.streakModalImg}
+              />
+            )}
+
+            {/* Level label */}
+            <View style={styles.streakModalLevelBadge}>
+              <Text style={styles.streakModalLevelTxt}>
+                Cấp độ: Cấp {getStreakLevel(streakModalData?.count || 1)}
+              </Text>
+            </View>
+
+            {profile && (
+              <Text style={styles.streakModalRecoveryInfo}>
+                Số lần khôi phục tháng này: {profile.streakRecoveriesCount || 0}
+                /3
+              </Text>
+            )}
+
+            <Text style={styles.streakModalHint}>
+              {streakModalData?.status === "increased"
+                ? "Ghi chép giao dịch liên tục giúp nuôi dưỡng Heo béo tốt!"
+                : streakModalData?.status === "preserved"
+                  ? "Thật may mắn, chuỗi lửa đã được khôi phục kịp thời!"
+                  : "Hãy duy trì ghi chép mỗi ngày từ hôm nay nhé!"}
+            </Text>
+
+            {/* Close CTA */}
+            <TouchableOpacity
+              style={styles.streakModalBtn}
+              onPress={() => setStreakModalVisible(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.streakModalBtnText}>Tuyệt vời</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={showWelcomeModal} transparent animationType="slide">
         <View style={styles.welcomeModalOverlay}>
           <View style={styles.welcomeModalContent}>
@@ -959,41 +1228,174 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   header: {
-    backgroundColor: "#5596e0ff",
-    padding: 24,
-    paddingTop: 60,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    elevation: 4,
+    // backgroundColor: "#0c2340", // Deep navy blue (Vietcombank/premium style)
+    backgroundColor: "#5596e0ff", // Deep navy blue (Vietcombank/premium style)
+
+    paddingHorizontal: 20,
+    paddingTop: 54,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
-  accountRow: {
+  headerTopBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  profileSection: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
-    marginTop: 6,
-    alignSelf: "flex-start",
   },
-  accountLabel: { color: "#fdf4ff", fontSize: 12, opacity: 0.8 },
-  accountValue: {
+  avatarContainer: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  avatarImage: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+  },
+  avatarText: {
     color: "#ffffff",
-    fontSize: 13,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  avatarStatus: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#10b981",
+    borderWidth: 1.5,
+    borderColor: "#0c2340",
+  },
+  profileTextWrapper: {
+    marginLeft: 10,
+  },
+  greetingLabel: {
+    color: "#000000",
+    fontSize: 12,
+  },
+  profileName: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  actionBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  actionBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#ef4444",
+  },
+  bankCard: {
+    backgroundColor: "#1e293b", // Slate-800
+    borderRadius: 18,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  cardBrandWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  cardBrandText: {
+    color: "#f59e0b",
+    fontSize: 11,
     fontWeight: "bold",
     letterSpacing: 1,
   },
-  greeting: { color: "#fdf4ff", fontSize: 15, marginBottom: 6 },
-  headerRow: {
+  cardChip: {
+    width: 32,
+    height: 24,
+    borderRadius: 4,
+    backgroundColor: "#f59e0b",
+    opacity: 0.8,
+  },
+  cardMiddle: {
+    marginBottom: 18,
+  },
+  cardAccountLabel: {
+    color: "#94a3b8",
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
+  accountNumberContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 2,
   },
-  balanceLabel: { color: "#fdf4ff", fontSize: 13, opacity: 0.9 },
-  eyeBtn: { padding: 4 },
-  totalAmount: {
+  cardAccountNumber: {
     color: "#ffffff",
-    fontSize: 30,
+    fontSize: 17,
+    fontWeight: "bold",
+    letterSpacing: 1.5,
+  },
+  copyBtn: {
+    padding: 4,
+  },
+  cardBottom: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+  },
+  cardBalanceLabel: {
+    color: "#94a3b8",
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
+  cardBalanceAmount: {
+    color: "#ffffff",
+    fontSize: 24,
     fontWeight: "bold",
     marginTop: 2,
-    marginBottom: 16,
+  },
+  cardEyeBtn: {
+    padding: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 10,
   },
   budgetChips: { gap: 10, paddingBottom: 4 },
   budgetChip: {
@@ -1039,16 +1441,16 @@ const styles = StyleSheet.create({
   amountDisplay: {
     backgroundColor: "#ffffff",
     borderRadius: 16,
-    padding: 24,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
-    marginBottom: 12,
     elevation: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
+    paddingVertical: 16,
+    marginBottom: 16,
   },
   amountText: { fontSize: 48, fontWeight: "bold" },
   expenseText: { color: "#ef4444" },
@@ -1130,10 +1532,28 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
     minHeight: 80,
   },
-  saveButton: {
-    paddingVertical: 16,
+  actionButtonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 10,
+    marginBottom: 40,
+  },
+  actionNextBtn: {
+    flex: 3,
+    paddingVertical: 14,
     borderRadius: 16,
     alignItems: "center",
+    justifyContent: "center",
+  },
+  actionCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  saveButton: {
     elevation: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -1143,7 +1563,17 @@ const styles = StyleSheet.create({
   saveExpense: { backgroundColor: "#ef4444" },
   saveIncome: { backgroundColor: "#10b981" },
   saveDisabled: { backgroundColor: "#cbd5e1", elevation: 0, shadowOpacity: 0 },
-  saveButtonText: { color: "#ffffff", fontSize: 18, fontWeight: "bold" },
+  saveButtonText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
+  cancelButton: {
+    backgroundColor: "#fee2e2",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  cancelButtonText: {
+    color: "#ef4444",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   // Footer / Manual Input Styles
   footerAction: {
     backgroundColor: "#ffffff",
@@ -1507,6 +1937,108 @@ const styles = StyleSheet.create({
     color: "#94a3b8",
     textAlign: "center",
     lineHeight: 22,
+  },
+  streakHeaderChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+  },
+  streakHeaderTxt: {
+    color: "#ffffff",
+    fontWeight: "800",
+    fontSize: 13,
+  },
+  streakModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  streakModalContent: {
+    backgroundColor: "#ffffff",
+    borderRadius: 28,
+    padding: 24,
+    alignItems: "center",
+    width: "85%",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#ffedd5",
+  },
+  streakModalStatus: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#ea580c",
+    letterSpacing: 1.2,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  streakModalCount: {
+    fontSize: 36,
+    fontWeight: "900",
+    color: "#0c2340",
+    marginBottom: 12,
+  },
+  streakModalImg: {
+    width: 140,
+    height: 140,
+    resizeMode: "contain",
+    marginVertical: 12,
+  },
+  streakModalLevelBadge: {
+    backgroundColor: "#fff7ed",
+    borderWidth: 1.5,
+    borderColor: "#ffedd5",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    marginBottom: 12,
+  },
+  streakModalLevelTxt: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#ea580c",
+  },
+  streakModalRecoveryInfo: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "600",
+    marginBottom: 10,
+  },
+  streakModalHint: {
+    fontSize: 14,
+    color: "#64748b",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  streakModalBtn: {
+    backgroundColor: "#0c2340",
+    borderRadius: 16,
+    paddingVertical: 14,
+    width: "100%",
+    alignItems: "center",
+    shadowColor: "#0c2340",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  streakModalBtnText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
 
