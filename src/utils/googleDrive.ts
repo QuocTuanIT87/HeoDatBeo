@@ -1,7 +1,7 @@
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { storage } from '../store/storage';
 
-const GOOGLE_CLIENT_ID = '765227702920-stgd8jrmp5ms2ad5aoqjdum048i8l9hg.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '765227702920-caeghllgauea96583eircrrtuv2gvcpj.apps.googleusercontent.com';
 const BACKUP_FOLDER_NAME = 'data_heo_dat_beo';
 
 export interface GoogleDriveBackupInfo {
@@ -93,9 +93,6 @@ export const getAccessToken = async (): Promise<string | null> => {
   return activeTokenPromise;
 };
 
-/**
- * Tìm hoặc tạo thư mục data_heo_dat_beo trên Google Drive
- */
 const getOrCreateBackupFolder = async (accessToken: string): Promise<string | null> => {
   try {
     // 1. Tìm kiếm folder
@@ -106,6 +103,12 @@ const getOrCreateBackupFolder = async (accessToken: string): Promise<string | nu
         Authorization: `Bearer ${accessToken}`,
       },
     });
+
+    if (!searchResponse.ok) {
+      const errText = await searchResponse.text();
+      console.error('Lỗi khi tìm kiếm folder Google Drive:', errText);
+      return null;
+    }
 
     const searchData = await searchResponse.json();
     if (searchData.files && searchData.files.length > 0) {
@@ -125,6 +128,12 @@ const getOrCreateBackupFolder = async (accessToken: string): Promise<string | nu
         mimeType: 'application/vnd.google-apps.folder',
       }),
     });
+
+    if (!createResponse.ok) {
+      const errText = await createResponse.text();
+      console.error('Lỗi khi tạo folder Google Drive:', errText);
+      return null;
+    }
 
     const createData = await createResponse.json();
     return createData.id || null;

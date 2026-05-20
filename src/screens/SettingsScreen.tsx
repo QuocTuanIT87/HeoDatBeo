@@ -680,7 +680,7 @@ const SettingsScreen = () => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={{ paddingVertical: 10 }}>
+            <ScrollView contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
               {/* Trạng thái liên kết */}
               <View style={styles.driveStatusCard}>
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
