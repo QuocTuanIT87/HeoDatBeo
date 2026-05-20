@@ -24,6 +24,7 @@ import {
   LayoutGrid,
   Keyboard,
   ArrowRightLeft,
+  RotateCcw,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { CategoryBudget, UserProfile } from "../types";
@@ -794,21 +795,35 @@ const BudgetScreen = () => {
                   amount={allocAmount}
                   onAddAmount={(val) => setAllocAmount((prev) => prev + val)}
                   onClear={() => setAllocAmount(0)}
+                  hideClearButton={true}
                 />
               </>
             )}
 
-            <TouchableOpacity
-              style={[
-                styles.confirmBtn,
-                allocType === "withdraw" && styles.confirmBtnWithdraw,
-              ]}
-              onPress={handleAllocate}
-            >
-              <Text style={styles.confirmBtnText}>
-                {allocType === "deposit" ? "Xác nhận nạp" : "Xác nhận rút"}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.actionButtonRow}>
+              <TouchableOpacity
+                style={[
+                  styles.actionConfirmBtn,
+                  allocType === "deposit"
+                    ? { backgroundColor: "#7c3aed" }
+                    : { backgroundColor: "#ef4444" },
+                  allocAmount === 0 && styles.confirmDisabled,
+                ]}
+                onPress={handleAllocate}
+                disabled={allocAmount === 0}
+              >
+                <Text style={styles.confirmBtnText}>
+                  {allocType === "deposit" ? "Xác nhận nạp" : "Xác nhận rút"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionCancelBtn}
+                onPress={() => setAllocAmount(0)}
+              >
+                <RotateCcw color="#ef4444" size={22} />
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -1223,6 +1238,44 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     marginTop: 8,
   },
+  actionButtonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 24,
+  },
+  actionConfirmBtn: {
+    flex: 1,
+    height: 54,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionCancelBtn: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fee2e2",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  confirmDisabled: {
+    backgroundColor: "#cbd5e1",
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  cancelBtnText: {
+    color: "#ef4444",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  confirmBtnText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   confirmBtn: {
     backgroundColor: "#7c3aed",
     paddingVertical: 16,
@@ -1230,8 +1283,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 24,
   },
-  confirmBtnWithdraw: { backgroundColor: "#ef4444" },
-  confirmBtnText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
   modalOverlayCenter: {
     flex: 1,
     backgroundColor: "rgba(15, 23, 42, 0.6)",

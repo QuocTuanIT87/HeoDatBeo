@@ -386,7 +386,7 @@ const renderHistoryBody = (bodyStr: string) => {
           );
         }
 
-        if (trimmed.startsWith("So với ngày trước:")) {
+        if (trimmed.includes("So với")) {
           return (
             <Text
               key={index}
@@ -441,12 +441,17 @@ const StatisticsScreen = () => {
     NotificationHistoryItem[]
   >([]);
   const [historyDisplayLimit, setHistoryDisplayLimit] = useState<number>(10);
+  const [historyTab, setHistoryTab] = useState<'day' | 'month' | 'year'>('day');
 
   const loadNotificationHistory = async () => {
     const data = await storage.getNotificationHistory();
     setNotificationHistory(data);
     setHistoryDisplayLimit(10);
   };
+
+  useEffect(() => {
+    setHistoryDisplayLimit(10);
+  }, [historyTab]);
 
   const [period, setPeriod] = useState<FilterPeriod>("day");
   const [type, setType] = useState<FilterType>("all");
@@ -1762,91 +1767,151 @@ const StatisticsScreen = () => {
               </TouchableOpacity>
             </View>
 
-            {notificationHistory.length === 0 ? (
-              <View
-                style={{
-                  flex: 1,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  padding: 24,
-                }}
-              >
-                <Text
-                  style={{
-                    color: "#64748b",
-                    fontSize: 16,
-                    textAlign: "center",
-                    fontWeight: "600",
-                  }}
-                >
-                  Chưa có báo cáo tài chính nào.
-                </Text>
-                <Text
-                  style={{
-                    color: "#94a3b8",
-                    fontSize: 13,
-                    textAlign: "center",
-                    marginTop: 8,
-                  }}
-                >
-                  Báo cáo chi tiết hàng ngày sẽ tự động xuất hiện lúc 2:00 sáng
-                  và được lưu trữ tại đây!
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={notificationHistory.slice(0, historyDisplayLimit)}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-                showsVerticalScrollIndicator={false}
-                onEndReached={() => {
-                  if (historyDisplayLimit < notificationHistory.length) {
-                    setHistoryDisplayLimit((prev) => prev + 10);
-                  }
-                }}
-                onEndReachedThreshold={0.5}
-                renderItem={({ item }) => (
-                  <View
+            {/* Thanh Tab chọn Ngày / Tháng / Năm */}
+            <View style={{
+              flexDirection: 'row',
+              backgroundColor: '#f1f5f9',
+              borderRadius: 12,
+              padding: 4,
+              marginHorizontal: 16,
+              marginTop: 12,
+              marginBottom: 8,
+            }}>
+              {(['day', 'month', 'year'] as const).map((tab) => {
+                const isActive = historyTab === tab;
+                const label = tab === 'day' ? 'Ngày' : tab === 'month' ? 'Tháng' : 'Năm';
+                return (
+                  <TouchableOpacity
+                    key={tab}
+                    onPress={() => setHistoryTab(tab)}
                     style={{
-                      backgroundColor: "#f8fafc",
-                      borderRadius: 16,
-                      padding: 16,
-                      marginBottom: 16,
-                      borderWidth: 1,
-                      borderColor: "#e2e8f0",
-                      shadowColor: "#0f172a",
+                      flex: 1,
+                      paddingVertical: 10,
+                      alignItems: 'center',
+                      borderRadius: 8,
+                      backgroundColor: isActive ? '#3b82f6' : 'transparent',
+                      shadowColor: isActive ? '#3b82f6' : 'transparent',
                       shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.02,
+                      shadowOpacity: isActive ? 0.2 : 0,
                       shadowRadius: 4,
-                      elevation: 1,
+                      elevation: isActive ? 2 : 0,
                     }}
                   >
-                    <View
+                    <Text style={{
+                      fontWeight: '700',
+                      color: isActive ? '#ffffff' : '#64748b',
+                      fontSize: 14,
+                    }}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {(() => {
+              const filteredHistory = notificationHistory.filter(item => {
+                const type = item.type || 'day';
+                return type === historyTab;
+              });
+
+              if (filteredHistory.length === 0) {
+                return (
+                  <View
+                    style={{
+                      flex: 1,
+                      justifyContent: "center",
+                      alignItems: "center",
+                      padding: 24,
+                    }}
+                  >
+                    <Text
                       style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        borderBottomWidth: 1,
-                        borderBottomColor: "#e2e8f0",
-                        paddingBottom: 8,
-                        marginBottom: 12,
+                        color: "#64748b",
+                        fontSize: 16,
+                        textAlign: "center",
+                        fontWeight: "600",
                       }}
                     >
-                      <Text
+                      {historyTab === 'day'
+                        ? "Chưa có báo cáo tài chính hàng ngày."
+                        : historyTab === 'month'
+                        ? "Chưa có báo cáo tài chính hàng tháng."
+                        : "Chưa có báo cáo tài chính hàng năm."}
+                    </Text>
+                    <Text
+                      style={{
+                        color: "#94a3b8",
+                        fontSize: 13,
+                        textAlign: "center",
+                        marginTop: 8,
+                      }}
+                    >
+                      {historyTab === 'day'
+                        ? "Báo cáo chi tiết hàng ngày sẽ tự động xuất hiện lúc 2:00 sáng và được lưu trữ tại đây!"
+                        : historyTab === 'month'
+                        ? "Báo cáo tổng hợp chi tiết hàng tháng sẽ tự động xuất hiện lúc 2:00 sáng ngày đầu tiên của tháng mới!"
+                        : "Báo cáo tổng hợp chi tiết hàng năm sẽ tự động xuất hiện lúc 2:00 sáng ngày đầu tiên của năm mới!"}
+                    </Text>
+                  </View>
+                );
+              }
+
+              return (
+                <FlatList
+                  data={filteredHistory.slice(0, historyDisplayLimit)}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+                  showsVerticalScrollIndicator={false}
+                  onEndReached={() => {
+                    if (historyDisplayLimit < filteredHistory.length) {
+                      setHistoryDisplayLimit((prev) => prev + 10);
+                    }
+                  }}
+                  onEndReachedThreshold={0.5}
+                  renderItem={({ item }) => (
+                    <View
+                      style={{
+                        backgroundColor: "#f8fafc",
+                        borderRadius: 16,
+                        padding: 16,
+                        marginBottom: 16,
+                        borderWidth: 1,
+                        borderColor: "#e2e8f0",
+                        shadowColor: "#0f172a",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.02,
+                        shadowRadius: 4,
+                        elevation: 1,
+                      }}
+                    >
+                      <View
                         style={{
-                          fontWeight: "700",
-                          color: "#0f172a",
-                          fontSize: 15,
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          borderBottomWidth: 1,
+                          borderBottomColor: "#e2e8f0",
+                          paddingBottom: 8,
+                          marginBottom: 12,
                         }}
                       >
-                        {item.title}
-                      </Text>
+                        <Text
+                          style={{
+                            fontWeight: "700",
+                            color: "#0f172a",
+                            fontSize: 15,
+                          }}
+                        >
+                          {item.title}
+                        </Text>
+                      </View>
+                      {renderHistoryBody(item.body)}
                     </View>
-                    {renderHistoryBody(item.body)}
-                  </View>
-                )}
-              />
-            )}
+                  )}
+                />
+              );
+            })()}
           </View>
         </View>
       </Modal>

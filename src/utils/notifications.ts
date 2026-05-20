@@ -147,6 +147,196 @@ export function generateDailyReport(
 }
 
 /**
+ * Tạo nội dung báo cáo tài chính hàng tháng cho một tháng cụ thể
+ */
+export function generateMonthlyReport(
+  transactions: Transaction[],
+  targetMonthDate: Date
+): { title: string; body: string } {
+  const yyyy = targetMonthDate.getFullYear();
+  const monthIdx = targetMonthDate.getMonth(); // 0-11
+  
+  const targetStart = new Date(yyyy, monthIdx, 1, 0, 0, 0, 0).getTime();
+  const targetEnd = new Date(yyyy, monthIdx + 1, 1, 0, 0, 0, 0).getTime() - 1;
+
+  const prevMonthDate = new Date(yyyy, monthIdx - 1, 1, 0, 0, 0, 0);
+  const prevStart = prevMonthDate.getTime();
+  const prevEnd = targetStart - 1;
+
+  // Lọc giao dịch của tháng cần báo cáo
+  const targetTxs = transactions.filter(tx => tx.timestamp >= targetStart && tx.timestamp <= targetEnd);
+  
+  // Lọc giao dịch của tháng trước đó để so sánh
+  const prevTxs = transactions.filter(tx => tx.timestamp >= prevStart && tx.timestamp <= prevEnd);
+
+  // Gom nhóm chi tiêu theo danh mục
+  const expenses: Record<string, number> = {};
+  let totalExpense = 0;
+  const incomes: Record<string, number> = {};
+  let totalIncome = 0;
+
+  targetTxs.forEach(tx => {
+    if (isFundTransaction(tx)) return;
+
+    const cat = tx.categorySnapshot || tx.category;
+    if (tx.type === "expense") {
+      expenses[cat] = (expenses[cat] || 0) + tx.amount;
+      totalExpense += tx.amount;
+    } else if (tx.type === "income") {
+      incomes[cat] = (incomes[cat] || 0) + tx.amount;
+      totalIncome += tx.amount;
+    }
+  });
+
+  // Tính tổng chi tiêu tháng trước đó
+  let prevTotalExpense = 0;
+  let hasPrevData = false;
+  prevTxs.forEach(tx => {
+    if (isFundTransaction(tx)) return;
+
+    hasPrevData = true;
+    if (tx.type === "expense") {
+      prevTotalExpense += tx.amount;
+    }
+  });
+
+  const monthStr = `${String(monthIdx + 1).padStart(2, "0")}/${yyyy}`;
+  let body = `Trong tháng ${monthStr} bạn đã chi tiêu:\n`;
+  
+  if (totalExpense === 0) {
+    body += "Không có chi tiêu\n";
+  } else {
+    Object.entries(expenses).forEach(([cat, amt]) => {
+      body += `- ${cat}: 🔴 -${formatCurrency(amt)}\n`;
+    });
+  }
+
+  body += `\nBạn đã thu:\n`;
+  if (totalIncome === 0) {
+    body += "Không có thu nhập\n";
+  } else {
+    Object.entries(incomes).forEach(([cat, amt]) => {
+      body += `- ${cat}: 🟢 +${formatCurrency(amt)}\n`;
+    });
+  }
+
+  body += `\n------------------\n`;
+  body += `Tổng chi: 🔴 -${formatCurrency(totalExpense)} | Tổng thu: 🟢 +${formatCurrency(totalIncome)}\n`;
+  body += `------------------\n`;
+
+  if (hasPrevData) {
+    const diff = totalExpense - prevTotalExpense;
+    if (diff > 0) {
+      body += `So với tháng trước: Chi tiêu NHIỀU HƠN ${formatCurrency(diff)}`;
+    } else if (diff < 0) {
+      body += `So với tháng trước: Chi tiêu ÍT HƠN ${formatCurrency(Math.abs(diff))}`;
+    } else {
+      body += `So với tháng trước: Chi tiêu BẰNG NHAU`;
+    }
+  } else {
+    const prevMonthStr = `${String(prevMonthDate.getMonth() + 1).padStart(2, "0")}/${prevMonthDate.getFullYear()}`;
+    body += `So với tháng trước: tháng ${prevMonthStr} không có giao dịch`;
+  }
+
+  const title = `Báo cáo tài chính tháng ${monthStr} 📊`;
+
+  return { title, body };
+}
+
+/**
+ * Tạo nội dung báo cáo tài chính hàng năm cho một năm cụ thể
+ */
+export function generateYearlyReport(
+  transactions: Transaction[],
+  targetYear: number
+): { title: string; body: string } {
+  const targetStart = new Date(targetYear, 0, 1, 0, 0, 0, 0).getTime();
+  const targetEnd = new Date(targetYear + 1, 0, 1, 0, 0, 0, 0).getTime() - 1;
+
+  const prevYear = targetYear - 1;
+  const prevStart = new Date(prevYear, 0, 1, 0, 0, 0, 0).getTime();
+  const prevEnd = targetStart - 1;
+
+  // Lọc giao dịch của năm cần báo cáo
+  const targetTxs = transactions.filter(tx => tx.timestamp >= targetStart && tx.timestamp <= targetEnd);
+  
+  // Lọc giao dịch của năm trước đó để so sánh
+  const prevTxs = transactions.filter(tx => tx.timestamp >= prevStart && tx.timestamp <= prevEnd);
+
+  // Gom nhóm chi tiêu theo danh mục
+  const expenses: Record<string, number> = {};
+  let totalExpense = 0;
+  const incomes: Record<string, number> = {};
+  let totalIncome = 0;
+
+  targetTxs.forEach(tx => {
+    if (isFundTransaction(tx)) return;
+
+    const cat = tx.categorySnapshot || tx.category;
+    if (tx.type === "expense") {
+      expenses[cat] = (expenses[cat] || 0) + tx.amount;
+      totalExpense += tx.amount;
+    } else if (tx.type === "income") {
+      incomes[cat] = (incomes[cat] || 0) + tx.amount;
+      totalIncome += tx.amount;
+    }
+  });
+
+  // Tính tổng chi tiêu năm trước đó
+  let prevTotalExpense = 0;
+  let hasPrevData = false;
+  prevTxs.forEach(tx => {
+    if (isFundTransaction(tx)) return;
+
+    hasPrevData = true;
+    if (tx.type === "expense") {
+      prevTotalExpense += tx.amount;
+    }
+  });
+
+  const yearStr = `${targetYear}`;
+  let body = `Trong năm ${yearStr} bạn đã chi tiêu:\n`;
+  
+  if (totalExpense === 0) {
+    body += "Không có chi tiêu\n";
+  } else {
+    Object.entries(expenses).forEach(([cat, amt]) => {
+      body += `- ${cat}: 🔴 -${formatCurrency(amt)}\n`;
+    });
+  }
+
+  body += `\nBạn đã thu:\n`;
+  if (totalIncome === 0) {
+    body += "Không có thu nhập\n";
+  } else {
+    Object.entries(incomes).forEach(([cat, amt]) => {
+      body += `- ${cat}: 🟢 +${formatCurrency(amt)}\n`;
+    });
+  }
+
+  body += `\n------------------\n`;
+  body += `Tổng chi: 🔴 -${formatCurrency(totalExpense)} | Tổng thu: 🟢 +${formatCurrency(totalIncome)}\n`;
+  body += `------------------\n`;
+
+  if (hasPrevData) {
+    const diff = totalExpense - prevTotalExpense;
+    if (diff > 0) {
+      body += `So với năm trước: Chi tiêu NHIỀU HƠN ${formatCurrency(diff)}`;
+    } else if (diff < 0) {
+      body += `So với năm trước: Chi tiêu ÍT HƠN ${formatCurrency(Math.abs(diff))}`;
+    } else {
+      body += `So với năm trước: Chi tiêu BẰNG NHAU`;
+    }
+  } else {
+    body += `So với năm trước: năm ${prevYear} không có giao dịch`;
+  }
+
+  const title = `Báo cáo tài chính năm ${yearStr} 📊`;
+
+  return { title, body };
+}
+
+/**
  * Tự động đồng bộ và làm mới toàn bộ lịch sử thông báo vào bộ nhớ đệm AsyncStorage
  */
 export async function syncNotificationHistory(transactions: Transaction[]) {
@@ -155,25 +345,66 @@ export async function syncNotificationHistory(transactions: Transaction[]) {
   // Sắp xếp transactions tăng dần theo thời gian để tìm ngày đầu tiên
   const sortedTxs = [...transactions].sort((a, b) => a.timestamp - b.timestamp);
   const firstTxDate = new Date(sortedTxs[0].timestamp);
-  const startDate = new Date(firstTxDate.getFullYear(), firstTxDate.getMonth(), firstTxDate.getDate(), 0, 0, 0, 0);
-
   const now = new Date();
-  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0);
 
   const newHistory: NotificationHistoryItem[] = [];
 
-  // Duyệt qua từng ngày từ ngày đầu tiên có giao dịch cho đến ngày hôm qua
+  // 1. DUYỆT BÁO CÁO NGÀY (từ ngày đầu tiên có giao dịch cho đến ngày hôm qua)
+  const startDate = new Date(firstTxDate.getFullYear(), firstTxDate.getMonth(), firstTxDate.getDate(), 0, 0, 0, 0);
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0);
+
   for (let d = new Date(startDate.getTime()); d <= yesterday; d.setDate(d.getDate() + 1)) {
     const dateStr = formatDateString(d);
     const { title, body } = generateDailyReport(transactions, d);
     const triggerTime = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 2, 0, 0, 0).getTime();
     
     newHistory.push({
-      id: `history-${dateStr.replace(/\//g, "-")}`,
+      id: `history-day-${dateStr.replace(/\//g, "-")}`,
       dateStr,
       triggerTime,
       title,
       body,
+      type: 'day'
+    });
+  }
+
+  // 2. DUYỆT BÁO CÁO THÁNG (từ tháng đầu tiên có giao dịch cho đến tháng trước tháng hiện tại)
+  const startMonthDate = new Date(firstTxDate.getFullYear(), firstTxDate.getMonth(), 1, 0, 0, 0, 0);
+  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+
+  for (let m = new Date(startMonthDate.getTime()); m <= prevMonthDate; m.setMonth(m.getMonth() + 1)) {
+    const mm = String(m.getMonth() + 1).padStart(2, "0");
+    const yyyy = m.getFullYear();
+    const monthStr = `${mm}/${yyyy}`;
+    const { title, body } = generateMonthlyReport(transactions, m);
+    const triggerTime = new Date(m.getFullYear(), m.getMonth() + 1, 1, 2, 0, 0, 0).getTime();
+
+    newHistory.push({
+      id: `history-month-${mm}-${yyyy}`,
+      dateStr: monthStr,
+      triggerTime,
+      title,
+      body,
+      type: 'month'
+    });
+  }
+
+  // 3. DUYỆT BÁO CÁO NĂM (từ năm đầu tiên có giao dịch cho đến năm trước năm hiện tại)
+  const startYearVal = firstTxDate.getFullYear();
+  const prevYearVal = now.getFullYear() - 1;
+
+  for (let y = startYearVal; y <= prevYearVal; y++) {
+    const yearStr = `${y}`;
+    const { title, body } = generateYearlyReport(transactions, y);
+    const triggerTime = new Date(y + 1, 0, 1, 2, 0, 0, 0).getTime();
+
+    newHistory.push({
+      id: `history-year-${y}`,
+      dateStr: yearStr,
+      triggerTime,
+      title,
+      body,
+      type: 'year'
     });
   }
 
@@ -276,7 +507,19 @@ export async function scheduleDailyReminder() {
     await scheduleSpecificNotification(triggerDate, title, body, { type: 'daily_report' });
   }
 
-  console.log("Rescheduled smart daily reminders & 2 AM daily reports successfully!");
+  // 3. LẬP LỊCH THÔNG BÁO BÁO CÁO THÁNG (2H SÁNG ngày đầu tiên của tháng tiếp theo)
+  const nextMonthTrigger = new Date(now.getFullYear(), now.getMonth() + 1, 1, 2, 0, 0, 0);
+  const currentMonthDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  const monthReport = generateMonthlyReport(transactions, currentMonthDate);
+  await scheduleSpecificNotification(nextMonthTrigger, monthReport.title, monthReport.body, { type: 'monthly_report' });
+
+  // 4. LẬP LỊCH THÔNG BÁO BÁO CÁO NĂM (2H SÁNG ngày 01/01 của năm tiếp theo)
+  const nextYearTrigger = new Date(now.getFullYear() + 1, 0, 1, 2, 0, 0, 0);
+  const currentYearVal = now.getFullYear();
+  const yearReport = generateYearlyReport(transactions, currentYearVal);
+  await scheduleSpecificNotification(nextYearTrigger, yearReport.title, yearReport.body, { type: 'yearly_report' });
+
+  console.log("Rescheduled smart daily reminders, 2 AM daily reports, month and year reports successfully!");
 }
 
 async function scheduleSpecificNotification(date: Date, title: string, body: string, data?: Record<string, any>) {

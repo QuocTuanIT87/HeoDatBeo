@@ -23,6 +23,7 @@ import {
   Keyboard,
   ArrowUpCircle,
   ArrowDownCircle,
+  RotateCcw,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import {
@@ -598,7 +599,7 @@ const SavingScreen = () => {
                   onPress={() => setAmount(0)}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.cancelButtonText}>Hủy</Text>
+                  <RotateCcw color="#ef4444" size={22} />
                 </TouchableOpacity>
               </View>
             )}
@@ -796,7 +797,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
+    paddingVertical: 11,
     borderRadius: 12,
     gap: 8,
   },
@@ -829,7 +830,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
-    marginBottom: 24,
     borderWidth: 1,
   },
   borderDeposit: { borderColor: "#f59e0b", backgroundColor: "#fffbeb" },
@@ -850,15 +850,15 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   actionNextBtn: {
-    flex: 3,
-    paddingVertical: 16,
+    flex: 1,
+    height: 54,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
   actionCancelBtn: {
-    flex: 1,
-    paddingVertical: 16,
+    width: 54,
+    height: 54,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",

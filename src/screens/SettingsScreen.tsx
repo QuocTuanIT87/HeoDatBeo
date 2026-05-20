@@ -12,12 +12,21 @@ import {
   Platform,
   ScrollView,
   Image,
+  Switch,
+  ActivityIndicator,
 } from "react-native";
 import { writeAsStringAsync, readAsStringAsync } from "expo-file-system/legacy";
 import { Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
 import { storage } from "../store/storage";
+import {
+  initGoogleDrive,
+  signInGoogle,
+  signOutGoogle,
+  uploadBackupToGoogleDrive,
+  getAccessToken,
+} from "../utils/googleDrive";
 import {
   CommonActions,
   useNavigation,
@@ -39,8 +48,9 @@ import {
   GraduationCap,
   Heart,
   Link,
+  Cloud,
 } from "lucide-react-native";
-import { UserProfile } from "../types";
+import { UserProfile, CategoryBudget, Transaction } from "../types";
 import { scheduleTestNotification } from "../utils/notifications";
 
 const DEFAULT_INCOME_CATEGORIES = ["Lương", "Thưởng", "Bán hàng"];
@@ -107,11 +117,153 @@ const SettingsScreen = () => {
   // Settings Modal State
   const [isSettingsModalVisible, setSettingsModalVisible] = useState(false);
 
+  // Google Drive Backup States
+  const [isDriveModalVisible, setDriveModalVisible] = useState(false);
+  const [isGoogleSignedIn, setIsGoogleSignedIn] = useState(false);
+  const [googleUserEmail, setGoogleUserEmail] = useState<string | null>(null);
+  const [isAutoBackupEnabled, setIsAutoBackupEnabled] = useState(false);
+  const [lastBackupTimestamp, setLastBackupTimestamp] = useState<number>(0);
+  const [lastBackupStatus, setLastBackupStatus] = useState<string>('none');
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  useEffect(() => {
+    initGoogleDrive();
+    checkGoogleSignInStatus();
+    loadBackupSettings();
+  }, []);
+
   useEffect(() => {
     if (isFocused) {
       loadProfile();
+      checkGoogleSignInStatus();
+      loadBackupSettings();
     }
   }, [isFocused]);
+
+  const checkGoogleSignInStatus = async () => {
+    try {
+      const token = await getAccessToken();
+      if (token) {
+        setIsGoogleSignedIn(true);
+        const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+        const currentUser = await GoogleSignin.getCurrentUser();
+        if (currentUser && currentUser.user) {
+          setGoogleUserEmail(currentUser.user.email);
+        }
+      } else {
+        setIsGoogleSignedIn(false);
+        setGoogleUserEmail(null);
+      }
+    } catch (e) {
+      setIsGoogleSignedIn(false);
+      setGoogleUserEmail(null);
+    }
+  };
+
+  const loadBackupSettings = async () => {
+    const autoEnabled = await storage.isGoogleDriveAutoBackupEnabled();
+    const lastTimestamp = await storage.getGoogleDriveLastBackupTimestamp();
+    const lastStatus = await storage.getGoogleDriveLastBackupStatus();
+    setIsAutoBackupEnabled(autoEnabled);
+    setLastBackupTimestamp(lastTimestamp);
+    setLastBackupStatus(lastStatus);
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsLoggingIn(true);
+    try {
+      const res = await signInGoogle();
+      if (res.success && res.userInfo) {
+        const userInfoAny = res.userInfo as any;
+        setIsGoogleSignedIn(true);
+        setGoogleUserEmail(userInfoAny.user.email);
+        Alert.alert("Thành công", `Đã liên kết tài khoản Google: ${userInfoAny.user.email}`);
+        await loadBackupSettings();
+      } else {
+        Alert.alert("Lỗi đăng nhập", res.error || "Không thể đăng nhập Google.");
+      }
+    } catch (e: any) {
+      Alert.alert("Lỗi", e.message || String(e));
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleGoogleLogout = async () => {
+    Alert.alert(
+      "Đăng xuất",
+      "Bạn có chắc muốn đăng xuất và hủy liên kết Google Drive?",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Đăng xuất",
+          style: "destructive",
+          onPress: async () => {
+            const res = await signOutGoogle();
+            if (res.success) {
+              setIsGoogleSignedIn(false);
+              setGoogleUserEmail(null);
+              setIsAutoBackupEnabled(false);
+              await storage.setGoogleDriveAutoBackupEnabled(false);
+              Alert.alert("Đăng xuất thành công", "Đã hủy liên kết Google Drive.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleToggleAutoBackup = async (value: boolean) => {
+    if (!isGoogleSignedIn) {
+      Alert.alert("Yêu cầu đăng nhập", "Bạn cần liên kết tài khoản Google trước.");
+      return;
+    }
+    const success = await storage.setGoogleDriveAutoBackupEnabled(value);
+    if (success) {
+      setIsAutoBackupEnabled(value);
+    }
+  };
+
+  const handleManualBackup = async () => {
+    if (!isGoogleSignedIn) {
+      Alert.alert("Yêu cầu đăng nhập", "Bạn cần liên kết tài khoản Google trước.");
+      return;
+    }
+    setIsBackingUp(true);
+    try {
+      const dataStr = await storage.exportData();
+      const res = await uploadBackupToGoogleDrive(dataStr);
+      const now = Date.now();
+      await storage.setGoogleDriveLastBackupTimestamp(now);
+      await storage.setGoogleDriveLastBackupStatus(res.success ? 'success' : 'failed');
+      
+      setLastBackupTimestamp(now);
+      setLastBackupStatus(res.success ? 'success' : 'failed');
+
+      if (res.success) {
+        Alert.alert("Thành công", "Đã sao lưu dữ liệu lên Google Drive.");
+      } else {
+        Alert.alert("Lỗi sao lưu", res.message);
+      }
+    } catch (e: any) {
+      Alert.alert("Lỗi", e.message || String(e));
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  const formatLastBackupTime = (ts: number) => {
+    if (!ts || ts === 0) return "Chưa từng sao lưu";
+    const date = new Date(ts);
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    const hh = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    const ss = String(date.getSeconds()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} lúc ${hh}:${min}:${ss}`;
+  };
 
   const loadProfile = async () => {
     const p = await storage.getUserProfile();
@@ -459,6 +611,23 @@ const SettingsScreen = () => {
           </View>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => setDriveModalVisible(true)}
+        >
+          <View style={[styles.iconContainer, { backgroundColor: "#ecfeff" }]}>
+            <Cloud color="#0891b2" size={18} />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Sao lưu Google Drive</Text>
+            {isGoogleSignedIn && (
+              <Text style={{ fontSize: 12, color: "#0891b2", marginTop: 2 }}>
+                Đã liên kết tài khoản
+              </Text>
+            )}
+          </View>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.card} onPress={handleExport}>
           <View style={[styles.iconContainer, { backgroundColor: "#e0e7ff" }]}>
             <Upload color="#4f46e5" size={18} />
@@ -487,13 +656,147 @@ const SettingsScreen = () => {
         </TouchableOpacity>
 
         <View style={styles.footerInfo}>
-          <Text style={styles.versionText}>Phiên bản hiện tại : 19.5.2026</Text>
+          <Text style={styles.versionText}>Phiên bản hiện tại : 20.5.2026</Text>
           <Text style={styles.authorText}>
             Ứng dụng được phát triển bởi{" "}
             <Text style={styles.authorHighlight}>SatsBoy87</Text>
           </Text>
         </View>
       </ScrollView>
+
+      {/* Modal Cấu hình Sao lưu Google Drive */}
+      <Modal
+        visible={isDriveModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setDriveModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Sao lưu Google Drive</Text>
+              <TouchableOpacity onPress={() => setDriveModalVisible(false)}>
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={{ paddingVertical: 10 }}>
+              {/* Trạng thái liên kết */}
+              <View style={styles.driveStatusCard}>
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+                  <Cloud color={isGoogleSignedIn ? "#0891b2" : "#94a3b8"} size={28} />
+                  <View style={{ marginLeft: 12 }}>
+                    <Text style={{ fontSize: 16, fontWeight: "bold", color: "#1e293b" }}>
+                      {isGoogleSignedIn ? "Đã liên kết Google Drive" : "Chưa liên kết tài khoản"}
+                    </Text>
+                    {isGoogleSignedIn && googleUserEmail && (
+                      <Text style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>
+                        {googleUserEmail}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+
+                {isGoogleSignedIn ? (
+                  <TouchableOpacity
+                    style={styles.driveLogoutBtn}
+                    onPress={handleGoogleLogout}
+                  >
+                    <Text style={styles.driveLogoutBtnText}>Hủy liên kết tài khoản</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.driveLoginBtn}
+                    onPress={handleGoogleLogin}
+                    disabled={isLoggingIn}
+                  >
+                    {isLoggingIn ? (
+                      <ActivityIndicator color="#ffffff" size="small" />
+                    ) : (
+                      <Text style={styles.driveLoginBtnText}>Đăng nhập Google</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Tùy chọn Tự động Sao lưu */}
+              <View style={[styles.driveOptionRow, !isGoogleSignedIn && { opacity: 0.5 }]}>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <Text style={styles.driveOptionTitle}>Tự động sao lưu hàng ngày</Text>
+                  <Text style={styles.driveOptionDesc}>
+                    Tự động đồng bộ và sao lưu dữ liệu lên Google Drive lúc 1:00 sáng mỗi ngày.
+                  </Text>
+                </View>
+                <Switch
+                  value={isAutoBackupEnabled}
+                  onValueChange={handleToggleAutoBackup}
+                  disabled={!isGoogleSignedIn}
+                  trackColor={{ false: "#cbd5e1", true: "#99f6e4" }}
+                  thumbColor={isAutoBackupEnabled ? "#0891b2" : "#f1f5f9"}
+                />
+              </View>
+
+              {/* Sao lưu thủ công */}
+              <View style={[styles.driveActionBox, !isGoogleSignedIn && { opacity: 0.5 }]}>
+                <Text style={styles.driveSectionTitle}>Sao lưu thủ công</Text>
+                <Text style={styles.driveSectionDesc}>
+                  Tải dữ liệu hiện tại lên Google Drive ngay lập tức.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.driveManualBtn, !isGoogleSignedIn && styles.driveBtnDisabled]}
+                  onPress={handleManualBackup}
+                  disabled={!isGoogleSignedIn || isBackingUp}
+                >
+                  {isBackingUp ? (
+                    <ActivityIndicator color="#ffffff" size="small" />
+                  ) : (
+                    <Text style={styles.driveManualBtnText}>Sao lưu ngay bây giờ</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {/* Thông tin lịch sử sao lưu */}
+              <View style={styles.driveHistoryBox}>
+                <Text style={styles.driveHistoryTitle}>Thông tin sao lưu gần nhất</Text>
+                
+                <View style={styles.driveHistoryRow}>
+                  <Text style={styles.driveHistoryLabel}>Trạng thái:</Text>
+                  <Text style={[
+                    styles.driveHistoryValue, 
+                    { 
+                      fontWeight: "bold", 
+                      color: lastBackupStatus === 'success' 
+                        ? "#16a34a" 
+                        : lastBackupStatus === 'failed' 
+                          ? "#dc2626" 
+                          : "#64748b" 
+                    }
+                  ]}>
+                    {lastBackupStatus === 'success' 
+                      ? "Thành công" 
+                      : lastBackupStatus === 'failed' 
+                        ? "Thất bại" 
+                        : "Chưa thực hiện"}
+                  </Text>
+                </View>
+
+                <View style={styles.driveHistoryRow}>
+                  <Text style={styles.driveHistoryLabel}>Thời gian:</Text>
+                  <Text style={styles.driveHistoryValue}>
+                    {formatLastBackupTime(lastBackupTimestamp)}
+                  </Text>
+                </View>
+
+                <View style={styles.driveWarningBox}>
+                  <Text style={styles.driveWarningText}>
+                    * Lưu ý: Google Drive chỉ lưu tối đa 7 ngày sao lưu gần nhất trong thư mục "data_heo_dat_beo". Các bản sao lưu cũ hơn sẽ tự động được xóa bỏ.
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={isCategoryModalVisible}
@@ -964,6 +1267,126 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     resizeMode: "contain",
+  },
+  driveStatusCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginBottom: 20,
+  },
+  driveLoginBtn: {
+    backgroundColor: "#0891b2",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  driveLoginBtnText: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+  driveLogoutBtn: {
+    backgroundColor: "#fee2e2",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  driveLogoutBtnText: {
+    color: "#dc2626",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  driveOptionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+    marginBottom: 16,
+  },
+  driveOptionTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: 4,
+  },
+  driveOptionDesc: {
+    fontSize: 12,
+    color: "#64748b",
+    lineHeight: 16,
+  },
+  driveActionBox: {
+    marginBottom: 20,
+  },
+  driveSectionTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: 6,
+  },
+  driveSectionDesc: {
+    fontSize: 13,
+    color: "#64748b",
+    marginBottom: 12,
+  },
+  driveManualBtn: {
+    backgroundColor: "#0891b2",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  driveManualBtnText: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+  driveBtnDisabled: {
+    backgroundColor: "#cbd5e1",
+  },
+  driveHistoryBox: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  driveHistoryTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 12,
+  },
+  driveHistoryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  driveHistoryLabel: {
+    fontSize: 13,
+    color: "#64748b",
+  },
+  driveHistoryValue: {
+    fontSize: 13,
+    color: "#1e293b",
+  },
+  driveWarningBox: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+  },
+  driveWarningText: {
+    fontSize: 11,
+    color: "#94a3b8",
+    lineHeight: 15,
   },
 });
 

@@ -25,6 +25,7 @@ import {
   Eye,
   EyeOff,
   History,
+  RotateCcw,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { UserProfile, Transaction, CategoryBudget, CustomFund } from "../types";
@@ -740,21 +741,31 @@ const FundScreen = () => {
                   amount={amount}
                   onAddAmount={(val) => setAmount(amount + val)}
                   onClear={() => setAmount(0)}
+                  hideClearButton={true}
                 />
               </View>
             )}
 
-            <TouchableOpacity
-              style={[
-                styles.confirmAllocBtn,
-                txType === "deposit" ? styles.bgDeposit : styles.bgWithdraw,
-                amount <= 0 && styles.bgDisabled,
-              ]}
-              onPress={executeTransaction}
-              disabled={amount <= 0}
-            >
-              <Text style={styles.confirmAllocBtnText}>Xác Nhận</Text>
-            </TouchableOpacity>
+            <View style={styles.actionButtonRow}>
+              <TouchableOpacity
+                style={[
+                  styles.actionConfirmBtn,
+                  txType === "deposit" ? styles.bgDeposit : styles.bgWithdraw,
+                  amount <= 0 && styles.bgDisabled,
+                ]}
+                onPress={executeTransaction}
+                disabled={amount <= 0}
+              >
+                <Text style={styles.confirmBtnText}>Xác Nhận</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionCancelBtn}
+                onPress={() => setAmount(0)}
+              >
+                <RotateCcw color="#ef4444" size={22} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1194,12 +1205,34 @@ const styles = StyleSheet.create({
   },
   confirmBtnText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
 
-  confirmAllocBtn: {
-    padding: 16,
+  actionButtonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 24,
+  },
+  actionConfirmBtn: {
+    flex: 1,
+    height: 54,
     borderRadius: 16,
     alignItems: "center",
+    justifyContent: "center",
   },
-  confirmAllocBtnText: { color: "#ffffff", fontSize: 18, fontWeight: "bold" },
+  actionCancelBtn: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fee2e2",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  cancelBtnText: {
+    color: "#ef4444",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   bgDeposit: { backgroundColor: "#10b981" },
   bgWithdraw: { backgroundColor: "#ef4444" },
   bgDisabled: { backgroundColor: "#cbd5e1" },

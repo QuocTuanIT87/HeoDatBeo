@@ -25,7 +25,11 @@
     "web": {
       "favicon": "./assets/savepig.jpg"
     },
-    "plugins": ["expo-sharing", "@react-native-community/datetimepicker"],
+    "plugins": [
+      "expo-sharing",
+      "@react-native-community/datetimepicker",
+      "@react-native-google-signin/google-signin"
+    ],
     "notification": {
       "icon": "./assets/savepig.jpg",
       "color": "#ffffff"

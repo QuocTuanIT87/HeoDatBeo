@@ -443,18 +443,13 @@ const ProfileScreen = () => {
               </Text>
               <Text style={styles.streakLevelTxt}>
                 Cấp độ hiện tại: Cấp {getStreakLevel(profile?.streakCount || 0)}{" "}
-                / 12
-              </Text>
-              <Text style={styles.streakNextLevelTxt}>
-                {getStreakLevel(profile?.streakCount || 0) >= 12
-                  ? "Bạn đã đạt cấp độ tối đa! 👑"
-                  : `Còn ${30 - ((profile?.streakCount || 0) % 30)} ngày nữa để lên Cấp ${getStreakLevel(profile?.streakCount || 0) + 1}`}
+                / 16
               </Text>
             </View>
           </View>
 
           {/* Progress Bar */}
-          {getStreakLevel(profile?.streakCount || 0) < 12 && (
+          {getStreakLevel(profile?.streakCount || 0) < 16 && (
             <View style={styles.progressBarBg}>
               <View
                 style={[
@@ -468,8 +463,7 @@ const ProfileScreen = () => {
           )}
 
           <Text style={styles.streakRecoveryLimitTxt}>
-            🛡️ Lượt khôi phục đã dùng trong tháng:{" "}
-            {profile?.streakRecoveriesCount || 0}/3 (tối đa 3)
+          Mỗi tháng sẽ có 3 lượt khôi phục chuỗi
           </Text>
         </View>
 
@@ -1431,11 +1425,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   streakRecoveryLimitTxt: {
-    fontSize: 11,
-    color: "#64748b",
+    fontSize: 8,
+    color: "#bbbbbb",
     fontWeight: "700",
     marginTop: 12,
-    textAlign: "right",
+    textAlign: "left",
   },
 });
 

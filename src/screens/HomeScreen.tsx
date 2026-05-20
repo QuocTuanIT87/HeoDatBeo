@@ -12,6 +12,9 @@ import {
   Platform,
   FlatList,
   Image,
+  PanResponder,
+  Animated,
+  Dimensions,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -36,10 +39,12 @@ import {
   Bell,
   Copy,
   Flame,
+  RotateCcw,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { Transaction, UserProfile, CategoryBudget } from "../types";
 import { formatCurrency } from "../utils/format";
+import { initGoogleDrive, checkAndRunAutoBackup } from "../utils/googleDrive";
 import Keypad from "../components/Keypad";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { Sparkles } from "lucide-react-native/icons";
@@ -179,6 +184,37 @@ const HomeScreen = () => {
   const navigation = useNavigation();
   const scrollRef = useRef<ScrollView>(null);
 
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+  const pan = useRef(new Animated.ValueXY()).current;
+
+  useEffect(() => {
+    // Xuất hiện ngẫu nhiên trên màn hình
+    const randomX = Math.random() * (SCREEN_WIDTH - 100) + 10;
+    const randomY = Math.random() * (SCREEN_HEIGHT - 350) + 150;
+    pan.setValue({ x: randomX, y: randomY });
+  }, []);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        pan.setOffset({
+          x: (pan.x as any)._value,
+          y: (pan.y as any)._value,
+        });
+        pan.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: pan.x, dy: pan.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        pan.flattenOffset();
+      },
+    })
+  ).current;
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [budgets, setBudgets] = useState<CategoryBudget[]>([]);
   const [showBudgets, setShowBudgets] = useState(false);
@@ -235,8 +271,20 @@ const HomeScreen = () => {
   const manualInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
+    initGoogleDrive();
+    checkAndRunAutoBackup();
+
+    const intervalId = setInterval(() => {
+      checkAndRunAutoBackup();
+    }, 5 * 60 * 1000); // 5 phút một lần
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
     if (isFocused) {
       loadData();
+      checkAndRunAutoBackup();
     }
   }, [isFocused]);
 
@@ -548,7 +596,10 @@ const HomeScreen = () => {
               style={styles.streakHeaderChip}
               activeOpacity={0.8}
             >
-              <Flame color="#f97316" fill="#f97316" size={16} />
+              <Image
+                source={require("../../assets/series/icon-series.gif")}
+                style={{ width: 36, height: 36, resizeMode: "contain" }}
+              />
               <Text style={styles.streakHeaderTxt}>{profile.streakCount}</Text>
             </TouchableOpacity>
           ) : null}
@@ -759,7 +810,7 @@ const HomeScreen = () => {
                 onPress={() => setAmount(0)}
                 activeOpacity={0.8}
               >
-                <Text style={styles.cancelButtonText}>Hủy</Text>
+                <RotateCcw color="#ef4444" size={22} />
               </TouchableOpacity>
             </View>
           )}
@@ -1221,6 +1272,37 @@ const HomeScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {profile && (
+        <Animated.View
+          {...panResponder.panHandlers}
+          style={[
+            pan.getLayout(),
+            {
+              position: "absolute",
+              width: 60,
+              height: 60,
+              borderRadius: 30,
+              backgroundColor: "#ffffff",
+              borderWidth: 1.5,
+              borderColor: "#e2e8f0",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 9999,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 6,
+              elevation: 6,
+            },
+          ]}
+        >
+          <Image
+            source={getStreakLevelImage(getStreakLevel(profile.streakCount || 0))}
+            style={{ width: 50, height: 50, resizeMode: "contain" }}
+          />
+        </Animated.View>
+      )}
     </View>
   );
 };
@@ -1540,15 +1622,15 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   actionNextBtn: {
-    flex: 3,
-    paddingVertical: 14,
+    flex: 1,
+    height: 54,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
   actionCancelBtn: {
-    flex: 1,
-    paddingVertical: 14,
+    width: 54,
+    height: 54,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -1952,7 +2034,7 @@ const styles = StyleSheet.create({
   streakHeaderTxt: {
     color: "#ffffff",
     fontWeight: "800",
-    fontSize: 13,
+    fontSize: 16,
   },
   streakModalOverlay: {
     flex: 1,

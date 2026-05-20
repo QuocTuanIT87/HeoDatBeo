@@ -118,31 +118,35 @@ export const calculateNewStreak = (
 export const getStreakLevel = (streakCount: number): number => {
   if (streakCount <= 0) return 1;
   const level = Math.floor((streakCount - 1) / 30) + 1;
-  return Math.min(12, level); // giới hạn tạm thời ở 12 theo số lượng file ảnh hiện có
+  return Math.min(16, level); // giới hạn ở 16 theo hệ thống cấp độ mới
 };
 
 /**
  * Bản đồ các hình ảnh cấp độ ngọn lửa
  */
 export const STREAK_LEVEL_IMAGES: Record<number, any> = {
-  1: require('../../assets/series/level_1.png'),
-  2: require('../../assets/series/level_2.png'),
-  3: require('../../assets/series/level_3.png'),
-  4: require('../../assets/series/level_4.png'),
-  5: require('../../assets/series/level_5.png'),
-  6: require('../../assets/series/level_6.png'),
-  7: require('../../assets/series/level_7.png'),
-  8: require('../../assets/series/level_8.png'),
-  9: require('../../assets/series/level_9.png'),
-  10: require('../../assets/series/level_10.png'),
-  11: require('../../assets/series/level_11.png'),
-  12: require('../../assets/series/level_12.png'),
+  1: require('../../assets/series/gif/level_1.gif'),
+  2: require('../../assets/series/gif/level_2.gif'),
+  3: require('../../assets/series/gif/level_3.gif'),
+  4: require('../../assets/series/gif/level_4.gif'),
+  5: require('../../assets/series/gif/level_5.gif'),
+  6: require('../../assets/series/gif/level_6.gif'),
+  7: require('../../assets/series/gif/level_7.gif'),
+  8: require('../../assets/series/gif/level_8.gif'),
+  9: require('../../assets/series/gif/level_9.gif'),
+  10: require('../../assets/series/gif/level_10.gif'),
+  11: require('../../assets/series/gif/level_11.gif'),
+  12: require('../../assets/series/gif/level_12.gif'),
+  13: require('../../assets/series/gif/level_13.gif'),
+  14: require('../../assets/series/gif/level_14.gif'),
+  15: require('../../assets/series/gif/level_15.gif'),
+  16: require('../../assets/series/gif/level_16.gif'),
 };
 
 /**
  * Lấy ảnh tương ứng cho cấp độ
  */
 export const getStreakLevelImage = (level: number) => {
-  const safeLevel = Math.max(1, Math.min(12, level));
+  const safeLevel = Math.max(1, Math.min(16, level));
   return STREAK_LEVEL_IMAGES[safeLevel];
 };

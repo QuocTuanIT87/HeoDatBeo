@@ -329,5 +329,60 @@ export const storage = {
       console.error('Error saving notification history', e);
       return false;
     }
+  },
+
+  // Google Drive Backup settings
+  async isGoogleDriveAutoBackupEnabled(): Promise<boolean> {
+    try {
+      const value = await AsyncStorage.getItem('@googleDriveAutoBackupEnabled');
+      return value === 'true';
+    } catch (e) {
+      return false;
+    }
+  },
+
+  async setGoogleDriveAutoBackupEnabled(enabled: boolean): Promise<boolean> {
+    try {
+      await AsyncStorage.setItem('@googleDriveAutoBackupEnabled', enabled ? 'true' : 'false');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  async getGoogleDriveLastBackupTimestamp(): Promise<number> {
+    try {
+      const value = await AsyncStorage.getItem('@googleDriveLastBackupTimestamp');
+      return value ? parseInt(value, 10) : 0;
+    } catch (e) {
+      return 0;
+    }
+  },
+
+  async setGoogleDriveLastBackupTimestamp(timestamp: number): Promise<boolean> {
+    try {
+      await AsyncStorage.setItem('@googleDriveLastBackupTimestamp', timestamp.toString());
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  async getGoogleDriveLastBackupStatus(): Promise<string> {
+    try {
+      const value = await AsyncStorage.getItem('@googleDriveLastBackupStatus');
+      return value || 'none';
+    } catch (e) {
+      return 'none';
+    }
+  },
+
+  async setGoogleDriveLastBackupStatus(status: string): Promise<boolean> {
+    try {
+      await AsyncStorage.setItem('@googleDriveLastBackupStatus', status);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 };
