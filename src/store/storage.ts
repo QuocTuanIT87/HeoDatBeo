@@ -9,6 +9,34 @@ const CATEGORY_BUDGETS_KEY = '@categoryBudgets';
 const TRANSACTION_DATE_INDEX_KEY = '@transaction_date_index';
 const NOTIFICATION_HISTORY_KEY = '@notificationHistory';
 
+const ENCRYPTION_PREFIX = 'HDB_ENC_';
+const XOR_KEY = 87; // QuocTuanIT87 / SatsBoy87
+
+function encrypt(text: string): string {
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    const charCode = text.charCodeAt(i);
+    const encryptedValue = charCode ^ XOR_KEY;
+    result += encryptedValue.toString(16).padStart(4, '0');
+  }
+  return ENCRYPTION_PREFIX + result;
+}
+
+function decrypt(cipherText: string): string {
+  if (!cipherText || !cipherText.startsWith(ENCRYPTION_PREFIX)) {
+    return cipherText; // Trả về dạng gốc nếu không có tiền tố mã hóa (tương thích ngược)
+  }
+  const hexPart = cipherText.substring(ENCRYPTION_PREFIX.length);
+  let result = '';
+  for (let i = 0; i < hexPart.length; i += 4) {
+    const hex = hexPart.substring(i, i + 4);
+    const encryptedValue = parseInt(hex, 16);
+    const charCode = encryptedValue ^ XOR_KEY;
+    result += String.fromCharCode(charCode);
+  }
+  return result;
+}
+
 let onTransactionChangeCallback: (() => void) | null = null;
 
 export const storage = {
@@ -188,20 +216,20 @@ export const storage = {
       return false;
     }
   },
-  
+
   async updateTransaction(updatedTransaction: Transaction): Promise<boolean> {
-      try {
-          const current = await this.getTransactions();
-          const updated = current.map(t => t.id === updatedTransaction.id ? updatedTransaction : t);
-          await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updated));
-          if (onTransactionChangeCallback) {
-            onTransactionChangeCallback();
-          }
-          return true;
-      } catch (e) {
-          console.error('Error updating transaction', e);
-          return false;
+    try {
+      const current = await this.getTransactions();
+      const updated = current.map(t => t.id === updatedTransaction.id ? updatedTransaction : t);
+      await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updated));
+      if (onTransactionChangeCallback) {
+        onTransactionChangeCallback();
       }
+      return true;
+    } catch (e) {
+      console.error('Error updating transaction', e);
+      return false;
+    }
   },
 
   async updateTransactionsBulk(updatedTransactions: Transaction[]): Promise<boolean> {
@@ -249,12 +277,14 @@ export const storage = {
       }
     }
 
-    return JSON.stringify({ profile, transactions, categoryBudgets, avatarMap });
+    const jsonStr = JSON.stringify({ profile, transactions, categoryBudgets, avatarMap });
+    return encrypt(jsonStr);
   },
 
   async importData(jsonData: string): Promise<boolean> {
     try {
-      const parsed = JSON.parse(jsonData);
+      const decrypted = decrypt(jsonData);
+      const parsed = JSON.parse(decrypted);
       let profile: UserProfile | null = parsed.profile || null;
       const avatarMap = parsed.avatarMap || {};
 

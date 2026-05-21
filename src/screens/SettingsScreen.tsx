@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Modal,
   TextInput,
   FlatList,
@@ -15,6 +14,7 @@ import {
   Switch,
   ActivityIndicator,
 } from "react-native";
+import { Alert } from "../components/CustomAlert";
 import { writeAsStringAsync, readAsStringAsync } from "expo-file-system/legacy";
 import { Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -26,6 +26,7 @@ import {
   signOutGoogle,
   uploadBackupToGoogleDrive,
   getAccessToken,
+  restoreLatestBackupFromGoogleDrive,
 } from "../utils/googleDrive";
 import {
   CommonActions,
@@ -49,6 +50,7 @@ import {
   Heart,
   Link,
   Cloud,
+  Database,
 } from "lucide-react-native";
 import { UserProfile, CategoryBudget, Transaction } from "../types";
 import { scheduleTestNotification } from "../utils/notifications";
@@ -100,6 +102,16 @@ export const getIncomeIconSource = (
   return INCOME_ICONS["default"];
 };
 
+const VERSION_HISTORY = [
+  { version: "21.05.2026", description: "Sửa giao diện profile, mã hóa dữ liệu, thêm linh vật" },
+  { version: "20.05.2026", description: "Thêm linh vật giữ chuỗi, backup dữ liệu tự động, thông báo thu chi theo ngày, tháng, năm" },
+  { version: "14.05.2026", description: "Thêm icon sinh động cho danh mục, Quỹ" },
+  { version: "10.05.2026", description: "Thêm Quỹ lưu trữ" },
+  { version: "1.05.2026", description: "Sửa lỗi logic xóa giao dịch" },
+  { version: "21.04.2026", description: "Sửa, xóa giao dịch trong vòng 3 ngày" },
+  { version: "15.04.2026", description: "Chia 2 loại danh mục (Cần nạp tiền và chi trực tiếp)" },
+];
+
 const SettingsScreen = () => {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
@@ -126,6 +138,9 @@ const SettingsScreen = () => {
   const [lastBackupStatus, setLastBackupStatus] = useState<string>('none');
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isHistoryModalVisible, setHistoryModalVisible] = useState(false);
+  const [isOfflineModalVisible, setOfflineModalVisible] = useState(false);
 
   useEffect(() => {
     initGoogleDrive();
@@ -253,6 +268,52 @@ const SettingsScreen = () => {
     }
   };
 
+  const handleRestoreFromGoogleDrive = async () => {
+    if (!isGoogleSignedIn) {
+      Alert.alert("Yêu cầu đăng nhập", "Bạn cần liên kết tài khoản Google trước.");
+      return;
+    }
+
+    Alert.alert(
+      "Khôi phục dữ liệu",
+      "Bạn có chắc chắn muốn khôi phục dữ liệu từ bản sao lưu gần nhất trên Google Drive? Dữ liệu hiện tại trên thiết bị sẽ bị ghi đè và thay thế hoàn toàn.",
+      [
+        { text: "Hủy bỏ", style: "cancel" },
+        {
+          text: "Khôi phục",
+          style: "destructive",
+          onPress: async () => {
+            setIsRestoring(true);
+            try {
+              const res = await restoreLatestBackupFromGoogleDrive();
+              if (res.success && res.content) {
+                const success = await storage.importData(res.content);
+                if (success) {
+                  Alert.alert(
+                    "Thành công",
+                    "Dữ liệu đã được phục hồi từ Google Drive. Vui lòng mở lại ứng dụng hoặc chuyển tab để làm mới."
+                  );
+                  loadProfile();
+                } else {
+                  Alert.alert(
+                    "Lỗi phục hồi",
+                    "Dữ liệu không hợp lệ hoặc đã xảy ra lỗi trong quá trình phục hồi."
+                  );
+                }
+              } else {
+                Alert.alert("Lỗi khôi phục", res.message);
+              }
+            } catch (e: any) {
+              Alert.alert("Lỗi", e.message || String(e));
+            } finally {
+              setIsRestoring(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const formatLastBackupTime = (ts: number) => {
     if (!ts || ts === 0) return "Chưa từng sao lưu";
     const date = new Date(ts);
@@ -339,7 +400,7 @@ const SettingsScreen = () => {
       [
         { text: "Hủy bỏ", style: "cancel" },
         {
-          text: "Chắc chắn Xóa",
+          text: "Xóa",
           style: "destructive",
           onPress: async () => {
             const success = await storage.clearUserResetData();
@@ -546,7 +607,7 @@ const SettingsScreen = () => {
           <Text style={styles.categoryListName}>{item}</Text>
         </View>
         <TouchableOpacity onPress={() => handleDeleteCategory(item)}>
-          <Trash2 color="#ef4444" size={20} />
+          <Trash2 color="#cccccc" size={20} />
         </TouchableOpacity>
       </View>
     );
@@ -562,7 +623,7 @@ const SettingsScreen = () => {
         <Text style={styles.headerTitle}>Cài đặt & Dữ liệu</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.body}>
         <TouchableOpacity
           style={styles.card}
           onPress={() => (navigation as any).navigate("Profile")}
@@ -619,7 +680,7 @@ const SettingsScreen = () => {
             <Cloud color="#0891b2" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Sao lưu Google Drive</Text>
+            <Text style={styles.cardTitle}>Sao lưu dữ liệu (Trực tuyến)</Text>
             {isGoogleSignedIn && (
               <Text style={{ fontSize: 12, color: "#0891b2", marginTop: 2 }}>
                 Đã liên kết tài khoản
@@ -628,21 +689,15 @@ const SettingsScreen = () => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.card} onPress={handleExport}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => setOfflineModalVisible(true)}
+        >
           <View style={[styles.iconContainer, { backgroundColor: "#e0e7ff" }]}>
-            <Upload color="#4f46e5" size={18} />
+            <Database color="#4f46e5" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Xuất dữ liệu (.txt)</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={handleImport}>
-          <View style={[styles.iconContainer, { backgroundColor: "#dcfce7" }]}>
-            <Download color="#16a34a" size={18} />
-          </View>
-          <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Nhập dữ liệu (.txt)</Text>
+            <Text style={styles.cardTitle}>Sao lưu dữ liệu (Ngoại tuyến)</Text>
           </View>
         </TouchableOpacity>
 
@@ -654,15 +709,59 @@ const SettingsScreen = () => {
             <Text style={styles.cardTitle}>Khôi phục cài đặt gốc</Text>
           </View>
         </TouchableOpacity>
-
-        <View style={styles.footerInfo}>
-          <Text style={styles.versionText}>Phiên bản hiện tại : 20.5.2026</Text>
-          <Text style={styles.authorText}>
-            Ứng dụng được phát triển bởi{" "}
-            <Text style={styles.authorHighlight}>SatsBoy87</Text>
-          </Text>
-        </View>
       </ScrollView>
+
+      {/* Footer cố định phía dưới */}
+      <View style={styles.footerInfo}>
+        <View style={styles.versionRow}>
+          <Text style={styles.versionText}>Phiên bản hiện tại : 21.5.2026</Text>
+          <Text style={styles.versionSeparator}>|</Text>
+          <TouchableOpacity onPress={() => setHistoryModalVisible(true)}>
+            <Text style={styles.versionHistoryBtn}>Lịch sử phiên bản ({VERSION_HISTORY.length})</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.authorText}>
+          Ứng dụng được phát triển bởi{" "}
+          <Text style={styles.authorHighlight}>SatsBoy87</Text>
+        </Text>
+      </View>
+
+      {/* Modal Lịch sử Phiên bản */}
+      <Modal
+        visible={isHistoryModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setHistoryModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>📜 Lịch sử phiên bản</Text>
+              <TouchableOpacity onPress={() => setHistoryModalVisible(false)}>
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+              <Text style={styles.modalTitleSub}>{VERSION_HISTORY.length} phiên bản</Text>
+
+            <ScrollView contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
+              <View style={styles.historyList}>
+                {VERSION_HISTORY.map((item, idx) => (
+                  <View key={idx} style={styles.historyItem}>
+                    <View style={styles.historyDotContainer}>
+                      <View style={styles.historyDot} />
+                      {idx < VERSION_HISTORY.length - 1 && <View style={styles.historyLine} />}
+                    </View>
+                    <View style={styles.historyContent}>
+                      <Text style={styles.historyVersion}>{item.version}</Text>
+                      <Text style={styles.historyDesc}>Mô tả: {item.description}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal Cấu hình Sao lưu Google Drive */}
       <Modal
@@ -674,7 +773,7 @@ const SettingsScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Sao lưu Google Drive</Text>
+              <Text style={styles.modalTitle}>Sao lưu dữ liệu tự động</Text>
               <TouchableOpacity onPress={() => setDriveModalVisible(false)}>
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
@@ -789,9 +888,28 @@ const SettingsScreen = () => {
 
                 <View style={styles.driveWarningBox}>
                   <Text style={styles.driveWarningText}>
-                    * Lưu ý: Google Drive chỉ lưu tối đa 7 ngày sao lưu gần nhất trong thư mục "data_heo_dat_beo". Các bản sao lưu cũ hơn sẽ tự động được xóa bỏ.
+                    * Lưu ý: Mỗi lần sao lưu sẽ tạo một file riêng có tên dạng heodatbeo_YYYY-MM-DD_[giây UTC].txt. Google Drive chỉ giữ tối đa 20 file gần nhất trong thư mục "data_heo_dat_beo". Các file cũ hơn sẽ tự động được xóa bỏ.
                   </Text>
                 </View>
+              </View>
+
+              {/* Khôi phục dữ liệu từ Google Drive */}
+              <View style={[styles.driveActionBox, { marginTop: 16 }, !isGoogleSignedIn && { opacity: 0.5 }]}>
+                <Text style={styles.driveSectionTitle}>Khôi phục dữ liệu</Text>
+                <Text style={styles.driveSectionDesc}>
+                  Tải xuống và khôi phục bản sao lưu mới nhất từ Google Drive của bạn.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.driveRestoreBtn, !isGoogleSignedIn && styles.driveBtnDisabled]}
+                  onPress={handleRestoreFromGoogleDrive}
+                  disabled={!isGoogleSignedIn || isRestoring}
+                >
+                  {isRestoring ? (
+                    <ActivityIndicator color="#ffffff" size="small" />
+                  ) : (
+                    <Text style={styles.driveRestoreBtnText}>Khôi phục dữ liệu</Text>
+                  )}
+                </TouchableOpacity>
               </View>
             </ScrollView>
           </View>
@@ -918,6 +1036,70 @@ const SettingsScreen = () => {
             <TouchableOpacity
               style={styles.closeSettingsBtn}
               onPress={() => setSettingsModalVisible(false)}
+            >
+              <Text style={styles.closeSettingsBtnText}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal: Sao lưu ngoại tuyến */}
+      <Modal
+        visible={isOfflineModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setOfflineModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>💾 Sao lưu ngoại tuyến</Text>
+              <TouchableOpacity onPress={() => setOfflineModalVisible(false)}>
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
+              <TouchableOpacity
+                style={[styles.card, { marginBottom: 16 }]}
+                onPress={() => {
+                  setOfflineModalVisible(false);
+                  handleExport();
+                }}
+              >
+                <View style={[styles.iconContainer, { backgroundColor: "#e0e7ff" }]}>
+                  <Upload color="#4f46e5" size={18} />
+                </View>
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardTitle}>Xuất dữ liệu (.txt)</Text>
+                  <Text style={{ fontSize: 13, color: "#64748b", marginTop: 4, lineHeight: 18 }}>
+                    Xuất dữ liệu ra file văn bản (.txt) mã hóa để lưu trữ hoặc chuyển thiết bị.
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.card, { marginBottom: 16 }]}
+                onPress={() => {
+                  setOfflineModalVisible(false);
+                  handleImport();
+                }}
+              >
+                <View style={[styles.iconContainer, { backgroundColor: "#dcfce7" }]}>
+                  <Download color="#16a34a" size={18} />
+                </View>
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardTitle}>Nhập dữ liệu (.txt)</Text>
+                  <Text style={{ fontSize: 13, color: "#64748b", marginTop: 4, lineHeight: 18 }}>
+                    Nhập và phục hồi dữ liệu từ file văn bản (.txt) đã xuất trước đó.
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.closeSettingsBtn, { marginTop: 16 }]}
+              onPress={() => setOfflineModalVisible(false)}
             >
               <Text style={styles.closeSettingsBtnText}>Đóng</Text>
             </TouchableOpacity>
@@ -1062,6 +1244,10 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#0f172a",
   },
+  modalTitleSub: {
+    fontSize: 14,
+    color: "#64748b",
+  },
   modalTabs: {
     flexDirection: "row",
     backgroundColor: "#f1f5f9",
@@ -1126,13 +1312,33 @@ const styles = StyleSheet.create({
   },
   footerInfo: {
     alignItems: "center",
-    marginTop: 52,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+    backgroundColor: "#ffffff",
+  },
+  versionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
   },
   versionText: {
     fontSize: 14,
     color: "#64748b",
     fontWeight: "500",
-    marginBottom: 4,
+  },
+  versionSeparator: {
+    marginHorizontal: 8,
+    color: "#cbd5e1",
+    fontSize: 14,
+  },
+  versionHistoryBtn: {
+    fontSize: 14,
+    color: "#3b82f6",
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
   authorText: {
     fontSize: 14,
@@ -1143,6 +1349,51 @@ const styles = StyleSheet.create({
     color: "#3b82f6",
     fontStyle: "italic",
     fontSize: 15,
+  },
+  historyList: {
+    marginTop: 8,
+  },
+  historyItem: {
+    flexDirection: "row",
+    marginBottom: 16,
+  },
+  historyDotContainer: {
+    alignItems: "center",
+    marginRight: 12,
+    width: 16,
+  },
+  historyDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#3b82f6",
+    marginTop: 6,
+  },
+  historyLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: "#e2e8f0",
+    marginTop: 4,
+    marginBottom: -16,
+  },
+  historyContent: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  historyVersion: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#1e293b",
+    marginBottom: 4,
+  },
+  historyDesc: {
+    fontSize: 13,
+    color: "#475569",
+    lineHeight: 18,
   },
   // Setting styles
   settingSectionTitle: {
@@ -1211,7 +1462,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
-    marginTop: 10,
+    marginBottom: 46,
   },
   closeSettingsBtnText: {
     color: "#1e293b",
@@ -1387,6 +1638,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#94a3b8",
     lineHeight: 15,
+  },
+  driveRestoreBtn: {
+    backgroundColor: "#16a34a",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  driveRestoreBtnText: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "bold",
   },
 });
 

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Modal,
   TextInput,
   KeyboardAvoidingView,
@@ -16,6 +15,7 @@ import {
   Animated,
   Dimensions,
 } from "react-native";
+import { Alert } from "../components/CustomAlert";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import {
@@ -53,7 +53,9 @@ import {
   StreakStatus,
   getStreakLevel,
   getStreakLevelImage,
+  getStreakLevelInfo,
 } from "../utils/streak";
+import { getMascotImage, MASCOT_LIST } from "../utils/mascot";
 
 const HIDE_BALANCE_KEY = "@hideBalance";
 
@@ -268,6 +270,7 @@ const HomeScreen = () => {
   const [manualInputModalVisible, setManualInputModalVisible] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [accountNumber, setAccountNumber] = useState("");
+  const [isMascotPreviewVisible, setMascotPreviewVisible] = useState(false);
   const manualInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -311,7 +314,12 @@ const HomeScreen = () => {
     const txs = await storage.getTransactions();
     let firstTimestamp = p?.initialBalanceTimestamp || Date.now();
     if (txs.length > 0) {
-      const minTs = Math.min(...txs.map((t) => t.timestamp));
+      let minTs = txs[0].timestamp;
+      for (let i = 1; i < txs.length; i++) {
+        if (txs[i].timestamp < minTs) {
+          minTs = txs[i].timestamp;
+        }
+      }
       firstTimestamp = Math.min(firstTimestamp, minTs);
     }
     const d = new Date(firstTimestamp);
@@ -588,9 +596,10 @@ const HomeScreen = () => {
               onPress={() => {
                 const currentStreak = profile.streakCount || 0;
                 const level = getStreakLevel(currentStreak);
+                const levelInfo = getStreakLevelInfo(level);
                 Alert.alert(
                   "Chuỗi giữ lửa 🔥",
-                  `Bạn đang duy trì chuỗi ${currentStreak} ngày giữ lửa!\nCấp độ hiện tại: Cấp ${level}.\nHãy tiếp tục ghi chép giao dịch mỗi ngày để thăng cấp nhé.`,
+                  `Bạn đang duy trì chuỗi ${currentStreak} ngày giữ lửa!\nCấp độ: ${levelInfo.name}\n${levelInfo.description}\nHãy tiếp tục ghi chép giao dịch mỗi ngày để thăng cấp nhé.`,
                 );
               }}
               style={styles.streakHeaderChip}
@@ -1215,16 +1224,12 @@ const HomeScreen = () => {
             {/* Level label */}
             <View style={styles.streakModalLevelBadge}>
               <Text style={styles.streakModalLevelTxt}>
-                Cấp độ: Cấp {getStreakLevel(streakModalData?.count || 1)}
+                Cấp độ: {getStreakLevelInfo(getStreakLevel(streakModalData?.count || 1)).name}
               </Text>
             </View>
-
-            {profile && (
-              <Text style={styles.streakModalRecoveryInfo}>
-                Số lần khôi phục tháng này: {profile.streakRecoveriesCount || 0}
-                /3
-              </Text>
-            )}
+            <Text style={{ fontSize: 10, color: "#94a3b8", textAlign: 'center', marginTop: -4, marginBottom: 12 }}>
+              {getStreakLevelInfo(getStreakLevel(streakModalData?.count || 1)).description}
+            </Text>
 
             <Text style={styles.streakModalHint}>
               {streakModalData?.status === "increased"
@@ -1273,6 +1278,58 @@ const HomeScreen = () => {
         </View>
       </Modal>
 
+      {/* Modal xem trước linh vật */}
+      {profile && (
+        <Modal
+          visible={isMascotPreviewVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setMascotPreviewVisible(false)}
+        >
+          <TouchableOpacity
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.55)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            activeOpacity={1}
+            onPress={() => setMascotPreviewVisible(false)}
+          >
+            <Image
+              source={getMascotImage(profile.mascot)}
+              style={{ width: 360, height: 360, resizeMode: "contain" }}
+            />
+            <View
+              style={{
+                marginTop: 20,
+                backgroundColor: "rgba(255,255,255,0.15)",
+                borderRadius: 20,
+                paddingHorizontal: 24,
+                paddingVertical: 10,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.3)",
+              }}
+            >
+              <Text
+                style={{
+                  color: "#ffffff",
+                  fontSize: 22,
+                  fontWeight: "bold",
+                  textAlign: "center",
+                  letterSpacing: 1,
+                  textShadowColor: "rgba(0,0,0,0.4)",
+                  textShadowOffset: { width: 0, height: 1 },
+                  textShadowRadius: 4,
+                }}
+              >
+                {MASCOT_LIST.find(m => m.key === profile.mascot)?.name ?? MASCOT_LIST[0].name}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
+
       {profile && (
         <Animated.View
           {...panResponder.panHandlers}
@@ -1280,27 +1337,50 @@ const HomeScreen = () => {
             pan.getLayout(),
             {
               position: "absolute",
-              width: 60,
-              height: 60,
-              borderRadius: 30,
-              backgroundColor: "#ffffff",
-              borderWidth: 1.5,
-              borderColor: "#e2e8f0",
+              width: 80,
+              height: 80,
+              zIndex: 9999,
               alignItems: "center",
               justifyContent: "center",
-              zIndex: 9999,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 6,
-              elevation: 6,
             },
           ]}
         >
-          <Image
-            source={getStreakLevelImage(getStreakLevel(profile.streakCount || 0))}
-            style={{ width: 50, height: 50, resizeMode: "contain" }}
-          />
+          {/* Ảnh mascot ở phía dưới không lấy nền */}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => setMascotPreviewVisible(true)}
+          >
+            <Image
+              source={getMascotImage(profile.mascot)}
+              style={{ width: 95, height: 95, resizeMode: "contain" }}
+            />
+          </TouchableOpacity>
+          {/* Cấp độ chuỗi phía trên có nền trắng */}
+          <View
+            style={{
+              position: "absolute",
+              top: -50,
+              left: 10,
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: "#ffffff",
+              borderWidth: 1.5,
+              borderColor: "#cbd5e1",
+              alignItems: "center",
+              justifyContent: "center",
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 3,
+              elevation: 3,
+            }}
+          >
+            <Image
+              source={getStreakLevelImage(getStreakLevel(profile.streakCount || 0))}
+              style={{ width: 26, height: 26, resizeMode: "contain" }}
+            />
+          </View>
         </Animated.View>
       )}
     </View>
@@ -1368,7 +1448,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   greetingLabel: {
-    color: "#000000",
+    color: "#cccccc",
     fontSize: 12,
   },
   profileName: {

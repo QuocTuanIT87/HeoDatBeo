@@ -4,7 +4,7 @@ export type BottomTabParamList = {
   Home: undefined;
   Budget: undefined;
   Funds: undefined;
-  Statistics: undefined;
+  Statistics: { openHistory?: boolean } | undefined;
   Savings: undefined;
   Settings: undefined;
 };

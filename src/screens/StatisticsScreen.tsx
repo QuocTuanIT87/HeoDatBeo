@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
   Platform,
   ScrollView,
   Modal,
@@ -13,6 +12,7 @@ import {
   TextInput,
   Image,
 } from "react-native";
+import { Alert } from "../components/CustomAlert";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { storage } from "../store/storage";
 import {
@@ -161,7 +161,7 @@ const TransactionCard = React.memo(
                 onPress={() => onOpenOptions(item)}
                 style={cardStyles.actionButton}
               >
-                <MoreHorizontal color="#94a3b8" size={20} />
+                <MoreHorizontal color="#cccccc" size={20} />
               </TouchableOpacity>
             )}
           </View>
@@ -350,7 +350,23 @@ const renderHistoryBody = (bodyStr: string) => {
         }
 
         if (trimmed.startsWith("Tổng chi:")) {
-          const parts = trimmed.split(" | ");
+          const hasSeparator = trimmed.includes(" | ");
+          const parts = hasSeparator ? trimmed.split(" | ") : [trimmed];
+          let cleanExpense = parts[0].replace("🔴 ", "");
+          let cleanIncome = "";
+
+          if (hasSeparator) {
+            cleanIncome = parts[1].replace("🟢 ", "");
+          } else {
+            // Check if next line is "Tổng thu:"
+            if (index + 1 < lines.length) {
+              const nextTrimmed = lines[index + 1].trim();
+              if (nextTrimmed.startsWith("Tổng thu:")) {
+                cleanIncome = nextTrimmed.replace("🟢 ", "");
+              }
+            }
+          }
+
           return (
             <View
               key={index}
@@ -359,29 +375,47 @@ const renderHistoryBody = (bodyStr: string) => {
                 padding: 12,
                 borderRadius: 8,
                 marginTop: 12,
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
+                flexDirection: "column",
+                gap: 6,
               }}
             >
-              {parts.map((p, i) => {
-                const cleanP = p.replace("🔴 ", "").replace("🟢 ", "");
-                const isExpense = p.includes("Tổng chi");
-                const isIncome = p.includes("Tổng thu");
-                const pColor = isExpense
-                  ? "#ef4444"
-                  : isIncome
-                    ? "#10b981"
-                    : "#0f172a";
-                return (
-                  <Text
-                    key={i}
-                    style={{ fontWeight: "bold", color: pColor, fontSize: 14 }}
-                  >
-                    {cleanP}
-                  </Text>
-                );
-              })}
+              <Text
+                style={{ fontWeight: "bold", color: "#ef4444", fontSize: 14 }}
+              >
+                {cleanExpense}
+              </Text>
+              {cleanIncome ? (
+                <Text
+                  style={{ fontWeight: "bold", color: "#10b981", fontSize: 14 }}
+                >
+                  {cleanIncome}
+                </Text>
+              ) : null}
+            </View>
+          );
+        }
+
+        if (trimmed.startsWith("Tổng thu:")) {
+          const prevTrimmed = index > 0 ? lines[index - 1].trim() : "";
+          if (prevTrimmed.startsWith("Tổng chi:")) {
+            return null; // Already rendered in the box above
+          }
+          const cleanP = trimmed.replace("🟢 ", "");
+          return (
+            <View
+              key={index}
+              style={{
+                backgroundColor: "#f1f5f9",
+                padding: 12,
+                borderRadius: 8,
+                marginTop: 12,
+              }}
+            >
+              <Text
+                style={{ fontWeight: "bold", color: "#10b981", fontSize: 14 }}
+              >
+                {cleanP}
+              </Text>
             </View>
           );
         }
@@ -1595,7 +1629,22 @@ const StatisticsScreen = () => {
         }
       />
 
-      {displayTotal !== null && (
+      {type === "all" ? (
+        <View style={styles.summaryContainer}>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabelBold}>Tổng thu:</Text>
+            <Text style={styles.summaryIncome}>
+              +{formatCurrency(totalIncome)} đ
+            </Text>
+          </View>
+          <View style={[styles.summaryRow, { marginBottom: 0 }]}>
+            <Text style={styles.summaryLabelBold}>Tổng chi:</Text>
+            <Text style={styles.summaryExpense}>
+              -{formatCurrency(totalExpense)} đ
+            </Text>
+          </View>
+        </View>
+      ) : displayTotal !== null ? (
         <View style={styles.summaryContainer}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabelBold}>Tổng:</Text>
@@ -1610,7 +1659,7 @@ const StatisticsScreen = () => {
             </Text>
           </View>
         </View>
-      )}
+      ) : null}
 
       {showPicker && (
         <DateTimePicker

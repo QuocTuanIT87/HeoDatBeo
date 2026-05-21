@@ -5,12 +5,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Modal,
   TextInput,
   RefreshControl,
   Image,
 } from "react-native";
+import { Alert } from "../components/CustomAlert";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import {

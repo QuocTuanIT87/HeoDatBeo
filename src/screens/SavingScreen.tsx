@@ -6,9 +6,10 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  Alert,
   Modal,
+  Image,
 } from "react-native";
+import { Alert } from "../components/CustomAlert";
 import {
   PiggyBank,
   Edit2,
@@ -32,7 +33,7 @@ import {
   CategoryBudget,
   SavingHistoryItem,
 } from "../types";
-import { formatCurrency } from "../utils/format";
+import { formatCurrency, formatPercent } from "../utils/format";
 import Keypad from "../components/Keypad";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -135,7 +136,12 @@ const SavingScreen = () => {
       (t) => t.category === "Rút tiết kiệm",
     );
     if (withdrawals.length > 0) {
-      const lastWithdrawal = Math.max(...withdrawals.map((t) => t.timestamp));
+      let lastWithdrawal = withdrawals[0].timestamp;
+      for (let i = 1; i < withdrawals.length; i++) {
+        if (withdrawals[i].timestamp > lastWithdrawal) {
+          lastWithdrawal = withdrawals[i].timestamp;
+        }
+      }
       const diffMs = Date.now() - lastWithdrawal;
       const diffDays = diffMs / (24 * 60 * 60 * 1000);
       setCooldownRemainingDays(diffDays < 7 ? Math.ceil(7 - diffDays) : 0);
@@ -298,55 +304,160 @@ const SavingScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTitleRow}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <PiggyBank color="#ffffff" size={28} />
-            <Text style={styles.headerTitle}>Heo Đất {currentYear}</Text>
+        {/* Top bar: Avatar + năm + actions */}
+        <View style={styles.headerTopBar}>
+          <View style={styles.profileSection}>
+            <View style={styles.avatarContainer}>
+              {profile?.avatar ? (
+                <Image
+                  source={{ uri: profile.avatar }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {profile?.name ? profile.name.charAt(0).toUpperCase() : "U"}
+                </Text>
+              )}
+            </View>
+            <View style={styles.profileTextWrapper}>
+              <Text style={styles.greetingLabel}>Tiết kiệm,</Text>
+              <Text style={styles.profileName} numberOfLines={1}>
+                {profile?.name || "Người dùng"}
+              </Text>
+            </View>
           </View>
+
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <TouchableOpacity
               onPress={() => setShowAmount(!showAmount)}
               style={styles.eyeBtn}
             >
               {showAmount ? (
-                <Eye color="#ffffff" size={18} />
+                <Eye color="#ffffff" size={20} />
               ) : (
-                <EyeOff color="#ffffff" size={18} />
+                <EyeOff color="#ffffff" size={20} />
               )}
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => navigation.navigate("SavingHistory")}
               style={styles.historyBtn}
             >
-              <HistoryIcon color="#ffffff" size={18} />
+              <HistoryIcon color="#ffffff" size={20} />
             </TouchableOpacity>
           </View>
         </View>
-        <View style={styles.balancesContainer}>
-          <View style={styles.balanceRow}>
-            <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
-            <Text style={styles.balanceAmount}>
-              {showAmount ? `${formatCurrency(totalBalance)} đ` : "******"}
-            </Text>
+
+        {/* Bank Card: Mục tiêu năm + Số tiền */}
+        <View style={styles.bankCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardBrandWrapper}>
+              <PiggyBank color="#f59e0b" size={16} />
+              <Text style={styles.cardBrandText}>HEO ĐẤT BÉO {currentYear}</Text>
+            </View>
+            <View style={styles.cardChip} />
           </View>
-          <View style={styles.balanceRowDivider} />
-          <View style={styles.balanceRow}>
-            <Text style={styles.balanceLabel}>Chưa phân bổ</Text>
-            <Text
-              style={[
-                styles.balanceAmount,
+
+          {/* Mục tiêu năm ở đầu */}
+          <Text style={styles.cardGoalLabel}>MỤC TIÊU NĂM {currentYear}</Text>
+          <View style={styles.cardGoalRow}>
+            {profile?.savingTarget ? (
+              isEditingTarget ? (
+                <View style={styles.inlineEditRow}>
+                  <TextInput
+                    style={styles.inlineInput}
+                    keyboardType="numeric"
+                    value={targetInput}
+                    onChangeText={(text) => setTargetInput(formatMoneyInput(text))}
+                    placeholder="Nhập số tiền..."
+                    placeholderTextColor="rgba(255,255,255,0.5)"
+                  />
+                  <TouchableOpacity style={styles.inlineSaveBtn} onPress={handleSaveTarget}>
+                    <Text style={styles.inlineSaveBtnText}>Lưu</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.inlineCancelBtn} onPress={() => setIsEditingTarget(false)}>
+                    <X color="rgba(255,255,255,0.7)" size={18} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Text style={styles.cardGoalAmount}>
+                    {showAmount ? `${formatCurrency(profile.savingTarget)} đ` : "•••••• đ"}
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.goalEditBtn, !canEditTarget() && styles.goalEditBtnDisabled]}
+                    onPress={() => {
+                      if (canEditTarget()) {
+                        setTargetInput(formatMoneyInput(profile.savingTarget!.toString()));
+                        setIsEditingTarget(true);
+                      } else {
+                        Alert.alert("Thông báo", `Bạn chỉ có thể sửa mục tiêu sau ${getDaysUntilEdit()} ngày nữa.`);
+                      }
+                    }}
+                  >
+                    <Edit2 color={canEditTarget() ? "#fbbf24" : "rgba(255,255,255,0.3)"} size={16} />
+                  </TouchableOpacity>
+                </View>
+              )
+            ) : (
+              <View style={styles.inlineEditRow}>
+                <TextInput
+                  style={styles.inlineInput}
+                  keyboardType="numeric"
+                  value={targetInput}
+                  onChangeText={(text) => setTargetInput(formatMoneyInput(text))}
+                  placeholder="Đặt mục tiêu năm..."
+                  placeholderTextColor="rgba(255,255,255,0.5)"
+                />
+                <TouchableOpacity style={styles.inlineSaveBtn} onPress={handleSaveTarget}>
+                  <Text style={styles.inlineSaveBtnText}>Đặt</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {profile?.savingHistory && profile.savingHistory.length > 0 && !isEditingTarget && (
+              <TouchableOpacity
+                onPress={() => navigation.navigate("SavingHistory")}
+                style={styles.viewHistoryBtn}
+              >
+                <Text style={styles.viewHistoryText}>Lịch sử</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Tiến trình */}
+          {profile?.savingTarget && !isEditingTarget && (
+            <View style={{ marginTop: 8, marginBottom: 14 }}>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${Math.min(100, (savingBalance / profile.savingTarget) * 100)}%` },
+                  ]}
+                />
+              </View>
+              <Text style={styles.progressHint}>
+                {formatPercent((savingBalance / profile.savingTarget) * 100)}% mục tiêu
+              </Text>
+            </View>
+          )}
+
+          {/* Số tiền đang có trong Heo ở dưới */}
+          <View style={styles.cardStats}>
+            <View style={styles.cardStat}>
+              <Text style={styles.cardStatLabel}>ĐANG CÓ TRONG HEO</Text>
+              <Text style={[styles.cardStatValue, { color: "#fcd34d" }]}>
+                {showAmount ? `${formatCurrency(savingBalance)} đ` : "••••••"}
+              </Text>
+            </View>
+            <View style={styles.cardStatDivider} />
+            <View style={styles.cardStat}>
+              <Text style={styles.cardStatLabel}>CHƯA PHÂN BỔ</Text>
+              <Text style={[
+                styles.cardStatValue,
                 { color: unallocated <= 0 ? "#fca5a5" : "#ffffff" },
-              ]}
-            >
-              {showAmount ? `${formatCurrency(unallocated)} đ` : "******"}
-            </Text>
-          </View>
-          <View style={styles.balanceRowDivider} />
-          <View style={[styles.balanceRow, { marginBottom: 0 }]}>
-            <Text style={styles.balanceLabel}>Đang có trong Heo</Text>
-            <Text style={[styles.balanceAmount, { color: "#fcd34d" }]}>
-              {showAmount ? `${formatCurrency(savingBalance)} đ` : "******"}
-            </Text>
+              ]}>
+                {showAmount ? `${formatCurrency(unallocated)} đ` : "••••••"}
+              </Text>
+            </View>
           </View>
         </View>
       </View>
@@ -355,118 +466,6 @@ const SavingScreen = () => {
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
       >
-        <View style={styles.targetCard}>
-          <View style={styles.targetHeader}>
-            <Text style={styles.sectionTitle}>Mục tiêu năm {currentYear}</Text>
-            {profile?.savingHistory && profile.savingHistory.length > 0 && (
-              <TouchableOpacity
-                onPress={() => navigation.navigate("SavingHistory")}
-                style={styles.viewHistoryBtn}
-              >
-                <Text style={styles.viewHistoryText}>Xem lịch sử</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {profile?.savingTarget ? (
-            <View>
-              {isEditingTarget ? (
-                <View style={styles.targetEditRow}>
-                  <TextInput
-                    style={styles.targetInput}
-                    keyboardType="numeric"
-                    value={targetInput}
-                    onChangeText={(text) =>
-                      setTargetInput(formatMoneyInput(text))
-                    }
-                    placeholder="Nhập số tiền..."
-                  />
-                  <TouchableOpacity
-                    style={styles.saveTargetBtn}
-                    onPress={handleSaveTarget}
-                  >
-                    <Text style={styles.saveTargetBtnText}>Lưu</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.cancelBtn}
-                    onPress={() => setIsEditingTarget(false)}
-                  >
-                    <Text style={styles.cancelBtnText}>Hủy</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.targetDisplayRow}>
-                  <Text style={styles.targetValueText}>
-                    {showAmount
-                      ? `${formatCurrency(profile.savingTarget)} đ`
-                      : "******"}
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.editBtn,
-                      !canEditTarget() && styles.editBtnDisabled,
-                    ]}
-                    onPress={() => {
-                      if (canEditTarget()) {
-                        setTargetInput(
-                          formatMoneyInput(profile.savingTarget!.toString()),
-                        );
-                        setIsEditingTarget(true);
-                      } else {
-                        Alert.alert(
-                          "Thông báo",
-                          `Bạn chỉ có thể sửa mục tiêu sau ${getDaysUntilEdit()} ngày nữa.`,
-                        );
-                      }
-                    }}
-                  >
-                    <Edit2
-                      color={canEditTarget() ? "#3b82f6" : "#94a3b8"}
-                      size={18}
-                    />
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              <View style={styles.progressContainer}>
-                <View
-                  style={[
-                    styles.progressBar,
-                    {
-                      width: `${Math.min(100, (savingBalance / profile.savingTarget) * 100)}%`,
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={styles.progressText}>
-                Đạt được{" "}
-                {((savingBalance / profile.savingTarget) * 100).toFixed(1)}% mục
-                tiêu
-              </Text>
-              {!canEditTarget() && !isEditingTarget && (
-                <Text style={styles.cooldownText}>
-                  * Có thể sửa lại sau {getDaysUntilEdit()} ngày
-                </Text>
-              )}
-            </View>
-          ) : (
-            <View style={styles.targetEditRow}>
-              <TextInput
-                style={styles.targetInput}
-                keyboardType="numeric"
-                value={targetInput}
-                onChangeText={(text) => setTargetInput(formatMoneyInput(text))}
-                placeholder="Nhập mục tiêu năm mới..."
-              />
-              <TouchableOpacity
-                style={styles.saveTargetBtn}
-                onPress={handleSaveTarget}
-              >
-                <Text style={styles.saveTargetBtnText}>Đặt mục tiêu</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
 
         <View style={styles.tabs}>
           <TouchableOpacity
@@ -529,7 +528,7 @@ const SavingScreen = () => {
               <View style={styles.withdrawNotice}>
                 <Info color="#ef4444" size={16} />
                 <Text style={styles.withdrawNoticeText}>
-                  Mỗi 7 ngày được rút 1 lần, tối đa 500.000đ/lần.
+                  7 ngày được rút 1 lần, tối đa 500.000đ/lần.
                 </Text>
               </View>
             )}
@@ -664,44 +663,129 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   header: {
     backgroundColor: "#f59e0b",
-    padding: 24,
-    paddingTop: 60,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 54,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
   },
-  headerTitleRow: {
+  headerTopBar: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
   },
-  headerTitle: { color: "#ffffff", fontSize: 24, fontWeight: "bold" },
-  historyBtn: {
-    padding: 8,
+  profileSection: { flexDirection: "row", alignItems: "center" },
+  avatarContainer: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
+  avatarImage: { width: 42, height: 42, borderRadius: 21 },
+  avatarText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
+  profileTextWrapper: { marginLeft: 10 },
+  greetingLabel: { color: "rgba(255,255,255,0.8)", fontSize: 12 },
+  profileName: { color: "#ffffff", fontSize: 15, fontWeight: "bold" },
   eyeBtn: {
-    padding: 8,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  balancesContainer: {
+  historyBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 16,
-    padding: 16,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  balanceRow: {
+  bankCard: {
+    backgroundColor: "#1e293b",
+    borderRadius: 18,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+  },
+  cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 14,
   },
-  balanceRowDivider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    marginBottom: 8,
+  cardBrandWrapper: { flexDirection: "row", alignItems: "center", gap: 6 },
+  cardBrandText: { color: "#f59e0b", fontSize: 11, fontWeight: "bold", letterSpacing: 1 },
+  cardChip: { width: 32, height: 24, borderRadius: 4, backgroundColor: "#f59e0b", opacity: 0.8 },
+  cardGoalLabel: { color: "#94a3b8", fontSize: 10, letterSpacing: 0.5, marginBottom: 6 },
+  cardGoalRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 },
+  cardGoalAmount: { color: "#ffffff", fontSize: 18, fontWeight: "bold" },
+  goalEditBtn: { padding: 6, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 8 },
+  goalEditBtnDisabled: { opacity: 0.4 },
+  inlineEditRow: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
+  inlineInput: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: "#ffffff",
   },
+  inlineSaveBtn: {
+    backgroundColor: "#f59e0b",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+  inlineSaveBtnText: { color: "#1e293b", fontWeight: "bold", fontSize: 13 },
+  inlineCancelBtn: {
+    padding: 8,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 8,
+  },
+  progressTrack: {
+    height: 6,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 3,
+    overflow: "hidden",
+    marginBottom: 4,
+  },
+  progressFill: { height: 6, backgroundColor: "#f59e0b", borderRadius: 3 },
+  progressHint: { color: "rgba(255,255,255,0.6)", fontSize: 11 },
+  cardStats: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+  },
+  cardStat: { flex: 1 },
+  cardStatDivider: { width: 1, height: 30, backgroundColor: "rgba(255,255,255,0.2)", marginHorizontal: 12 },
+  cardStatLabel: { color: "#94a3b8", fontSize: 10, letterSpacing: 0.5, marginBottom: 4 },
+  cardStatValue: { color: "#ffffff", fontSize: 14, fontWeight: "bold" },
+  // Legacy - kept for compatibility
+  headerTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 },
+  headerTitle: { color: "#ffffff", fontSize: 24, fontWeight: "bold" },
+  balancesContainer: { backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 16, padding: 16 },
+  balanceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  balanceRowDivider: { height: 1, backgroundColor: "rgba(255,255,255,0.2)", marginBottom: 8 },
   balanceLabel: { color: "#fef3c7", fontSize: 14 },
   balanceAmount: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
   body: { flex: 1 },
@@ -774,12 +858,6 @@ const styles = StyleSheet.create({
   },
   progressBar: { height: "100%", backgroundColor: "#10b981" },
   progressText: { fontSize: 13, color: "#64748b" },
-  cooldownText: {
-    fontSize: 12,
-    color: "#ef4444",
-    marginTop: 8,
-    fontStyle: "italic",
-  },
   tabs: {
     flexDirection: "row",
     backgroundColor: "#ffffff",

@@ -5,12 +5,12 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
   ScrollView,
 } from "react-native";
+import { Alert } from "../components/CustomAlert";
 import { storage } from "../store/storage";
 import { Transaction, UserProfile, SavingHistoryItem } from "../types";
-import { formatCurrency } from "../utils/format";
+import { formatCurrency, formatPercent } from "../utils/format";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { ArrowLeft, Trash2, Trophy, Clock } from "lucide-react-native";
 
@@ -149,7 +149,7 @@ const SavingHistoryScreen = () => {
           />
         </View>
         <Text style={styles.goalFooter}>
-          Hoàn thành {percent.toFixed(1)}% mục tiêu năm
+          Hoàn thành {formatPercent(percent)}% mục tiêu năm
         </Text>
       </View>
     );

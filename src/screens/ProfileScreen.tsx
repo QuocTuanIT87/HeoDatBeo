@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from "react";
+import QRCode from "react-native-qrcode-svg";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   TextInput,
   ScrollView,
   Image,
   Platform,
   KeyboardAvoidingView,
   Modal,
+  Animated,
 } from "react-native";
+import { Alert } from "../components/CustomAlert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import * as DocumentPicker from "expo-document-picker";
@@ -35,7 +37,8 @@ import {
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { UserProfile } from "../types";
-import { getStreakLevel, getStreakLevelImage } from "../utils/streak";
+import { getStreakLevel, getStreakLevelImage, getStreakLevelInfo } from "../utils/streak";
+import { MASCOT_LIST } from "../utils/mascot";
 
 const SOCIAL_ICONS = {
   facebook: require("../../assets/common_icons/facebook.png"),
@@ -55,6 +58,67 @@ const ProfileScreen = () => {
   const [isEditModalVisible, setEditModalVisible] = useState(false);
   const [joinDateDisplay, setJoinDateDisplay] = useState("");
   const [daysSinceJoin, setDaysSinceJoin] = useState<number | null>(null);
+  const [isMascotModalVisible, setMascotModalVisible] = useState(false);
+  const [qrModal, setQrModal] = useState<{ visible: boolean; url: string; label: string }>(
+    { visible: false, url: "", label: "" }
+  );
+
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1.25,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const MASCOT_COOLDOWN_DAYS = 20;
+
+  const handleSelectMascot = async (mascotKey: string) => {
+    if (!profile) return;
+
+    // Kiểm tra cooldown 20 ngày kể từ lần đổi linh vật gần nhất
+    if (profile.mascotLastChanged) {
+      const now = Date.now();
+      const daysSinceChange = Math.floor(
+        (now - profile.mascotLastChanged) / (1000 * 60 * 60 * 24)
+      );
+      if (daysSinceChange < MASCOT_COOLDOWN_DAYS) {
+        const daysLeft = MASCOT_COOLDOWN_DAYS - daysSinceChange;
+        setMascotModalVisible(false);
+        Alert.alert(
+          "Chưa đến lúc đổi linh vật",
+          `Bạn vừa đổi linh vật ${daysSinceChange} ngày trước. Còn ${daysLeft} ngày nữa mới được đổi lại.`
+        );
+        return;
+      }
+    }
+
+    const updatedProfile = {
+      ...profile,
+      mascot: mascotKey,
+      mascotLastChanged: Date.now(),
+    };
+    const success = await storage.saveUserProfile(updatedProfile);
+    if (success) {
+      setProfile(updatedProfile);
+      setMascotModalVisible(false);
+      Alert.alert("Thành công", "Đã cập nhật linh vật mới!");
+    } else {
+      Alert.alert("Lỗi", "Không thể lưu linh vật.");
+    }
+  };
 
   // Edit form states
   const [editName, setEditName] = useState("");
@@ -379,10 +443,12 @@ const ProfileScreen = () => {
           <Text style={styles.heroName}>{profile?.name || "—"}</Text>
           {profile?.nickname ? (
             <Text style={styles.heroNickname}>@{profile.nickname}</Text>
-          ) : null}
+          ) : <Text style={styles.heroNickname}>@nickname</Text>}
           {profile?.bio ? (
             <Text style={styles.heroBio}>{profile.bio}</Text>
-          ) : null}
+          ) : (
+            <Text style={styles.heroBio}>Có gì đó ở đây!</Text>
+          )}
 
           {/* Days since joining badge */}
           {daysSinceJoin !== null ? (
@@ -397,28 +463,44 @@ const ProfileScreen = () => {
           {hasSocial ? (
             <View style={styles.socialStrip}>
               {profile?.facebook ? (
-                <Image
-                  source={SOCIAL_ICONS.facebook}
-                  style={styles.socialIcon}
-                />
+                <TouchableOpacity
+                  onPress={() => setQrModal({ visible: true, url: profile.facebook!, label: "Facebook" })}
+                  activeOpacity={0.75}
+                >
+                  <Image source={SOCIAL_ICONS.facebook} style={styles.socialIcon} />
+                </TouchableOpacity>
               ) : null}
               {profile?.instagram ? (
-                <Image
-                  source={SOCIAL_ICONS.instagram}
-                  style={styles.socialIcon}
-                />
+                <TouchableOpacity
+                  onPress={() => setQrModal({ visible: true, url: profile.instagram!, label: "Instagram" })}
+                  activeOpacity={0.75}
+                >
+                  <Image source={SOCIAL_ICONS.instagram} style={styles.socialIcon} />
+                </TouchableOpacity>
               ) : null}
               {profile?.tiktok ? (
-                <Image source={SOCIAL_ICONS.tiktok} style={styles.socialIcon} />
+                <TouchableOpacity
+                  onPress={() => setQrModal({ visible: true, url: profile.tiktok!, label: "TikTok" })}
+                  activeOpacity={0.75}
+                >
+                  <Image source={SOCIAL_ICONS.tiktok} style={styles.socialIcon} />
+                </TouchableOpacity>
               ) : null}
               {profile?.youtube ? (
-                <Image
-                  source={SOCIAL_ICONS.youtube}
-                  style={styles.socialIcon}
-                />
+                <TouchableOpacity
+                  onPress={() => setQrModal({ visible: true, url: profile.youtube!, label: "YouTube" })}
+                  activeOpacity={0.75}
+                >
+                  <Image source={SOCIAL_ICONS.youtube} style={styles.socialIcon} />
+                </TouchableOpacity>
               ) : null}
               {profile?.thread ? (
-                <Image source={SOCIAL_ICONS.thread} style={styles.socialIcon} />
+                <TouchableOpacity
+                  onPress={() => setQrModal({ visible: true, url: profile.thread!, label: "Threads" })}
+                  activeOpacity={0.75}
+                >
+                  <Image source={SOCIAL_ICONS.thread} style={styles.socialIcon} />
+                </TouchableOpacity>
               ) : null}
             </View>
           ) : null}
@@ -428,39 +510,66 @@ const ProfileScreen = () => {
         <View style={styles.streakCard}>
           <View style={styles.streakHeader}>
             <Text style={styles.streakTitle}>🔥 HÀNH TRÌNH GIỮ CHUỖI</Text>
+            <TouchableOpacity
+              onPress={() => setMascotModalVisible(true)}
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+              activeOpacity={0.9}
+            >
+              <Animated.View style={[styles.changeMascotHeaderBtn, { transform: [{ scale: scaleAnim }] }]}>
+                <Text style={styles.changeMascotHeaderEmoji}>🐾</Text>
+              </Animated.View>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.streakBody}>
+          <View style={styles.streakMainContent}>
             <Image
               source={getStreakLevelImage(
                 getStreakLevel(profile?.streakCount || 0),
               )}
-              style={styles.streakImage}
+              style={styles.streakBigImage}
             />
-            <View style={styles.streakInfo}>
-              <Text style={styles.streakDaysTxt}>
-                {profile?.streakCount || 0} Ngày Giữ Lửa
-              </Text>
-              <Text style={styles.streakLevelTxt}>
-                Cấp độ hiện tại: Cấp {getStreakLevel(profile?.streakCount || 0)}{" "}
-                / 16
-              </Text>
-            </View>
+            
+            <Text style={styles.streakLevelNameTxt}>
+              {getStreakLevelInfo(getStreakLevel(profile?.streakCount || 0)).name}
+            </Text>
+            
+            <Text style={styles.streakLevelDescriptionTxt}>
+              {getStreakLevelInfo(getStreakLevel(profile?.streakCount || 0)).description}
+            </Text>
+
+            <Text style={styles.streakDaysTxt}>
+              {profile?.streakCount || 0} Ngày Giữ Lửa
+            </Text>
           </View>
 
           {/* Progress Bar */}
-          {getStreakLevel(profile?.streakCount || 0) < 16 && (
-            <View style={styles.progressBarBg}>
-              <View
-                style={[
-                  styles.progressBarFill,
-                  {
-                    width: `${Math.min(100, Math.max(0, (((profile?.streakCount || 0) % 30) / 30) * 100))}%`,
-                  },
-                ]}
-              />
-            </View>
-          )}
+          {getStreakLevel(profile?.streakCount || 0) < 18 && (() => {
+            const pct = Math.min(100, Math.max(0, (((profile?.streakCount || 0) % 30) / 30) * 100));
+            return (
+              <View style={styles.progressBarWrapper}>
+                {/* Track (overflow hidden để clip fill) */}
+                <View style={styles.progressBarBg}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { width: `${pct}%` },
+                    ]}
+                  />
+                </View>
+                {/* Fire gif ở đầu fill, nằm ngoài track để hiện toàn bộ */}
+                {pct > 0 && (
+                  <Image
+                    source={require("../../assets/series/gif/fire_progress.gif")}
+                    style={[
+                      styles.fireGif,
+                      { left: `${pct}%`, transform: [{ translateX: -14 }] },
+                    ]}
+                  />
+                )}
+              </View>
+            );
+          })()}
 
           <Text style={styles.streakRecoveryLimitTxt}>
           Mỗi tháng sẽ có 3 lượt khôi phục chuỗi
@@ -923,6 +1032,141 @@ const ProfileScreen = () => {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* QR Code Modal cho mạng xã hội */}
+      <Modal
+        visible={qrModal.visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setQrModal({ visible: false, url: "", label: "" })}
+      >
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.75)",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          activeOpacity={1}
+          onPress={() => setQrModal({ visible: false, url: "", label: "" })}
+        >
+          <View
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: 24,
+              padding: 32,
+              alignItems: "center",
+              marginHorizontal: 32,
+              elevation: 12,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.3,
+              shadowRadius: 16,
+            }}
+          >
+            {/* Tên mạng xã hội */}
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: "bold",
+                color: "#1e293b",
+                marginBottom: 20,
+                letterSpacing: 0.5,
+              }}
+            >
+              {qrModal.label}
+            </Text>
+
+            {/* QR Code */}
+            {qrModal.url ? (
+              <QRCode
+                value={qrModal.url}
+                size={240}
+                backgroundColor="#ffffff"
+                color="#1e293b"
+              />
+            ) : null}
+
+            {/* URL hint */}
+            <Text
+              style={{
+                marginTop: 20,
+                fontSize: 12,
+                color: "#94a3b8",
+                textAlign: "center",
+                maxWidth: 240,
+              }}
+              numberOfLines={2}
+            >
+              {qrModal.url}
+            </Text>
+
+            <Text
+              style={{
+                marginTop: 12,
+                fontSize: 13,
+                color: "#64748b",
+              }}
+            >
+              Quét để kết bạn
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Mascot Selector Modal */}
+      <Modal
+        visible={isMascotModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setMascotModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.mascotModalContent}>
+            <View style={styles.mascotModalHeader}>
+              <Text style={styles.mascotModalTitle}>Chọn linh vật đồng hành</Text>
+              <TouchableOpacity onPress={() => setMascotModalVisible(false)}>
+                <X color="#334155" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.mascotGrid} showsVerticalScrollIndicator={false}>
+              {MASCOT_LIST.map((mascot) => {
+                const isSelected = (profile?.mascot || "adagio") === mascot.key;
+                return (
+                  <TouchableOpacity
+                    key={mascot.key}
+                    style={[
+                      styles.mascotCard,
+                      isSelected && styles.mascotCardActive,
+                    ]}
+                    onPress={() => handleSelectMascot(mascot.key)}
+                  >
+                    <Image
+                      source={mascot.image}
+                      style={styles.mascotCardImage}
+                      resizeMode="contain"
+                    />
+                    <Text
+                      style={[
+                        styles.mascotCardName,
+                        isSelected && styles.mascotCardNameActive,
+                      ]}
+                    >
+                      {mascot.name}
+                    </Text>
+                    {isSelected && (
+                      <View style={styles.activeIndicatorBadge}>
+                        <Text style={styles.activeIndicatorText}>Đang dùng</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -1362,7 +1606,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
   },
   streakTitle: {
     fontSize: 13,
@@ -1383,53 +1626,161 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#ea580c",
   },
-  streakBody: {
-    flexDirection: "row",
+  changeMascotHeaderBtn: {
+    padding: 6,
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: "#fed7aa",
+    justifyContent: "center",
     alignItems: "center",
-    gap: 16,
+    width: 46,
+    height: 46,
+    // Shadow properties for iOS
+    shadowColor: "#ea580c",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    // Elevation for Android
+    elevation: 4,
   },
-  streakImage: {
-    width: 64,
-    height: 64,
+  changeMascotHeaderEmoji: {
+    fontSize: 18,
+  },
+  streakMainContent: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  streakBigImage: {
+    width: 256,
+    height: 256,
+    maxWidth: "100%",
     resizeMode: "contain",
   },
-  streakInfo: {
-    flex: 1,
+  streakLevelNameTxt: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#ea580c",
+    textAlign: "center",
+    marginTop: 8,
+  },
+  streakLevelDescriptionTxt: {
+    fontSize: 12,
+    color: "#64748b",
+    textAlign: "center",
+    marginTop: 6,
+    lineHeight: 18,
+    paddingHorizontal: 16,
   },
   streakDaysTxt: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: NAVY,
-  },
-  streakLevelTxt: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#475569",
-    marginTop: 2,
-  },
-  streakNextLevelTxt: {
     fontSize: 12,
-    color: "#94a3b8",
-    marginTop: 4,
+    fontWeight: "700",
+    color: NAVY,
+    marginTop: 10,
+    textAlign: "center",
+  },
+  progressBarWrapper: {
+    marginTop: 16,
+    position: "relative",
+    height: 22, // đủ chỗ cho fire gif nổi lên trên
   },
   progressBarBg: {
-    height: 8,
+    height: 10,
     backgroundColor: "#f1f5f9",
-    borderRadius: 4,
-    marginTop: 16,
+    borderRadius: 5,
+    marginTop: 6,
     overflow: "hidden",
   },
   progressBarFill: {
     height: "100%",
     backgroundColor: "#ea580c",
-    borderRadius: 4,
+    borderRadius: 5,
+  },
+  fireGif: {
+    position: "absolute",
+    top: -16,
+    width: 22,
+    height: 22,
+    resizeMode: "contain",
   },
   streakRecoveryLimitTxt: {
     fontSize: 8,
-    color: "#bbbbbb",
+    color: "#dddddd",
     fontWeight: "700",
     marginTop: 12,
     textAlign: "left",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    justifyContent: "flex-end",
+  },
+  mascotModalContent: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    maxHeight: "80%",
+  },
+  mascotModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  mascotModalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#0f172a",
+  },
+  mascotGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    paddingBottom: 20,
+  },
+  mascotCard: {
+    width: "48%",
+    backgroundColor: "#f8fafc",
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    position: "relative",
+  },
+  mascotCardActive: {
+    borderColor: "#ea580c",
+    backgroundColor: "#fff7ed",
+  },
+  mascotCardImage: {
+    width: 80,
+    height: 80,
+    marginBottom: 12,
+  },
+  mascotCardName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#475569",
+    textAlign: "center",
+  },
+  mascotCardNameActive: {
+    color: "#ea580c",
+  },
+  activeIndicatorBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "#ea580c",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  activeIndicatorText: {
+    color: "#ffffff",
+    fontSize: 9,
+    fontWeight: "800",
   },
 });
 

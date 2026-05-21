@@ -159,36 +159,22 @@ export const uploadBackupToGoogleDrive = async (dataStr: string): Promise<Google
       return { success: false, message: 'Không thể tạo hoặc truy cập thư mục lưu trữ trên Google Drive.' };
     }
 
-    // 1. Sinh tên file theo ngày hiện tại: heodatbeo_YYYY-MM-DD.txt
+    // 1. Sinh tên file theo ngày + UTC giây hiện tại: heodatbeo_YYYY-MM-DD_<unix_s>.txt
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    const fileName = `heodatbeo_${year}-${month}-${day}.txt`;
+    const utcSeconds = Math.floor(Date.now() / 1000);
+    const fileName = `heodatbeo_${year}-${month}-${day}_${utcSeconds}.txt`;
 
-    // 2. Kiểm tra xem file ngày hôm nay đã tồn tại trong folder này chưa
-    const checkFileUrl = `https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${folderId}' in parents and trashed=false`;
-    const checkResponse = await fetch(checkFileUrl, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    const checkData = await checkResponse.json();
-    const existingFile = checkData.files && checkData.files.length > 0 ? checkData.files[0] : null;
-
-    // 3. Thực hiện Multipart Upload (Tạo mới hoặc Cập nhật file hiện tại)
-    let uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-    let method = 'POST';
-
-    if (existingFile) {
-      // Đã tồn tại file cùng ngày -> Cập nhật ghi đè file cũ
-      uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=multipart`;
-      method = 'PATCH';
-    }
+    // 2. Mỗi lần backup sẽ tạo file mới (không ghi đè), tên file đã là duy nhất theo giây
+    const uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    const method = 'POST';
 
     const boundary = 'heo_dat_beo_backup_boundary';
     const metadata = {
       name: fileName,
-      parents: existingFile ? undefined : [folderId],
+      parents: [folderId],
       mimeType: 'text/plain',
     };
 
@@ -215,7 +201,7 @@ export const uploadBackupToGoogleDrive = async (dataStr: string): Promise<Google
       throw new Error(`Upload thất bại: ${errorText}`);
     }
 
-    // 4. Dọn dẹp dữ liệu cũ: Quét các file trong thư mục, chỉ giữ tối đa 7 ngày gần nhất
+    // 4. Dọn dẹp dữ liệu cũ: Quét các file trong thư mục, chỉ giữ tối đa 20 file gần nhất
     const listFilesUrl = `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and mimeType='text/plain' and name contains 'heodatbeo_' and trashed=false&orderBy=name desc&pageSize=100`;
     const listResponse = await fetch(listFilesUrl, {
       method: 'GET',
@@ -223,8 +209,8 @@ export const uploadBackupToGoogleDrive = async (dataStr: string): Promise<Google
     });
 
     const listData = await listResponse.json();
-    if (listData.files && listData.files.length > 7) {
-      const filesToDelete = listData.files.slice(7); // Lấy các file cũ từ vị trí số 7 trở đi
+    if (listData.files && listData.files.length > 20) {
+      const filesToDelete = listData.files.slice(20); // Giữ lại 20 file mới nhất, xóa các file cũ hơn
       for (const file of filesToDelete) {
         try {
           await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}`, {
@@ -308,3 +294,66 @@ export const checkAndRunAutoBackup = async () => {
     isAutoBackupRunning = false;
   }
 };
+
+/**
+ * Tải xuống và khôi phục bản sao lưu mới nhất từ Google Drive
+ */
+export const restoreLatestBackupFromGoogleDrive = async (): Promise<{ success: boolean; message: string; content?: string }> => {
+  try {
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      return { success: false, message: 'Chưa đăng nhập tài khoản Google hoặc phiên làm việc đã hết hạn.' };
+    }
+
+    const folderId = await getOrCreateBackupFolder(accessToken);
+    if (!folderId) {
+      return { success: false, message: 'Không thể truy cập thư mục lưu trữ trên Google Drive.' };
+    }
+
+    // 1. Quét tìm file backup mới nhất trong thư mục
+    const listFilesUrl = `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and mimeType='text/plain' and name contains 'heodatbeo_' and trashed=false&orderBy=name desc&pageSize=1`;
+    const listResponse = await fetch(listFilesUrl, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!listResponse.ok) {
+      const errText = await listResponse.text();
+      return { success: false, message: `Không thể tìm danh sách bản sao lưu: ${errText}` };
+    }
+
+    const listData = await listResponse.json();
+    if (!listData.files || listData.files.length === 0) {
+      return { success: false, message: 'Không tìm thấy bản sao lưu nào trên tài khoản Google Drive của bạn.' };
+    }
+
+    const latestFile = listData.files[0];
+    const fileId = latestFile.id;
+
+    // 2. Tải nội dung file
+    const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+    const downloadResponse = await fetch(downloadUrl, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!downloadResponse.ok) {
+      const errText = await downloadResponse.text();
+      return { success: false, message: `Không thể tải dữ liệu sao lưu: ${errText}` };
+    }
+
+    const fileContent = await downloadResponse.text();
+    return {
+      success: true,
+      message: 'Tải bản sao lưu thành công.',
+      content: fileContent
+    };
+  } catch (error: any) {
+    console.error('Lỗi khi khôi phục dữ liệu từ Google Drive:', error);
+    return {
+      success: false,
+      message: error.message || String(error),
+    };
+  }
+};
+

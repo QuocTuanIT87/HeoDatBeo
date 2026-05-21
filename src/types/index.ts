@@ -74,6 +74,8 @@ export interface UserProfile {
   streakRecoveriesCount?: number;     // Số lần khôi phục chuỗi trong tháng hiện tại
   lastRecoveryMonthYear?: string;     // Tháng/Năm khôi phục gần nhất (dạng "MM/YYYY")
   avatarHistory?: string[];           // Lịch sử đường dẫn ảnh đại diện đã dùng (tối đa 10 ảnh)
+  mascot?: string;                    // Linh vật hiện tại được chọn (YC Mới)
+  mascotLastChanged?: number;         // Timestamp ms lần cuối đổi linh vật
 }
 
 export interface NotificationHistoryItem {

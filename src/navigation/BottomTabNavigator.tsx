@@ -14,6 +14,7 @@ import {
   PiggyBank,
   Layers,
   Wallet,
+  HouseHeart,
 } from "lucide-react-native";
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
@@ -39,7 +40,8 @@ const BottomTabNavigator = () => {
         component={HomeScreen}
         options={{
           tabBarLabel: "Trang chủ",
-          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => <HouseHeart color={color} size={size} />,
+
         }}
       />
       <Tab.Screen

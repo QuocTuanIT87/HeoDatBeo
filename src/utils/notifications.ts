@@ -124,7 +124,7 @@ export function generateDailyReport(
   }
 
   body += `\n------------------\n`;
-  body += `Tổng chi: 🔴 -${formatCurrency(totalExpense)} | Tổng thu: 🟢 +${formatCurrency(totalIncome)}\n`;
+  body += `Tổng chi: 🔴 -${formatCurrency(totalExpense)}\nTổng thu: 🟢 +${formatCurrency(totalIncome)}\n`;
   body += `------------------\n`;
 
   if (hasPrevData) {
@@ -221,7 +221,7 @@ export function generateMonthlyReport(
   }
 
   body += `\n------------------\n`;
-  body += `Tổng chi: 🔴 -${formatCurrency(totalExpense)} | Tổng thu: 🟢 +${formatCurrency(totalIncome)}\n`;
+  body += `Tổng chi: 🔴 -${formatCurrency(totalExpense)}\nTổng thu: 🟢 +${formatCurrency(totalIncome)}\n`;
   body += `------------------\n`;
 
   if (hasPrevData) {
@@ -315,7 +315,7 @@ export function generateYearlyReport(
   }
 
   body += `\n------------------\n`;
-  body += `Tổng chi: 🔴 -${formatCurrency(totalExpense)} | Tổng thu: 🟢 +${formatCurrency(totalIncome)}\n`;
+  body += `Tổng chi: 🔴 -${formatCurrency(totalExpense)}\nTổng thu: 🟢 +${formatCurrency(totalIncome)}\n`;
   body += `------------------\n`;
 
   if (hasPrevData) {
