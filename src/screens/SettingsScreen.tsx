@@ -107,7 +107,7 @@ const VERSION_HISTORY = [
   { version: "20.05.2026", description: "Thêm linh vật giữ chuỗi, backup dữ liệu tự động, thông báo thu chi theo ngày, tháng, năm" },
   { version: "14.05.2026", description: "Thêm icon sinh động cho danh mục, Quỹ" },
   { version: "10.05.2026", description: "Thêm Quỹ lưu trữ" },
-  { version: "1.05.2026", description: "Sửa lỗi logic xóa giao dịch" },
+  { version: "01.05.2026", description: "Sửa lỗi logic xóa giao dịch" },
   { version: "21.04.2026", description: "Sửa, xóa giao dịch trong vòng 3 ngày" },
   { version: "15.04.2026", description: "Chia 2 loại danh mục (Cần nạp tiền và chi trực tiếp)" },
   { version: "15.03.2026", description: "Ra mắt ứng dụng lúc 23:36" },
