@@ -5,13 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Modal,
   TextInput,
   KeyboardAvoidingView,
   Platform,
   Image,
 } from "react-native";
+import { Alert } from "../components/CustomAlert";
 import {
   PlusCircle,
   Trash2,
@@ -24,6 +24,7 @@ import {
   LayoutGrid,
   Keyboard,
   ArrowRightLeft,
+  RotateCcw,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { CategoryBudget, UserProfile } from "../types";
@@ -33,48 +34,78 @@ import { useIsFocused } from "@react-navigation/native";
 
 export const EXPENSE_ICONS: Record<string, any> = {
   badminton: require("../../assets/expense_icon/badminton.png"),
+  beer_mug: require("../../assets/expense_icon/beer-mug.png"),
+  bicycle: require("../../assets/expense_icon/bicycle.png"),
+  bill: require("../../assets/expense_icon/bill.png"),
+  bill_1: require("../../assets/expense_icon/bill_1.png"),
   brand: require("../../assets/expense_icon/brand.png"),
   bus: require("../../assets/expense_icon/bus.png"),
   candies: require("../../assets/expense_icon/candies.png"),
   "card-games": require("../../assets/expense_icon/card-games.png"),
+  "clean-clothes": require("../../assets/expense_icon/clean-clothes.png"),
+  competitors: require("../../assets/expense_icon/competitors.png"),
   cooking: require("../../assets/expense_icon/cooking.png"),
+  cosmetics: require("../../assets/expense_icon/cosmetics.png"),
   date: require("../../assets/expense_icon/date.png"),
   default: require("../../assets/expense_icon/default.png"),
   drink: require("../../assets/expense_icon/drink.png"),
   "electric-car": require("../../assets/expense_icon/electric-car.png"),
   "engine-oil": require("../../assets/expense_icon/engine-oil.png"),
   "flash-card": require("../../assets/expense_icon/flash-card.png"),
+  fried_rice: require("../../assets/expense_icon/fried-rice.png"),
   "game-console": require("../../assets/expense_icon/game-console.png"),
   "gas-stove": require("../../assets/expense_icon/gas-stove.png"),
   "gift-card": require("../../assets/expense_icon/gift-card.png"),
   gift: require("../../assets/expense_icon/gift.png"),
+  gloves: require("../../assets/expense_icon/gloves.png"),
   "hair-cut": require("../../assets/expense_icon/hair-cut.png"),
+  http: require("../../assets/expense_icon/http.png"),
+  "ice-cream": require("../../assets/expense_icon/ice-cream.png"),
   "interior-design": require("../../assets/expense_icon/interior-design.png"),
+  "interior-design_1": require("../../assets/expense_icon/interior-design_1.png"),
+  internet: require("../../assets/expense_icon/internet.png"),
+  internet_2: require("../../assets/expense_icon/internet_2.png"),
+  invoice: require("../../assets/expense_icon/invoice.png"),
   iphone: require("../../assets/expense_icon/iphone.png"),
   jewelry: require("../../assets/expense_icon/jewelry.png"),
+  keyboard: require("../../assets/expense_icon/keyboard.png"),
+  kitchen: require("../../assets/expense_icon/kitchen.png"),
+  lockers: require("../../assets/expense_icon/lockers.png"),
   main_meal: require("../../assets/expense_icon/main_meal.png"),
   moon: require("../../assets/expense_icon/moon.png"),
   motorbike: require("../../assets/expense_icon/motorbike.png"),
+  motorbike_1: require("../../assets/expense_icon/motorbike_1.png"),
+  motorcycle: require("../../assets/expense_icon/motorcycle.png"),
+  napkin: require("../../assets/expense_icon/napkin.png"),
+  noodle: require("../../assets/expense_icon/noodle.png"),
   other: require("../../assets/expense_icon/other.png"),
   outreach: require("../../assets/expense_icon/outreach.png"),
   "parking-car": require("../../assets/expense_icon/parking-car.png"),
   party: require("../../assets/expense_icon/party.png"),
   petrol: require("../../assets/expense_icon/petrol.png"),
+  pizza: require("../../assets/expense_icon/pizza.png"),
+  plugin: require("../../assets/expense_icon/plugin.png"),
+  premium: require("../../assets/expense_icon/premium.png"),
   private: require("../../assets/expense_icon/private.png"),
   rent_house: require("../../assets/expense_icon/rent_house.png"),
   review: require("../../assets/expense_icon/review.png"),
+  ring: require("../../assets/expense_icon/ring.png"),
+  shampoo: require("../../assets/expense_icon/shampoo.png"),
   shoes: require("../../assets/expense_icon/shoes.png"),
   smoothie: require("../../assets/expense_icon/smoothie.png"),
+  "strawberry-cake": require("../../assets/expense_icon/strawberry-cake.png"),
+  sweets: require("../../assets/expense_icon/sweets.png"),
   "teddy-bear": require("../../assets/expense_icon/teddy-bear.png"),
   tent: require("../../assets/expense_icon/tent.png"),
   "travel-luggage": require("../../assets/expense_icon/travel-luggage.png"),
+  tree: require("../../assets/expense_icon/tree.png"),
+  trophy: require("../../assets/expense_icon/trophy.png"),
   "watching-a-movie": require("../../assets/expense_icon/watching-a-movie.png"),
+  "water-tap": require("../../assets/expense_icon/water-tap.png"),
   wedding: require("../../assets/expense_icon/wedding.png"),
   wrench: require("../../assets/expense_icon/wrench.png"),
   wristwatch: require("../../assets/expense_icon/wristwatch.png"),
 };
-
-
 // Màn hình BudgetScreen: Quản lý chia tiền vào các danh mục chi tiêu theo tháng
 const BudgetScreen = () => {
   const isFocused = useIsFocused();
@@ -519,42 +550,69 @@ const BudgetScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.headerTitle}>Số dư chưa phân bổ</Text>
+        {/* Top bar */}
+        <View style={styles.headerTopBar}>
+          <View style={styles.profileSection}>
+            <View style={styles.avatarContainer}>
+              {profile?.avatar ? (
+                <Image
+                  source={{ uri: profile.avatar }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {profile?.name ? profile.name.charAt(0).toUpperCase() : "U"}
+                </Text>
+              )}
+              <View style={styles.avatarStatus} />
+            </View>
+            <View style={styles.profileTextWrapper}>
+              <Text style={styles.greetingLabel}>Ngân sách chi tiêu,</Text>
+              <Text style={styles.profileName} numberOfLines={1}>
+                {profile?.name || "Người dùng"}
+              </Text>
+            </View>
           </View>
+
           <TouchableOpacity
             onPress={() => setShowAmount(!showAmount)}
             style={styles.eyeBtn}
           >
             {showAmount ? (
-              <Eye color="#ffffff" size={18} />
+              <Eye color="#ffffff" size={20} />
             ) : (
-              <EyeOff color="#ffffff" size={18} />
+              <EyeOff color="#ffffff" size={20} />
             )}
           </TouchableOpacity>
         </View>
 
-        <View style={styles.unallocatedBox}>
-          <Wallet color="#ffffff" size={32} />
-          <Text style={styles.unallocatedAmount}>
-            {showAmount ? `${formatCurrency(unallocated)} đ` : "******"}
-          </Text>
-        </View>
-
-        <View style={styles.headerCards}>
-          <View style={styles.headerCard}>
-            <Text style={styles.headerCardLabel}>Quỹ Tiêu Sài</Text>
-            <Text style={styles.headerCardValue}>
-              {showAmount
-                ? `${formatCurrency(totalBalance - unallocated)} đ`
-                : "******"}
-            </Text>
+        {/* Bank Card */}
+        <View style={styles.bankCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardBrandWrapper}>
+              <Wallet color="#f59e0b" size={16} />
+              <Text style={styles.cardBrandText}>QUỸ TIÊU SÀI</Text>
+            </View>
+            <View style={styles.cardChip} />
           </View>
-          <View style={styles.headerDivider} />
-          <View style={styles.headerCard}>
-            <Text style={styles.headerCardLabel}>Danh mục chi tiêu</Text>
-            <Text style={styles.headerCardValue}>{currentMonthStr}</Text>
+
+          <Text style={styles.cardBalanceLabel}>SỐ DƯ CHƯA PHÂN BỔ</Text>
+          <Text style={styles.cardBalanceAmount}>
+            {showAmount ? `${formatCurrency(unallocated)} đ` : "•••••• đ"}
+          </Text>
+
+          <View style={styles.cardStats}>
+            <View style={styles.cardStat}>
+              <Text style={styles.cardStatLabel}>TỔNG QUỸ</Text>
+              <Text style={styles.cardStatValue}>
+                {showAmount ? `${formatCurrency(totalBalance)} đ` : "••••••"}
+              </Text>
+            </View>
+            <View style={styles.cardStatDivider} />
+            <View style={styles.cardStat}>
+              <Text style={styles.cardStatLabel}>KỲ HIỆN TẠI</Text>
+              <Text style={styles.cardStatValue}>{currentMonthStr}</Text>
+            </View>
           </View>
         </View>
       </View>
@@ -764,21 +822,35 @@ const BudgetScreen = () => {
                   amount={allocAmount}
                   onAddAmount={(val) => setAllocAmount((prev) => prev + val)}
                   onClear={() => setAllocAmount(0)}
+                  hideClearButton={true}
                 />
               </>
             )}
 
-            <TouchableOpacity
-              style={[
-                styles.confirmBtn,
-                allocType === "withdraw" && styles.confirmBtnWithdraw,
-              ]}
-              onPress={handleAllocate}
-            >
-              <Text style={styles.confirmBtnText}>
-                {allocType === "deposit" ? "Xác nhận nạp" : "Xác nhận rút"}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.actionButtonRow}>
+              <TouchableOpacity
+                style={[
+                  styles.actionConfirmBtn,
+                  allocType === "deposit"
+                    ? { backgroundColor: "#7c3aed" }
+                    : { backgroundColor: "#ef4444" },
+                  allocAmount === 0 && styles.confirmDisabled,
+                ]}
+                onPress={handleAllocate}
+                disabled={allocAmount === 0}
+              >
+                <Text style={styles.confirmBtnText}>
+                  {allocType === "deposit" ? "Xác nhận nạp" : "Xác nhận rút"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionCancelBtn}
+                onPress={() => setAllocAmount(0)}
+              >
+                <RotateCcw color="#ef4444" size={22} />
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -979,56 +1051,147 @@ const BudgetScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   header: {
-    backgroundColor: "#7c3aed",
-    padding: 24,
-    paddingTop: 60,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    elevation: 4,
+    backgroundColor: "#5596e0",
+    paddingHorizontal: 20,
+    paddingTop: 54,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
-  headerRow: {
+  headerTopBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
   },
-  eyeBtn: {
-    padding: 8,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 12,
-  },
-  headerTitle: { fontSize: 16, color: "#fdf4ff", opacity: 0.9 },
-  headerSubtitle: {
-    fontSize: 13,
-    color: "#fdf4ff",
-    opacity: 0.7,
-    marginTop: 4,
-  },
-  unallocatedBox: {
+  profileSection: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
   },
-  unallocatedAmount: {
-    color: "#ffffff",
-    fontSize: 32,
-    fontWeight: "bold",
-    marginLeft: 10,
-  },
-  headerCards: {
-    flexDirection: "row",
+  avatarContainer: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 20,
-    padding: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  avatarImage: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+  },
+  avatarText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  avatarStatus: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#10b981",
+    borderWidth: 1.5,
+    borderColor: "#5596e0",
+  },
+  profileTextWrapper: { marginLeft: 10 },
+  greetingLabel: { color: "#cccccc", fontSize: 12 },
+  profileName: { color: "#ffffff", fontSize: 15, fontWeight: "bold" },
+  eyeBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    justifyContent: "center",
     alignItems: "center",
   },
-  headerCard: { flex: 1 },
-  headerDivider: {
+  bankCard: {
+    backgroundColor: "#1e293b",
+    borderRadius: 18,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  cardBrandWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  cardBrandText: {
+    color: "#f59e0b",
+    fontSize: 11,
+    fontWeight: "bold",
+    letterSpacing: 1,
+  },
+  cardChip: {
+    width: 32,
+    height: 24,
+    borderRadius: 4,
+    backgroundColor: "#f59e0b",
+    opacity: 0.8,
+  },
+  cardBalanceLabel: {
+    color: "#94a3b8",
+    fontSize: 10,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  cardBalanceAmount: {
+    color: "#ffffff",
+    fontSize: 28,
+    fontWeight: "bold",
+    marginBottom: 18,
+  },
+  cardStats: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+  },
+  cardStat: { flex: 1 },
+  cardStatDivider: {
     width: 1,
-    height: 35,
-    backgroundColor: "rgba(255,255,255,0.3)",
+    height: 30,
+    backgroundColor: "rgba(255,255,255,0.2)",
     marginHorizontal: 12,
   },
+  cardStatLabel: {
+    color: "#94a3b8",
+    fontSize: 10,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  cardStatValue: { color: "#ffffff", fontSize: 14, fontWeight: "bold" },
+  // Legacy styles kept for references but no longer used in header
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
+  headerTitle: { fontSize: 16, color: "#fdf4ff", opacity: 0.9 },
+  headerSubtitle: { fontSize: 13, color: "#fdf4ff", opacity: 0.7, marginTop: 4 },
+  unallocatedBox: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
+  unallocatedAmount: { color: "#ffffff", fontSize: 32, fontWeight: "bold", marginLeft: 10 },
+  headerCards: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 20, padding: 16, alignItems: "center" },
+  headerCard: { flex: 1 },
+  headerDivider: { width: 1, height: 35, backgroundColor: "rgba(255,255,255,0.3)", marginHorizontal: 12 },
   headerCardLabel: { color: "#ede9fe", fontSize: 13, marginBottom: 4 },
   headerCardValue: { color: "#ffffff", fontSize: 17, fontWeight: "bold" },
   body: { flex: 1 },
@@ -1193,6 +1356,44 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     marginTop: 8,
   },
+  actionButtonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 24,
+  },
+  actionConfirmBtn: {
+    flex: 1,
+    height: 54,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionCancelBtn: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fee2e2",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  confirmDisabled: {
+    backgroundColor: "#cbd5e1",
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  cancelBtnText: {
+    color: "#ef4444",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  confirmBtnText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   confirmBtn: {
     backgroundColor: "#7c3aed",
     paddingVertical: 16,
@@ -1200,8 +1401,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 24,
   },
-  confirmBtnWithdraw: { backgroundColor: "#ef4444" },
-  confirmBtnText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
   modalOverlayCenter: {
     flex: 1,
     backgroundColor: "rgba(15, 23, 42, 0.6)",

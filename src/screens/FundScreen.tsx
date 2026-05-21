@@ -5,12 +5,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Modal,
   TextInput,
   RefreshControl,
   Image,
 } from "react-native";
+import { Alert } from "../components/CustomAlert";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import {
@@ -25,6 +25,7 @@ import {
   Eye,
   EyeOff,
   History,
+  RotateCcw,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { UserProfile, Transaction, CategoryBudget, CustomFund } from "../types";
@@ -400,12 +401,69 @@ const FundScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTitleRow}>
-          <Text style={styles.headerTitle}>Quản lý Quỹ</Text>
-          <View style={{ flexDirection: "row", gap: 16, alignItems: "center" }}>
+        {/* Top bar with User Profile and history action */}
+        <View style={styles.headerTopBar}>
+          <View style={styles.profileSection}>
+            <View style={styles.avatarContainer}>
+              {profile?.avatar ? (
+                <Image
+                  source={{ uri: profile.avatar }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {profile?.name ? profile.name.charAt(0).toUpperCase() : "U"}
+                </Text>
+              )}
+              <View style={styles.avatarStatus} />
+            </View>
+            <View style={styles.profileTextWrapper}>
+              <Text style={styles.greetingLabel}>Hệ thống quỹ</Text>
+              <Text style={styles.profileName} numberOfLines={1}>
+                {profile?.name || "Người dùng"}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("FundHistory" as any)}
+              style={styles.actionBtn}
+              activeOpacity={0.7}
+            >
+              <History color="#ffffff" size={20} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Bank Card / Account card */}
+        <View style={styles.bankCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardBrandWrapper}>
+              <Wallet color="#f59e0b" size={18} />
+              <Text style={styles.cardBrandText}>HEO ĐẤT BÉO DIGITAL</Text>
+            </View>
+            <View style={styles.cardChip} />
+          </View>
+
+          <View style={styles.cardMiddle}>
+            <Text style={styles.cardAccountLabel}>TỔNG TÀI SẢN</Text>
+            <Text style={styles.cardBalanceAmount}>
+              {showAmount ? `${formatCurrency(totalBalance)} đ` : "•••••• đ"}
+            </Text>
+          </View>
+
+          <View style={styles.cardBottom}>
+            <View>
+              <Text style={styles.cardBalanceLabel}>CHƯA PHÂN BỔ</Text>
+              <Text style={styles.unallocBalanceAmount}>
+                {showAmount ? `${formatCurrency(unallocated)} đ` : "•••••• đ"}
+              </Text>
+            </View>
             <TouchableOpacity
               onPress={() => setShowAmount(!showAmount)}
-              style={styles.eyeBtn}
+              style={styles.cardEyeBtn}
+              activeOpacity={0.7}
             >
               {showAmount ? (
                 <Eye color="#ffffff" size={20} />
@@ -413,27 +471,7 @@ const FundScreen = () => {
                 <EyeOff color="#ffffff" size={20} />
               )}
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => navigation.navigate("FundHistory" as any)}
-              style={styles.eyeBtn}
-            >
-              <History color="#ffffff" size={20} />
-            </TouchableOpacity>
           </View>
-        </View>
-
-        <View style={styles.balanceContainer}>
-          <Text style={styles.balanceLabel}>Tổng tài sản</Text>
-          <Text style={styles.balanceAmount}>
-            {showAmount ? `${formatCurrency(totalBalance)} đ` : "******"}
-          </Text>
-        </View>
-
-        <View style={styles.unallocContainer}>
-          <Text style={styles.unallocLabel}>Số dư chưa phân bổ</Text>
-          <Text style={styles.unallocAmount}>
-            {showAmount ? `${formatCurrency(unallocated)} đ` : "******"}
-          </Text>
         </View>
       </View>
 
@@ -703,21 +741,31 @@ const FundScreen = () => {
                   amount={amount}
                   onAddAmount={(val) => setAmount(amount + val)}
                   onClear={() => setAmount(0)}
+                  hideClearButton={true}
                 />
               </View>
             )}
 
-            <TouchableOpacity
-              style={[
-                styles.confirmAllocBtn,
-                txType === "deposit" ? styles.bgDeposit : styles.bgWithdraw,
-                amount <= 0 && styles.bgDisabled,
-              ]}
-              onPress={executeTransaction}
-              disabled={amount <= 0}
-            >
-              <Text style={styles.confirmAllocBtnText}>Xác Nhận</Text>
-            </TouchableOpacity>
+            <View style={styles.actionButtonRow}>
+              <TouchableOpacity
+                style={[
+                  styles.actionConfirmBtn,
+                  txType === "deposit" ? styles.bgDeposit : styles.bgWithdraw,
+                  amount <= 0 && styles.bgDisabled,
+                ]}
+                onPress={executeTransaction}
+                disabled={amount <= 0}
+              >
+                <Text style={styles.confirmBtnText}>Xác Nhận</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionCancelBtn}
+                onPress={() => setAmount(0)}
+              >
+                <RotateCcw color="#ef4444" size={22} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -857,38 +905,156 @@ const FundScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   header: {
-    backgroundColor: "#2563eb",
-    padding: 24,
-    paddingTop: 60,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    elevation: 4,
+    backgroundColor: "#5596e0ff",
+    paddingHorizontal: 20,
+    paddingTop: 54,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    elevation: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 12,
   },
-  headerTitleRow: {
+  headerTopBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  headerTitle: { fontSize: 24, fontWeight: "bold", color: "#ffffff" },
-  eyeBtn: { padding: 4 },
-  balanceContainer: { marginBottom: 16 },
-  balanceLabel: { fontSize: 14, color: "#bfdbfe", marginBottom: 4 },
-  balanceAmount: { fontSize: 32, fontWeight: "bold", color: "#ffffff" },
-  unallocContainer: {
+  profileSection: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  avatarContainer: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  avatarImage: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+  },
+  avatarText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  avatarStatus: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#10b981",
+    borderWidth: 1.5,
+    borderColor: "#5596e0ff",
+  },
+  profileTextWrapper: {
+    marginLeft: 10,
+  },
+  greetingLabel: {
+    color: "rgba(255, 255, 255, 0.75)",
+    fontSize: 11,
+    fontWeight: "500",
+  },
+  profileName: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "bold",
+    marginTop: 1,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  actionBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: "rgba(255, 255, 255, 0.15)",
-    padding: 12,
-    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  bankCard: {
+    backgroundColor: "#1e293b", // Slate-800
+    borderRadius: 18,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+  },
+  cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 16,
   },
-  unallocLabel: { fontSize: 14, color: "#bfdbfe" },
-  unallocAmount: { fontSize: 16, fontWeight: "bold", color: "#ffffff" },
+  cardBrandWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  cardBrandText: {
+    color: "#f59e0b",
+    fontSize: 11,
+    fontWeight: "bold",
+    letterSpacing: 1,
+  },
+  cardChip: {
+    width: 32,
+    height: 24,
+    borderRadius: 4,
+    backgroundColor: "#f59e0b",
+    opacity: 0.8,
+  },
+  cardMiddle: {
+    marginBottom: 18,
+  },
+  cardAccountLabel: {
+    color: "#94a3b8",
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
+  cardBalanceAmount: {
+    color: "#ffffff",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginTop: 2,
+  },
+  cardBottom: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+  },
+  cardBalanceLabel: {
+    color: "#94a3b8",
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
+  unallocBalanceAmount: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 2,
+  },
+  cardEyeBtn: {
+    padding: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 10,
+  },
 
   body: { flex: 1, padding: 20 },
   sectionHeader: {
@@ -1039,12 +1205,34 @@ const styles = StyleSheet.create({
   },
   confirmBtnText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
 
-  confirmAllocBtn: {
-    padding: 16,
+  actionButtonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 24,
+  },
+  actionConfirmBtn: {
+    flex: 1,
+    height: 54,
     borderRadius: 16,
     alignItems: "center",
+    justifyContent: "center",
   },
-  confirmAllocBtnText: { color: "#ffffff", fontSize: 18, fontWeight: "bold" },
+  actionCancelBtn: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fee2e2",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  cancelBtnText: {
+    color: "#ef4444",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   bgDeposit: { backgroundColor: "#10b981" },
   bgWithdraw: { backgroundColor: "#ef4444" },
   bgDisabled: { backgroundColor: "#cbd5e1" },

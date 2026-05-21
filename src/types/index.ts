@@ -55,4 +55,34 @@ export interface UserProfile {
   savingFundIcon?: string; // Icon cho Quỹ Tiết Kiệm (Saving)
   hasSeenGuide?: boolean;
   inputMethod?: 'keypad' | 'manual';
+  avatar?: string;
+  nickname?: string;
+  bio?: string;
+  job?: string;
+  education?: string;
+  hobby?: string;
+  birthday?: string;
+  gender?: string;
+  joinDate?: string;
+  facebook?: string;
+  youtube?: string;
+  tiktok?: string;
+  instagram?: string;
+  thread?: string;
+  streakCount?: number;           // Số ngày giữ chuỗi hiện tại
+  lastStreakTimestamp?: number;   // Timestamp ms của lần gần nhất được ghi nhận giữ chuỗi
+  streakRecoveriesCount?: number;     // Số lần khôi phục chuỗi trong tháng hiện tại
+  lastRecoveryMonthYear?: string;     // Tháng/Năm khôi phục gần nhất (dạng "MM/YYYY")
+  avatarHistory?: string[];           // Lịch sử đường dẫn ảnh đại diện đã dùng (tối đa 10 ảnh)
+  mascot?: string;                    // Linh vật hiện tại được chọn (YC Mới)
+  mascotLastChanged?: number;         // Timestamp ms lần cuối đổi linh vật
+}
+
+export interface NotificationHistoryItem {
+  id: string;
+  dateStr: string;      // The date reported (e.g. "18/05/2026")
+  triggerTime: number;  // Timestamp of the 2:00 AM trigger time (e.g. 19/05/2026 02:00:00)
+  title: string;
+  body: string;
+  type?: 'day' | 'month' | 'year';
 }

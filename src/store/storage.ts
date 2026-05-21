@@ -1,12 +1,50 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Transaction, UserProfile, CategoryBudget, TransactionDateIndex } from '../types';
+import { Transaction, UserProfile, CategoryBudget, TransactionDateIndex, NotificationHistoryItem } from '../types';
+import { Paths } from 'expo-file-system';
+import { readAsStringAsync, writeAsStringAsync } from 'expo-file-system/legacy';
 
 const TRANSACTIONS_KEY = '@transactions';
 const USER_PROFILE_KEY = '@userProfile';
 const CATEGORY_BUDGETS_KEY = '@categoryBudgets';
 const TRANSACTION_DATE_INDEX_KEY = '@transaction_date_index';
+const NOTIFICATION_HISTORY_KEY = '@notificationHistory';
+
+const ENCRYPTION_PREFIX = 'HDB_ENC_';
+const XOR_KEY = 87; // QuocTuanIT87 / SatsBoy87
+
+function encrypt(text: string): string {
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    const charCode = text.charCodeAt(i);
+    const encryptedValue = charCode ^ XOR_KEY;
+    result += encryptedValue.toString(16).padStart(4, '0');
+  }
+  return ENCRYPTION_PREFIX + result;
+}
+
+function decrypt(cipherText: string): string {
+  if (!cipherText || !cipherText.startsWith(ENCRYPTION_PREFIX)) {
+    return cipherText; // Trả về dạng gốc nếu không có tiền tố mã hóa (tương thích ngược)
+  }
+  const hexPart = cipherText.substring(ENCRYPTION_PREFIX.length);
+  let result = '';
+  for (let i = 0; i < hexPart.length; i += 4) {
+    const hex = hexPart.substring(i, i + 4);
+    const encryptedValue = parseInt(hex, 16);
+    const charCode = encryptedValue ^ XOR_KEY;
+    result += String.fromCharCode(charCode);
+  }
+  return result;
+}
+
+let onTransactionChangeCallback: (() => void) | null = null;
 
 export const storage = {
+  // Listener for transaction updates
+  setTransactionChangeListener(callback: () => void) {
+    onTransactionChangeCallback = callback;
+  },
+
   // User Profile
   async getUserProfile(): Promise<UserProfile | null> {
     try {
@@ -34,6 +72,7 @@ export const storage = {
       await AsyncStorage.removeItem(TRANSACTIONS_KEY);
       await AsyncStorage.removeItem(CATEGORY_BUDGETS_KEY);
       await AsyncStorage.removeItem(TRANSACTION_DATE_INDEX_KEY);
+      await AsyncStorage.removeItem(NOTIFICATION_HISTORY_KEY);
       return true;
     } catch (e) {
       console.error('Error clearing data', e);
@@ -150,6 +189,9 @@ export const storage = {
       await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updated));
       // Cập nhật index tháng/năm
       await this._addToTransactionDateIndex(transaction.timestamp);
+      if (onTransactionChangeCallback) {
+        onTransactionChangeCallback();
+      }
       return true;
     } catch (e) {
       console.error('Error saving transaction', e);
@@ -165,28 +207,37 @@ export const storage = {
       await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updated));
       // Rebuild index sau khi xóa (để loại bỏ tháng/năm không còn giao dịch)
       if (deleted) await this._removeFromTransactionDateIndex(deleted.timestamp);
+      if (onTransactionChangeCallback) {
+        onTransactionChangeCallback();
+      }
       return true;
     } catch (e) {
       console.error('Error deleting transaction', e);
       return false;
     }
   },
-  
+
   async updateTransaction(updatedTransaction: Transaction): Promise<boolean> {
-      try {
-          const current = await this.getTransactions();
-          const updated = current.map(t => t.id === updatedTransaction.id ? updatedTransaction : t);
-          await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updated));
-          return true;
-      } catch (e) {
-          console.error('Error updating transaction', e);
-          return false;
+    try {
+      const current = await this.getTransactions();
+      const updated = current.map(t => t.id === updatedTransaction.id ? updatedTransaction : t);
+      await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updated));
+      if (onTransactionChangeCallback) {
+        onTransactionChangeCallback();
       }
+      return true;
+    } catch (e) {
+      console.error('Error updating transaction', e);
+      return false;
+    }
   },
 
   async updateTransactionsBulk(updatedTransactions: Transaction[]): Promise<boolean> {
     try {
       await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updatedTransactions));
+      if (onTransactionChangeCallback) {
+        onTransactionChangeCallback();
+      }
       return true;
     } catch (e) {
       console.error('Error updating transactions in bulk', e);
@@ -199,15 +250,79 @@ export const storage = {
     const profile = await this.getUserProfile();
     const transactions = await this.getTransactions();
     const categoryBudgets = await this.getCategoryBudgets();
-    return JSON.stringify({ profile, transactions, categoryBudgets });
+
+    const avatarMap: Record<string, string> = {};
+
+    const processFile = async (uri: string) => {
+      if (uri && uri.startsWith('file://')) {
+        try {
+          const base64 = await readAsStringAsync(uri, { encoding: 'base64' });
+          const parts = uri.split('/');
+          const fileName = parts[parts.length - 1];
+          avatarMap[fileName] = base64;
+        } catch (err) {
+          console.error("Error reading file for export:", uri, err);
+        }
+      }
+    };
+
+    if (profile) {
+      if (profile.avatar) {
+        await processFile(profile.avatar);
+      }
+      if (profile.avatarHistory) {
+        for (const uri of profile.avatarHistory) {
+          await processFile(uri);
+        }
+      }
+    }
+
+    const jsonStr = JSON.stringify({ profile, transactions, categoryBudgets, avatarMap });
+    return encrypt(jsonStr);
   },
 
   async importData(jsonData: string): Promise<boolean> {
     try {
-      const parsed = JSON.parse(jsonData);
-      if (parsed.profile) {
-        await this.saveUserProfile(parsed.profile);
+      const decrypted = decrypt(jsonData);
+      const parsed = JSON.parse(decrypted);
+      let profile: UserProfile | null = parsed.profile || null;
+      const avatarMap = parsed.avatarMap || {};
+
+      if (profile) {
+        const baseDir = Paths.document?.uri || Paths.cache?.uri || "";
+        const reconstructFile = async (uri: string): Promise<string> => {
+          if (uri && uri.startsWith('file://')) {
+            const parts = uri.split('/');
+            const fileName = parts[parts.length - 1];
+            const base64 = avatarMap[fileName];
+            if (base64) {
+              try {
+                const newUri = `${baseDir}${baseDir.endsWith("/") ? "" : "/"}${fileName}`;
+                await writeAsStringAsync(newUri, base64, { encoding: 'base64' });
+                return newUri;
+              } catch (err) {
+                console.error("Error reconstructing avatar file:", err);
+              }
+            }
+          }
+          return uri;
+        };
+
+        if (profile.avatar) {
+          profile.avatar = await reconstructFile(profile.avatar);
+        }
+        if (profile.avatarHistory) {
+          const newHistory: string[] = [];
+          for (const uri of profile.avatarHistory) {
+            const restoredUri = await reconstructFile(uri);
+            newHistory.push(restoredUri);
+          }
+          profile.avatarHistory = newHistory;
+        }
+
+        await this.saveUserProfile(profile);
       }
+
       if (parsed.transactions) {
         await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(parsed.transactions));
       }
@@ -216,9 +331,87 @@ export const storage = {
       }
       // Rebuild index sau khi import
       await this._rebuildTransactionDateIndex();
+      if (onTransactionChangeCallback) {
+        onTransactionChangeCallback();
+      }
       return true;
     } catch (e) {
       console.error('Error importing data', e);
+      return false;
+    }
+  },
+
+  async getNotificationHistory(): Promise<NotificationHistoryItem[]> {
+    try {
+      const data = await AsyncStorage.getItem(NOTIFICATION_HISTORY_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error('Error fetching notification history', e);
+      return [];
+    }
+  },
+
+  async saveNotificationHistory(history: NotificationHistoryItem[]): Promise<boolean> {
+    try {
+      await AsyncStorage.setItem(NOTIFICATION_HISTORY_KEY, JSON.stringify(history));
+      return true;
+    } catch (e) {
+      console.error('Error saving notification history', e);
+      return false;
+    }
+  },
+
+  // Google Drive Backup settings
+  async isGoogleDriveAutoBackupEnabled(): Promise<boolean> {
+    try {
+      const value = await AsyncStorage.getItem('@googleDriveAutoBackupEnabled');
+      return value === 'true';
+    } catch (e) {
+      return false;
+    }
+  },
+
+  async setGoogleDriveAutoBackupEnabled(enabled: boolean): Promise<boolean> {
+    try {
+      await AsyncStorage.setItem('@googleDriveAutoBackupEnabled', enabled ? 'true' : 'false');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  async getGoogleDriveLastBackupTimestamp(): Promise<number> {
+    try {
+      const value = await AsyncStorage.getItem('@googleDriveLastBackupTimestamp');
+      return value ? parseInt(value, 10) : 0;
+    } catch (e) {
+      return 0;
+    }
+  },
+
+  async setGoogleDriveLastBackupTimestamp(timestamp: number): Promise<boolean> {
+    try {
+      await AsyncStorage.setItem('@googleDriveLastBackupTimestamp', timestamp.toString());
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  async getGoogleDriveLastBackupStatus(): Promise<string> {
+    try {
+      const value = await AsyncStorage.getItem('@googleDriveLastBackupStatus');
+      return value || 'none';
+    } catch (e) {
+      return 'none';
+    }
+  },
+
+  async setGoogleDriveLastBackupStatus(status: string): Promise<boolean> {
+    try {
+      await AsyncStorage.setItem('@googleDriveLastBackupStatus', status);
+      return true;
+    } catch (e) {
       return false;
     }
   }

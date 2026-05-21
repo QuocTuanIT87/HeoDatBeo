@@ -7,9 +7,9 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Image,
 } from "react-native";
+import { Alert } from "../components/CustomAlert";
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import { storage } from "../store/storage";
 import * as DocumentPicker from "expo-document-picker";

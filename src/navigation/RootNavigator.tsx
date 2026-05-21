@@ -6,8 +6,10 @@ import BottomTabNavigator from "./BottomTabNavigator";
 import SavingHistoryScreen from "../screens/SavingHistoryScreen";
 import FundHistoryScreen from "../screens/FundHistoryScreen";
 import GuideScreen from "../screens/GuideScreen";
+import ProfileScreen from "../screens/ProfileScreen";
 import { storage } from "../store/storage";
 import { View, ActivityIndicator } from "react-native";
+import { scheduleDailyReminder } from "../utils/notifications";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -20,6 +22,8 @@ const RootNavigator = () => {
       const profile = await storage.getUserProfile();
       setHasProfile(!!profile);
       setIsLoading(false);
+      // Đăng ký nhắc nhở ghi giao dịch lúc 22h hàng ngày
+      scheduleDailyReminder();
     };
     checkProfile();
   }, []);
@@ -42,6 +46,7 @@ const RootNavigator = () => {
       <Stack.Screen name="SavingHistory" component={SavingHistoryScreen} />
       <Stack.Screen name="FundHistory" component={FundHistoryScreen} />
       <Stack.Screen name="Guide" component={GuideScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
     </Stack.Navigator>
   );
 };

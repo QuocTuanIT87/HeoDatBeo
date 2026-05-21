@@ -42,6 +42,17 @@
 - 👋 **Chào mừng người mới**: Modal hướng dẫn xuất hiện ngay lần đầu sử dụng giúp bạn nắm bắt triết lý quản lý tài chính của ứng dụng.
 - 📚 **Trang hướng dẫn chi tiết**: Giải thích cách hoạt động của dòng tiền từ "Chưa phân bổ" đến các "Hũ ngân sách" và "Heo đất".
 
+### 6. Sao Lưu & Bảo Mật Dữ Liệu 💾
+
+- ☁️ **Sao lưu trực tuyến (Google Drive)**: Hỗ trợ liên kết tài khoản Google để tự động sao lưu dữ liệu hàng ngày vào lúc 1:00 sáng hoặc sao lưu thủ công nhanh chóng. Khôi phục dữ liệu từ bản sao lưu gần nhất trên Drive chỉ với một nút bấm.
+- 📂 **Sao lưu ngoại tuyến (Offline)**: Hỗ trợ xuất dữ liệu ra file văn bản `.txt` và nhập lại để phục hồi dữ liệu khi cần thiết hoặc khi chuyển đổi thiết bị.
+- 🔒 **Mã hóa dữ liệu**: Tự động mã hóa/giải mã toàn bộ dữ liệu sao lưu (cả Drive lẫn file cục bộ) bằng thuật toán XOR giúp bảo mật thông tin tài chính cá nhân an toàn.
+
+### 7. Thông Báo & Nhắc Nhở Báo Cáo 🔔
+
+- ⏰ **Nhắc nhở nuôi Heo**: Tự động nhắc nhở người dùng nuôi heo đất hàng ngày để duy trì chuỗi kỷ luật (Streak).
+- 📊 **Báo cáo định kỳ**: Tự động gửi thông báo báo cáo tài chính hàng ngày, hàng tháng và hàng năm. Khi bấm vào thông báo báo cáo, ứng dụng sẽ chuyển hướng ngay đến trang Thống kê và hiển thị chi tiết lịch sử báo cáo.
+
 ---
 
 ## Công Nghệ Sử Dụng 🛠️
@@ -67,10 +78,12 @@
 
 ## Định Hướng Phát Triển 🎯
 
-- [ ] **Thông báo nhắc nhở**: Nhắc nhở nuôi heo vào khung giờ cố định mỗi ngày.
-- [ ] **Giao diện Dark Mode**: Hỗ trợ nền tối.
-- [ ] **Xuất báo cáo PDF**: Xuất lịch sử chi tiêu năm ra file PDF đẹp mắt.
+- [ ] **Giao diện Dark Mode**: Hỗ trợ nền tối giúp bảo vệ mắt khi sử dụng ban đêm.
+- [ ] **Xuất báo cáo PDF/Excel**: Xuất lịch sử chi tiêu năm/tháng ra file PDF hoặc Excel đẹp mắt, chuyên nghiệp.
+- [ ] **Đồng bộ hóa đám mây đa thiết bị**: Đồng bộ dữ liệu theo thời gian thực giữa nhiều thiết bị dùng chung một tài khoản Google.
+- [ ] **Widget ngoài màn hình chính (Home Screen Widget)**: Widget hiển thị nhanh số dư hiện tại, trạng thái Heo Đất và chuỗi ngày streak ngay trên màn hình chính điện thoại.
 
 ---
 
 _Chúc bạn quản lý tài chính hiệu quả và nuôi được những chú Heo Đất thật béo!_ 🐷💕
+
