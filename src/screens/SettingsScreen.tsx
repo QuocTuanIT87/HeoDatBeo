@@ -680,7 +680,7 @@ const SettingsScreen = () => {
             <Cloud color="#0891b2" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Sao lưu dữ liệu (Trực tuyến)</Text>
+            <Text style={styles.cardTitle}>Sao lưu dữ liệu - Trực tuyến</Text>
             {isGoogleSignedIn && (
               <Text style={{ fontSize: 12, color: "#0891b2", marginTop: 2 }}>
                 Đã liên kết tài khoản
@@ -697,7 +697,7 @@ const SettingsScreen = () => {
             <Database color="#4f46e5" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Sao lưu dữ liệu (Ngoại tuyến)</Text>
+            <Text style={styles.cardTitle}>Sao lưu dữ liệu - Ngoại tuyến</Text>
           </View>
         </TouchableOpacity>
 
