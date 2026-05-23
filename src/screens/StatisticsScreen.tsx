@@ -1143,6 +1143,25 @@ const StatisticsScreen = () => {
     return `Năm ${new Date().getFullYear()}`;
   };
 
+  const getFilterDateText = () => {
+    if (period === "day") {
+      return `Hôm nay (${formatDateShort(new Date())})`;
+    } else if (period === "month") {
+      const targetMonth =
+        selectedMonth ||
+        `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+      const [y, m] = targetMonth.split("-");
+      return `Tháng ${parseInt(m)}/${y}`;
+    } else if (period === "year") {
+      const targetYear = selectedYear ?? new Date().getFullYear();
+      return `Năm ${targetYear}`;
+    } else if (period === "custom") {
+      return `${formatDateShort(customStartDate)} - ${formatDateShort(customEndDate)}`;
+    } else {
+      return "Tất cả thời gian";
+    }
+  };
+
   // Format tháng để hiển thị trong modal
   const formatMonthDisplay = (monthStr: string) => {
     const [y, m] = monthStr.split("-");
@@ -1374,11 +1393,17 @@ const StatisticsScreen = () => {
 
             <TouchableOpacity
               onPress={() => {
-                if (type === "expense" && filteredTransactions.length > 0) {
+                if (type !== "expense") {
+                  Alert.alert("Thông báo", "Bạn cần lọc theo Chi Tiền để hiển thị biểu đồ.");
+                } else if (filteredTransactions.length === 0) {
+                  Alert.alert(
+                    "Thông báo",
+                    "Dữ liệu không có để hiển thị biểu đồ. Vui lòng chọn thời gian khác",
+                  );
+                } else {
                   setShowPieChartModal(true);
                 }
               }}
-              disabled={type !== "expense" || filteredTransactions.length === 0}
               style={[
                 styles.chartButton,
                 (type !== "expense" || filteredTransactions.length === 0) && {
@@ -1977,7 +2002,12 @@ const StatisticsScreen = () => {
         <View style={styles.pieModalOverlay}>
           <View style={styles.pieModalBox}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Cơ cấu Chi Tiền</Text>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={styles.modalTitle}>Cơ cấu Chi Tiền</Text>
+                <Text style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
+                  Thời gian lọc: {getFilterDateText()}
+                </Text>
+              </View>
               <TouchableOpacity
                 onPress={() => {
                   setShowPieChartModal(false);

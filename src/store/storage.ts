@@ -73,6 +73,9 @@ export const storage = {
       await AsyncStorage.removeItem(CATEGORY_BUDGETS_KEY);
       await AsyncStorage.removeItem(TRANSACTION_DATE_INDEX_KEY);
       await AsyncStorage.removeItem(NOTIFICATION_HISTORY_KEY);
+      await AsyncStorage.removeItem('@googleDriveAutoBackupEnabled');
+      await AsyncStorage.removeItem('@googleDriveLastBackupTimestamp');
+      await AsyncStorage.removeItem('@googleDriveLastBackupStatus');
       return true;
     } catch (e) {
       console.error('Error clearing data', e);

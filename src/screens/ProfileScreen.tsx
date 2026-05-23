@@ -440,7 +440,7 @@ const ProfileScreen = () => {
           </View>
 
           {/* Name & bio */}
-          <Text style={styles.heroName}>{profile?.name || "—"}</Text>
+          <Text style={styles.heroName} numberOfLines={1} ellipsizeMode="tail">{profile?.name || "—"}</Text>
           {profile?.nickname ? (
             <Text style={styles.heroNickname}>@{profile.nickname}</Text>
           ) : <Text style={styles.heroNickname}>@nickname</Text>}
@@ -1249,6 +1249,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#0f172a",
     marginTop: 14,
+    paddingHorizontal: 24,
+    textAlign: "center",
   },
   heroNickname: { fontSize: 14, color: "#64748b", marginTop: 2 },
   heroBio: {

@@ -298,7 +298,7 @@ export const checkAndRunAutoBackup = async () => {
 /**
  * Tải xuống và khôi phục bản sao lưu mới nhất từ Google Drive
  */
-export const restoreLatestBackupFromGoogleDrive = async (): Promise<{ success: boolean; message: string; content?: string }> => {
+export const restoreLatestBackupFromGoogleDrive = async (): Promise<{ success: boolean; message: string; content?: string; timestamp?: number }> => {
   try {
     const accessToken = await getAccessToken();
     if (!accessToken) {
@@ -330,6 +330,12 @@ export const restoreLatestBackupFromGoogleDrive = async (): Promise<{ success: b
     const latestFile = listData.files[0];
     const fileId = latestFile.id;
 
+    let fileTimestamp = Date.now();
+    const match = latestFile.name.match(/_(\d+)\.txt$/);
+    if (match) {
+      fileTimestamp = parseInt(match[1], 10) * 1000;
+    }
+
     // 2. Tải nội dung file
     const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
     const downloadResponse = await fetch(downloadUrl, {
@@ -346,7 +352,8 @@ export const restoreLatestBackupFromGoogleDrive = async (): Promise<{ success: b
     return {
       success: true,
       message: 'Tải bản sao lưu thành công.',
-      content: fileContent
+      content: fileContent,
+      timestamp: fileTimestamp
     };
   } catch (error: any) {
     console.error('Lỗi khi khôi phục dữ liệu từ Google Drive:', error);
@@ -356,4 +363,60 @@ export const restoreLatestBackupFromGoogleDrive = async (): Promise<{ success: b
     };
   }
 };
+
+/**
+ * Kiểm tra xem trên Google Drive đã có folder data_heo_dat_beo và có bản sao lưu nào gần nhất không.
+ */
+export const checkLatestBackupOnGoogleDrive = async (): Promise<{ success: boolean; timestamp?: number } | null> => {
+  try {
+    const accessToken = await getAccessToken();
+    if (!accessToken) return null;
+
+    // 1. Tìm folder data_heo_dat_beo
+    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${BACKUP_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const searchResponse = await fetch(searchUrl, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!searchResponse.ok) return null;
+    const searchData = await searchResponse.json();
+    if (!searchData.files || searchData.files.length === 0) {
+      return null;
+    }
+
+    const folderId = searchData.files[0].id;
+
+    // 2. Quét tìm file backup mới nhất trong thư mục
+    const listFilesUrl = `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and mimeType='text/plain' and name contains 'heodatbeo_' and trashed=false&orderBy=name desc&pageSize=1`;
+    const listResponse = await fetch(listFilesUrl, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!listResponse.ok) return null;
+    const listData = await listResponse.json();
+    if (!listData.files || listData.files.length === 0) {
+      return null;
+    }
+
+    const latestFile = listData.files[0];
+    let fileTimestamp = Date.now();
+    const match = latestFile.name.match(/_(\d+)\.txt$/);
+    if (match) {
+      fileTimestamp = parseInt(match[1], 10) * 1000;
+    }
+
+    return {
+      success: true,
+      timestamp: fileTimestamp,
+    };
+  } catch (error) {
+    console.error('Lỗi khi kiểm tra bản sao lưu trên Google Drive:', error);
+    return null;
+  }
+};
+
 

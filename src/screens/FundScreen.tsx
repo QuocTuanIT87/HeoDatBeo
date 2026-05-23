@@ -26,6 +26,7 @@ import {
   EyeOff,
   History,
   RotateCcw,
+  HelpCircle,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { UserProfile, Transaction, CategoryBudget, CustomFund } from "../types";
@@ -59,6 +60,23 @@ type FundScreenNavigationProp = BottomTabNavigationProp<
 const FundScreen = () => {
   const navigation = useNavigation<FundScreenNavigationProp>();
   const isFocused = useIsFocused();
+
+  const handleShowTotalFundInfo = () => {
+    Alert.normal(
+      "TỔNG TIỀN QUỸ",
+      "Đây là tổng số tiền có trong các quỹ của bạn\n\nKhông bao gồm số dư chưa phân bổ",
+      [
+        {
+          text: "Hướng dẫn",
+          onPress: () => (navigation as any).navigate("Guide"),
+        },
+        {
+          text: "Đóng",
+          style: "cancel",
+        },
+      ]
+    );
+  };
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [totalAllocated, setTotalAllocated] = useState<number>(0);
@@ -136,12 +154,12 @@ const FundScreen = () => {
       const unalloc = Math.max(0, p.initialBalance - allocated);
       setUnallocated(unalloc);
 
-      // Calculate total balance
+      // Calculate total funds (excluding unallocated)
       let customFundsTotal = 0;
       if (p.customFunds) {
         customFundsTotal = p.customFunds.reduce((sum, f) => sum + f.balance, 0);
       }
-      setTotalBalance(allocated + unalloc + calcSaving + customFundsTotal);
+      setTotalBalance(allocated + calcSaving + customFundsTotal);
     }
   };
 
@@ -404,25 +422,6 @@ const FundScreen = () => {
         {/* Top bar with User Profile and history action */}
         <View style={styles.headerTopBar}>
           <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              {profile?.avatar ? (
-                <Image
-                  source={{ uri: profile.avatar }}
-                  style={styles.avatarImage}
-                />
-              ) : (
-                <Text style={styles.avatarText}>
-                  {profile?.name ? profile.name.charAt(0).toUpperCase() : "U"}
-                </Text>
-              )}
-              <View style={styles.avatarStatus} />
-            </View>
-            <View style={styles.profileTextWrapper}>
-              <Text style={styles.greetingLabel}>Hệ thống quỹ</Text>
-              <Text style={styles.profileName} numberOfLines={1}>
-                {profile?.name || "Người dùng"}
-              </Text>
-            </View>
           </View>
 
           <View style={styles.headerActions}>
@@ -447,30 +446,33 @@ const FundScreen = () => {
           </View>
 
           <View style={styles.cardMiddle}>
-            <Text style={styles.cardAccountLabel}>TỔNG TÀI SẢN</Text>
-            <Text style={styles.cardBalanceAmount}>
+            <View style={styles.cardAccountLabelContainer}>
+              <Text style={styles.cardAccountLabel}>TỔNG TIỀN QUỸ</Text>
+              <TouchableOpacity
+                onPress={handleShowTotalFundInfo}
+                style={styles.helpIconTouch}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <HelpCircle color="#94a3b8" size={12} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.cardBalanceAmount}>
               {showAmount ? `${formatCurrency(totalBalance)} đ` : "•••••• đ"}
             </Text>
-          </View>
-
-          <View style={styles.cardBottom}>
-            <View>
-              <Text style={styles.cardBalanceLabel}>CHƯA PHÂN BỔ</Text>
-              <Text style={styles.unallocBalanceAmount}>
-                {showAmount ? `${formatCurrency(unallocated)} đ` : "•••••• đ"}
-              </Text>
-            </View>
             <TouchableOpacity
               onPress={() => setShowAmount(!showAmount)}
               style={styles.cardEyeBtn}
               activeOpacity={0.7}
             >
               {showAmount ? (
-                <Eye color="#ffffff" size={20} />
+                <Eye color="#ffffff" size={15} />
               ) : (
-                <EyeOff color="#ffffff" size={20} />
+                <EyeOff color="#ffffff" size={15} />
               )}
             </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -544,7 +546,7 @@ const FundScreen = () => {
         </TouchableOpacity>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Quỹ tùy chỉnh</Text>
+          <Text style={styles.sectionTitle}>Quỹ khác</Text>
           <TouchableOpacity
             style={styles.addFundBtn}
             onPress={() => {
@@ -926,6 +928,8 @@ const styles = StyleSheet.create({
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
+    marginRight: 10,
   },
   avatarContainer: {
     width: 42,
@@ -959,6 +963,7 @@ const styles = StyleSheet.create({
   },
   profileTextWrapper: {
     marginLeft: 10,
+    flex: 1,
   },
   greetingLabel: {
     color: "rgba(255, 255, 255, 0.75)",
@@ -1023,10 +1028,20 @@ const styles = StyleSheet.create({
   cardMiddle: {
     marginBottom: 18,
   },
+  cardAccountLabelContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   cardAccountLabel: {
     color: "#94a3b8",
     fontSize: 10,
     letterSpacing: 0.5,
+  },
+  helpIconTouch: {
+    padding: 2,
+    marginLeft: 4,
+    justifyContent: "center",
+    alignItems: "center",
   },
   cardBalanceAmount: {
     color: "#ffffff",
@@ -1051,9 +1066,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   cardEyeBtn: {
-    padding: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   body: { flex: 1, padding: 20 },
@@ -1196,7 +1214,6 @@ const styles = StyleSheet.create({
     borderBottomColor: "#cbd5e1",
     paddingBottom: 8,
   },
-
   confirmBtn: {
     backgroundColor: "#3b82f6",
     padding: 16,
@@ -1309,6 +1326,13 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     resizeMode: "contain",
+  },
+
+  //ultis
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
 });
 

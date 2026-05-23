@@ -307,37 +307,10 @@ const SavingScreen = () => {
         {/* Top bar: Avatar + năm + actions */}
         <View style={styles.headerTopBar}>
           <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              {profile?.avatar ? (
-                <Image
-                  source={{ uri: profile.avatar }}
-                  style={styles.avatarImage}
-                />
-              ) : (
-                <Text style={styles.avatarText}>
-                  {profile?.name ? profile.name.charAt(0).toUpperCase() : "U"}
-                </Text>
-              )}
-            </View>
-            <View style={styles.profileTextWrapper}>
-              <Text style={styles.greetingLabel}>Tiết kiệm,</Text>
-              <Text style={styles.profileName} numberOfLines={1}>
-                {profile?.name || "Người dùng"}
-              </Text>
-            </View>
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <TouchableOpacity
-              onPress={() => setShowAmount(!showAmount)}
-              style={styles.eyeBtn}
-            >
-              {showAmount ? (
-                <Eye color="#ffffff" size={20} />
-              ) : (
-                <EyeOff color="#ffffff" size={20} />
-              )}
-            </TouchableOpacity>
+           
             <TouchableOpacity
               onPress={() => navigation.navigate("SavingHistory")}
               style={styles.historyBtn}
@@ -448,16 +421,16 @@ const SavingScreen = () => {
                 {showAmount ? `${formatCurrency(savingBalance)} đ` : "••••••"}
               </Text>
             </View>
-            <View style={styles.cardStatDivider} />
-            <View style={styles.cardStat}>
-              <Text style={styles.cardStatLabel}>CHƯA PHÂN BỔ</Text>
-              <Text style={[
-                styles.cardStatValue,
-                { color: unallocated <= 0 ? "#fca5a5" : "#ffffff" },
-              ]}>
-                {showAmount ? `${formatCurrency(unallocated)} đ` : "••••••"}
-              </Text>
-            </View>
+             <TouchableOpacity
+              onPress={() => setShowAmount(!showAmount)}
+              style={styles.eyeBtn}
+            >
+              {showAmount ? (
+                <Eye color="#ffffff" size={15} />
+              ) : (
+                <EyeOff color="#ffffff" size={15} />
+              )}
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -680,7 +653,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-  profileSection: { flexDirection: "row", alignItems: "center" },
+  profileSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 10,
+  },
   avatarContainer: {
     width: 42,
     height: 42,
@@ -691,13 +669,13 @@ const styles = StyleSheet.create({
   },
   avatarImage: { width: 42, height: 42, borderRadius: 21 },
   avatarText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
-  profileTextWrapper: { marginLeft: 10 },
+  profileTextWrapper: { marginLeft: 10, flex: 1 },
   greetingLabel: { color: "rgba(255,255,255,0.8)", fontSize: 12 },
   profileName: { color: "#ffffff", fontSize: 15, fontWeight: "bold" },
   eyeBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",

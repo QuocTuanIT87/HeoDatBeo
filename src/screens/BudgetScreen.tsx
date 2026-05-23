@@ -25,12 +25,13 @@ import {
   Keyboard,
   ArrowRightLeft,
   RotateCcw,
+  HelpCircle,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { CategoryBudget, UserProfile } from "../types";
 import { formatCurrency } from "../utils/format";
 import Keypad from "../components/Keypad";
-import { useIsFocused } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 
 export const EXPENSE_ICONS: Record<string, any> = {
   badminton: require("../../assets/expense_icon/badminton.png"),
@@ -109,6 +110,45 @@ export const EXPENSE_ICONS: Record<string, any> = {
 // Màn hình BudgetScreen: Quản lý chia tiền vào các danh mục chi tiêu theo tháng
 const BudgetScreen = () => {
   const isFocused = useIsFocused();
+  const navigation = useNavigation<any>();
+
+  const handleShowTotalFundInfo = () => {
+    Alert.normal(
+      "TỔNG QUỸ TIÊU SÀI",
+      "Đây là tổng số tiền trong các danh mục bạn đã chia tiền\n",
+      [
+        {
+          text: "Hướng dẫn",
+          onPress: () => {
+            navigation.navigate("Guide");
+          },
+        },
+        {
+          text: "Đóng",
+          style: "cancel",
+        },
+      ]
+    );
+  };
+
+  const handleShowUnallocatedInfo = () => {
+    Alert.normal(
+      "SỐ DƯ CHƯA PHÂN BỔ",
+      "Số dư chưa phân bổ là số tiền bạn dùng để phân chia vào danh mục cần nạp tiền và các loại quỹ.",
+      [
+        {
+          text: "Hướng dẫn",
+          onPress: () => {
+            navigation.navigate("Guide");
+          },
+        },
+        {
+          text: "Đóng",
+          style: "cancel",
+        },
+      ]
+    );
+  };
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [budgets, setBudgets] = useState<CategoryBudget[]>([]);
@@ -456,7 +496,7 @@ const BudgetScreen = () => {
   };
 
   const totalBalance =
-    budgets.reduce((sum, c) => sum + c.budget, 0) + unallocated;
+    budgets.reduce((sum, c) => sum + c.budget, 0);
 
   const renderCategoryItem = (cat: CategoryBudget) => {
     const spent = cat.spent || 0;
@@ -553,37 +593,9 @@ const BudgetScreen = () => {
         {/* Top bar */}
         <View style={styles.headerTopBar}>
           <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              {profile?.avatar ? (
-                <Image
-                  source={{ uri: profile.avatar }}
-                  style={styles.avatarImage}
-                />
-              ) : (
-                <Text style={styles.avatarText}>
-                  {profile?.name ? profile.name.charAt(0).toUpperCase() : "U"}
-                </Text>
-              )}
-              <View style={styles.avatarStatus} />
-            </View>
-            <View style={styles.profileTextWrapper}>
-              <Text style={styles.greetingLabel}>Ngân sách chi tiêu,</Text>
-              <Text style={styles.profileName} numberOfLines={1}>
-                {profile?.name || "Người dùng"}
-              </Text>
-            </View>
           </View>
 
-          <TouchableOpacity
-            onPress={() => setShowAmount(!showAmount)}
-            style={styles.eyeBtn}
-          >
-            {showAmount ? (
-              <Eye color="#ffffff" size={20} />
-            ) : (
-              <EyeOff color="#ffffff" size={20} />
-            )}
-          </TouchableOpacity>
+         
         </View>
 
         {/* Bank Card */}
@@ -596,14 +608,44 @@ const BudgetScreen = () => {
             <View style={styles.cardChip} />
           </View>
 
-          <Text style={styles.cardBalanceLabel}>SỐ DƯ CHƯA PHÂN BỔ</Text>
-          <Text style={styles.cardBalanceAmount}>
+          <View style={styles.cardBalanceLabelContainer}>
+            <Text style={styles.cardBalanceLabel}>SỐ DƯ CHƯA PHÂN BỔ</Text>
+            <TouchableOpacity
+              onPress={handleShowUnallocatedInfo}
+              style={styles.helpIconTouch}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <HelpCircle color="#94a3b8" size={12} />
+            </TouchableOpacity>
+          </View>
+         <View style={styles.rowmb10}>
+           <Text style={styles.cardBalanceAmount}>
             {showAmount ? `${formatCurrency(unallocated)} đ` : "•••••• đ"}
           </Text>
+           <TouchableOpacity
+            onPress={() => setShowAmount(!showAmount)}
+            style={styles.eyeBtn}
+          >
+            {showAmount ? (
+              <Eye color="#ffffff" size={15} />
+            ) : (
+              <EyeOff color="#ffffff" size={15} />
+            )}
+          </TouchableOpacity>
+         </View>
 
           <View style={styles.cardStats}>
             <View style={styles.cardStat}>
-              <Text style={styles.cardStatLabel}>TỔNG QUỸ</Text>
+              <View style={styles.cardStatLabelContainer}>
+                <Text style={styles.cardStatLabel}>TỔNG QUỸ</Text>
+                <TouchableOpacity
+                  onPress={handleShowTotalFundInfo}
+                  style={styles.helpIconTouch}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <HelpCircle color="#94a3b8" size={12} />
+                </TouchableOpacity>
+              </View>
               <Text style={styles.cardStatValue}>
                 {showAmount ? `${formatCurrency(totalBalance)} đ` : "••••••"}
               </Text>
@@ -671,7 +713,7 @@ const BudgetScreen = () => {
         {activeTab === "direct" && (
           <View style={styles.tabNoteBox}>
             <Text style={styles.tabNoteText}>
-              💡 Giao dịch từ các danh mục này sẽ được trừ trực tiếp vào số tiền
+              💡 Giao dịch từ các danh mục này sẽ được trừ trực tiếp vào số dư
               chưa phân bổ của bạn.
             </Text>
           </View>
@@ -1072,6 +1114,8 @@ const styles = StyleSheet.create({
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
+    marginRight: 10,
   },
   avatarContainer: {
     width: 42,
@@ -1103,13 +1147,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#5596e0",
   },
-  profileTextWrapper: { marginLeft: 10 },
+  profileTextWrapper: { marginLeft: 10, flex: 1 },
   greetingLabel: { color: "#cccccc", fontSize: 12 },
   profileName: { color: "#ffffff", fontSize: 15, fontWeight: "bold" },
   eyeBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: "rgba(255,255,255,0.1)",
     justifyContent: "center",
     alignItems: "center",
@@ -1154,13 +1198,16 @@ const styles = StyleSheet.create({
     color: "#94a3b8",
     fontSize: 10,
     letterSpacing: 0.5,
+  },
+  cardBalanceLabelContainer: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 4,
   },
   cardBalanceAmount: {
     color: "#ffffff",
     fontSize: 28,
     fontWeight: "bold",
-    marginBottom: 18,
   },
   cardStats: {
     flexDirection: "row",
@@ -1176,13 +1223,23 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     marginHorizontal: 12,
   },
+  cardStatLabelContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
   cardStatLabel: {
     color: "#94a3b8",
     fontSize: 10,
     letterSpacing: 0.5,
-    marginBottom: 4,
   },
   cardStatValue: { color: "#ffffff", fontSize: 14, fontWeight: "bold" },
+  helpIconTouch: {
+    padding: 2,
+    marginLeft: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   // Legacy styles kept for references but no longer used in header
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   headerTitle: { fontSize: 16, color: "#fdf4ff", opacity: 0.9 },
@@ -1588,6 +1645,13 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     resizeMode: "contain",
+  },
+  // ultils
+  rowmb10: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
 });
 

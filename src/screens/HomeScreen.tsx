@@ -40,6 +40,7 @@ import {
   Copy,
   Flame,
   RotateCcw,
+  HelpCircle,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { Transaction, UserProfile, CategoryBudget } from "../types";
@@ -181,19 +182,57 @@ export const getIncomeIconSource = (
   return INCOME_ICONS["default"];
 };
 
+export const getGreeting = (): string => {
+  const hour = new Date().getHours();
+  if (hour >= 4 && hour < 6) return "Xin chào sáng sớm,";
+  if (hour >= 6 && hour < 11) return "Xin chào buổi sáng,";
+  if (hour >= 11 && hour < 14) return "Xin chào buổi trưa,";
+  if (hour >= 14 && hour < 18) return "Xin chào buổi chiều,";
+  if (hour >= 18 && hour < 22) return "Xin chào buổi tối,";
+  return "Xin chào đêm khuya,";
+};
+
 const HomeScreen = () => {
   const isFocused = useIsFocused();
   const navigation = useNavigation();
   const scrollRef = useRef<ScrollView>(null);
 
+  const handleShowTotalAssetInfo = () => {
+    Alert.normal(
+      "TỔNG TÀI SẢN",
+      "Đây là tổng số tiền bạn hiện có\n\nBao gồm tiền trong tất cả các Quỹ và số dư chưa phân bổ",
+      [
+        {
+          text: "Hướng dẫn",
+          onPress: () => {
+            navigation.navigate("Guide" as never);
+          },
+        },
+        {
+          text: "Đóng",
+          style: "cancel",
+        },
+      ]
+    );
+  };
+
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
   const pan = useRef(new Animated.ValueXY()).current;
+  const lastPosition = useRef({ x: 0, y: 0 });
+
+  const MASCOT_MIN_X = 10;
+  const MASCOT_MAX_X = SCREEN_WIDTH - 95 - 10;
+  const MASCOT_MIN_Y = 180;
+  const MASCOT_MAX_Y = SCREEN_HEIGHT - 95 - 100;
 
   useEffect(() => {
-    // Xuất hiện ngẫu nhiên trên màn hình
-    const randomX = Math.random() * (SCREEN_WIDTH - 100) + 10;
-    const randomY = Math.random() * (SCREEN_HEIGHT - 350) + 150;
+    // Xuất hiện ngẫu nhiên trên màn hình trong giới hạn cho phép
+    const safeMaxX = MASCOT_MAX_X > MASCOT_MIN_X ? MASCOT_MAX_X : MASCOT_MIN_X;
+    const safeMaxY = MASCOT_MAX_Y > MASCOT_MIN_Y ? MASCOT_MAX_Y : MASCOT_MIN_Y;
+    const randomX = Math.random() * (safeMaxX - MASCOT_MIN_X) + MASCOT_MIN_X;
+    const randomY = Math.random() * (safeMaxY - MASCOT_MIN_Y) + MASCOT_MIN_Y;
     pan.setValue({ x: randomX, y: randomY });
+    lastPosition.current = { x: randomX, y: randomY };
   }, []);
 
   const panResponder = useRef(
@@ -202,17 +241,39 @@ const HomeScreen = () => {
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: () => {
         pan.setOffset({
-          x: (pan.x as any)._value,
-          y: (pan.y as any)._value,
+          x: lastPosition.current.x,
+          y: lastPosition.current.y,
         });
         pan.setValue({ x: 0, y: 0 });
       },
-      onPanResponderMove: Animated.event(
-        [null, { dx: pan.x, dy: pan.y }],
-        { useNativeDriver: false }
-      ),
-      onPanResponderRelease: () => {
+      onPanResponderMove: (evt, gestureState) => {
+        const newX = lastPosition.current.x + gestureState.dx;
+        const newY = lastPosition.current.y + gestureState.dy;
+
+        const safeMaxX = MASCOT_MAX_X > MASCOT_MIN_X ? MASCOT_MAX_X : MASCOT_MIN_X;
+        const safeMaxY = MASCOT_MAX_Y > MASCOT_MIN_Y ? MASCOT_MAX_Y : MASCOT_MIN_Y;
+
+        const clampedX = Math.min(Math.max(newX, MASCOT_MIN_X), safeMaxX);
+        const clampedY = Math.min(Math.max(newY, MASCOT_MIN_Y), safeMaxY);
+
+        pan.setValue({
+          x: clampedX - lastPosition.current.x,
+          y: clampedY - lastPosition.current.y,
+        });
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        const newX = lastPosition.current.x + gestureState.dx;
+        const newY = lastPosition.current.y + gestureState.dy;
+
+        const safeMaxX = MASCOT_MAX_X > MASCOT_MIN_X ? MASCOT_MAX_X : MASCOT_MIN_X;
+        const safeMaxY = MASCOT_MAX_Y > MASCOT_MIN_Y ? MASCOT_MAX_Y : MASCOT_MIN_Y;
+
+        const clampedX = Math.min(Math.max(newX, MASCOT_MIN_X), safeMaxX);
+        const clampedY = Math.min(Math.max(newY, MASCOT_MIN_Y), safeMaxY);
+
+        lastPosition.current = { x: clampedX, y: clampedY };
         pan.flattenOffset();
+        pan.setValue({ x: clampedX, y: clampedY });
       },
     })
   ).current;
@@ -300,7 +361,27 @@ const HomeScreen = () => {
     if (p) {
       const totalAllocated = cats.reduce((sum, c) => sum + c.budget, 0);
       const unallocated = Math.max(0, p.initialBalance - totalAllocated);
-      setTotalBalance(totalAllocated + unallocated);
+
+      // Calculate savings balance (Quỹ Tiết Kiệm)
+      let calcSaving = 0;
+      const txs = await storage.getTransactions();
+      txs.forEach((t) => {
+        if (t.category === "Tiết kiệm" || t.category === "Rút tiết kiệm") {
+          if (t.type === "expense" && t.category === "Tiết kiệm") {
+            calcSaving += t.amount;
+          } else if (t.type === "income" && t.category === "Rút tiết kiệm") {
+            calcSaving -= t.amount;
+          }
+        }
+      });
+
+      // Calculate custom funds total (Quỹ Khác)
+      let customFundsTotal = 0;
+      if (p.customFunds) {
+        customFundsTotal = p.customFunds.reduce((sum, f) => sum + f.balance, 0);
+      }
+
+      setTotalBalance(totalAllocated + unallocated + calcSaving + customFundsTotal);
     }
 
     try {
@@ -584,7 +665,7 @@ const HomeScreen = () => {
               <View style={styles.avatarStatus} />
             </View>
             <View style={styles.profileTextWrapper}>
-              <Text style={styles.greetingLabel}>Xin chào,</Text>
+              <Text style={styles.greetingLabel}>{getGreeting()}</Text>
               <Text style={styles.profileName} numberOfLines={1}>
                 {profile?.name || "Người dùng"}
               </Text>
@@ -668,7 +749,16 @@ const HomeScreen = () => {
 
           <View style={styles.cardBottom}>
             <View>
-              <Text style={styles.cardBalanceLabel}>SỐ DƯ KHẢ DỤNG</Text>
+              <View style={styles.cardBalanceLabelContainer}>
+                <Text style={styles.cardBalanceLabel}>TỔNG TÀI SẢN</Text>
+                <TouchableOpacity
+                  onPress={handleShowTotalAssetInfo}
+                  style={styles.helpIconTouch}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <HelpCircle color="#94a3b8" size={12} />
+                </TouchableOpacity>
+              </View>
               <Text style={styles.cardBalanceAmount}>
                 {showBudgets ? `${formatCurrency(totalBalance)} đ` : "•••••• đ"}
               </Text>
@@ -1337,8 +1427,8 @@ const HomeScreen = () => {
             pan.getLayout(),
             {
               position: "absolute",
-              width: 80,
-              height: 80,
+              width: 95,
+              height: 95,
               zIndex: 9999,
               alignItems: "center",
               justifyContent: "center",
@@ -1359,8 +1449,8 @@ const HomeScreen = () => {
           <View
             style={{
               position: "absolute",
-              top: -50,
-              left: 10,
+              top: -45,
+              left: 27.5,
               width: 40,
               height: 40,
               borderRadius: 20,
@@ -1413,6 +1503,8 @@ const styles = StyleSheet.create({
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
+    marginRight: 10,
   },
   avatarContainer: {
     width: 42,
@@ -1446,6 +1538,7 @@ const styles = StyleSheet.create({
   },
   profileTextWrapper: {
     marginLeft: 10,
+    flex: 1,
   },
   greetingLabel: {
     color: "#cccccc",
@@ -1548,11 +1641,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.5,
   },
+  cardBalanceLabelContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   cardBalanceAmount: {
     color: "#ffffff",
     fontSize: 24,
     fontWeight: "bold",
     marginTop: 2,
+  },
+  helpIconTouch: {
+    padding: 2,
+    marginLeft: 4,
+    justifyContent: "center",
+    alignItems: "center",
   },
   cardEyeBtn: {
     padding: 8,
@@ -2110,6 +2213,7 @@ const styles = StyleSheet.create({
     gap: 4,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.3)",
+    marginRight: 12
   },
   streakHeaderTxt: {
     color: "#ffffff",

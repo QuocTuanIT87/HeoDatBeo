@@ -27,6 +27,7 @@ import {
   uploadBackupToGoogleDrive,
   getAccessToken,
   restoreLatestBackupFromGoogleDrive,
+  checkLatestBackupOnGoogleDrive,
 } from "../utils/googleDrive";
 import {
   CommonActions,
@@ -103,14 +104,16 @@ export const getIncomeIconSource = (
 };
 
 const VERSION_HISTORY = [
-  { version: "21.05.2026", description: "Sửa giao diện profile, mã hóa dữ liệu, thêm linh vật" },
-  { version: "20.05.2026", description: "Thêm linh vật giữ chuỗi, backup dữ liệu tự động, thông báo thu chi theo ngày, tháng, năm" },
-  { version: "14.05.2026", description: "Thêm icon sinh động cho danh mục, Quỹ" },
-  { version: "10.05.2026", description: "Thêm Quỹ lưu trữ" },
-  { version: "01.05.2026", description: "Sửa lỗi logic xóa giao dịch" },
-  { version: "21.04.2026", description: "Sửa, xóa giao dịch trong vòng 3 ngày" },
-  { version: "15.04.2026", description: "Chia 2 loại danh mục (Cần nạp tiền và chi trực tiếp)" },
-  { version: "15.03.2026", description: "Ra mắt ứng dụng lúc 23:36" },
+  { version: "23.05.2026", description: "Sửa phần hiển thị tên ở các trang khác\nSửa hiển thị báo cáo tài chính\nSửa trang hướng dẫn sinh động hơn\nThu nhỏ icon ẩn tiền\nHiển thị lọc theo điều kiện nào ở biểu đồ tròn", order: 10 },
+  { version: "22.05.2026", description: "Cập nhật sao lưu dữ liệu ở trang bắt đầu\nThay đổi cơ chế linh vật\nBổ sung hướng dẫn chi tiết\nLời chào trang chủ chi tiết hơn\nSửa lỗi hiển thị tên người dùng\nTối ưu giao diện hiển thị tiền\nSửa lỗi sao lưu dữ liệu\nSửa lỗi hiển thị bản sao lưu mới nhất", order: 9 },
+  { version: "21.05.2026", description: "Sửa giao diện profile\nMã hóa dữ liệu\nThêm linh vật", order: 8 },
+  { version: "20.05.2026", description: "Thêm linh vật giữ chuỗi\nBackup dữ liệu tự động\nThông báo thu chi theo ngày, tháng, năm", order: 7 },
+  { version: "14.05.2026", description: "Thêm icon sinh động cho danh mục, Quỹ", order: 6 },
+  { version: "10.05.2026", description: "Thêm Quỹ lưu trữ", order: 5 },
+  { version: "01.05.2026", description: "Sửa lỗi logic xóa giao dịch", order: 4 },
+  { version: "21.04.2026", description: "Sửa, xóa giao dịch trong vòng 3 ngày", order: 3 },
+  { version: "15.04.2026", description: "Chia 2 loại danh mục chi tiền\n1. Cần nạp tiền\n2. Chi trực tiếp", order: 2 },
+  { version: "15.03.2026", description: "Ra mắt ứng dụng lúc 23:36", order: 1 },
 ];
 
 const SettingsScreen = () => {
@@ -194,8 +197,26 @@ const SettingsScreen = () => {
         const userInfoAny = res.userInfo as any;
         setIsGoogleSignedIn(true);
         setGoogleUserEmail(userInfoAny.user.email);
+        
+        let lastTimestamp = await storage.getGoogleDriveLastBackupTimestamp();
+        let lastStatus = await storage.getGoogleDriveLastBackupStatus();
+
+        if (lastTimestamp === 0) {
+          const driveBackup = await checkLatestBackupOnGoogleDrive();
+          if (driveBackup && driveBackup.success && driveBackup.timestamp) {
+            lastTimestamp = driveBackup.timestamp;
+            lastStatus = 'success';
+            await storage.setGoogleDriveLastBackupTimestamp(lastTimestamp);
+            await storage.setGoogleDriveLastBackupStatus(lastStatus);
+          }
+        }
+
+        const autoEnabled = await storage.isGoogleDriveAutoBackupEnabled();
+        setIsAutoBackupEnabled(autoEnabled);
+        setLastBackupTimestamp(lastTimestamp);
+        setLastBackupStatus(lastStatus);
+
         Alert.alert("Thành công", `Đã liên kết tài khoản Google: ${userInfoAny.user.email}`);
-        await loadBackupSettings();
       } else {
         Alert.alert("Lỗi đăng nhập", res.error || "Không thể đăng nhập Google.");
       }
@@ -290,6 +311,11 @@ const SettingsScreen = () => {
               if (res.success && res.content) {
                 const success = await storage.importData(res.content);
                 if (success) {
+                  const backupTime = res.timestamp || Date.now();
+                  await storage.setGoogleDriveLastBackupTimestamp(backupTime);
+                  await storage.setGoogleDriveLastBackupStatus("success");
+                  setLastBackupTimestamp(backupTime);
+                  setLastBackupStatus("success");
                   Alert.alert(
                     "Thành công",
                     "Dữ liệu đã được phục hồi từ Google Drive. Vui lòng mở lại ứng dụng hoặc chuyển tab để làm mới."
@@ -404,6 +430,11 @@ const SettingsScreen = () => {
           text: "Xóa",
           style: "destructive",
           onPress: async () => {
+            try {
+              await signOutGoogle();
+            } catch (e) {
+              console.error("Error signing out Google during factory reset:", e);
+            }
             const success = await storage.clearUserResetData();
             if (success) {
               navigation.dispatch(
@@ -715,7 +746,7 @@ const SettingsScreen = () => {
       {/* Footer cố định phía dưới */}
       <View style={styles.footerInfo}>
         <View style={styles.versionRow}>
-          <Text style={styles.versionText}>Phiên bản hiện tại : 21.5.2026</Text>
+          <Text style={styles.versionText}>Phiên bản hiện tại : 22.05.2026</Text>
           <Text style={styles.versionSeparator}>|</Text>
           <TouchableOpacity onPress={() => setHistoryModalVisible(true)}>
             <Text style={styles.versionHistoryBtn}>Lịch sử phiên bản ({VERSION_HISTORY.length})</Text>
@@ -753,8 +784,11 @@ const SettingsScreen = () => {
                       {idx < VERSION_HISTORY.length - 1 && <View style={styles.historyLine} />}
                     </View>
                     <View style={styles.historyContent}>
-                      <Text style={styles.historyVersion}>{item.version}</Text>
-                      <Text style={styles.historyDesc}>Mô tả: {item.description}</Text>
+                      <Text style={styles.historyVersion}>Mã phiên bản {item.order}: {item.version}</Text>
+                      <View>
+                        <Text style={styles.historyDesc}>Tính năng mới: </Text>
+                        <Text>{item.description}</Text>
+                      </View>
                     </View>
                   </View>
                 ))}
@@ -898,7 +932,7 @@ const SettingsScreen = () => {
               <View style={[styles.driveActionBox, { marginTop: 16 }, !isGoogleSignedIn && { opacity: 0.5 }]}>
                 <Text style={styles.driveSectionTitle}>Khôi phục dữ liệu</Text>
                 <Text style={styles.driveSectionDesc}>
-                  Tải xuống và khôi phục bản sao lưu mới nhất từ Google Drive của bạn.
+                  Khôi phục bản sao lưu mới nhất từ Google Drive của bạn.
                 </Text>
                 <TouchableOpacity
                   style={[styles.driveRestoreBtn, !isGoogleSignedIn && styles.driveBtnDisabled]}
@@ -1395,6 +1429,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#475569",
     lineHeight: 18,
+    fontStyle: "italic",
+    marginBottom: 8
   },
   // Setting styles
   settingSectionTitle: {

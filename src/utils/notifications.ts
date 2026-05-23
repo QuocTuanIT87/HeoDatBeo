@@ -28,7 +28,7 @@ export async function registerForPushNotificationsAsync() {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }
-  
+
   return finalStatus === "granted";
 }
 
@@ -67,7 +67,7 @@ export function generateDailyReport(
 
   // Lọc giao dịch của ngày cần báo cáo
   const targetTxs = transactions.filter(tx => tx.timestamp >= targetStart && tx.timestamp <= targetEnd);
-  
+
   // Lọc giao dịch của ngày trước đó để so sánh
   const prevTxs = transactions.filter(tx => tx.timestamp >= prevStart && tx.timestamp <= prevEnd);
 
@@ -104,8 +104,8 @@ export function generateDailyReport(
   });
 
   const dateStr = formatDateString(targetDate);
-  let body = `Hôm qua (ngày ${dateStr}) bạn đã chi tiêu:\n`;
-  
+  let body = `Ngày ${dateStr} bạn đã chi tiêu:\n`;
+
   if (totalExpense === 0) {
     body += "Không có chi tiêu\n";
   } else {
@@ -155,7 +155,7 @@ export function generateMonthlyReport(
 ): { title: string; body: string } {
   const yyyy = targetMonthDate.getFullYear();
   const monthIdx = targetMonthDate.getMonth(); // 0-11
-  
+
   const targetStart = new Date(yyyy, monthIdx, 1, 0, 0, 0, 0).getTime();
   const targetEnd = new Date(yyyy, monthIdx + 1, 1, 0, 0, 0, 0).getTime() - 1;
 
@@ -165,7 +165,7 @@ export function generateMonthlyReport(
 
   // Lọc giao dịch của tháng cần báo cáo
   const targetTxs = transactions.filter(tx => tx.timestamp >= targetStart && tx.timestamp <= targetEnd);
-  
+
   // Lọc giao dịch của tháng trước đó để so sánh
   const prevTxs = transactions.filter(tx => tx.timestamp >= prevStart && tx.timestamp <= prevEnd);
 
@@ -202,7 +202,7 @@ export function generateMonthlyReport(
 
   const monthStr = `${String(monthIdx + 1).padStart(2, "0")}/${yyyy}`;
   let body = `Trong tháng ${monthStr} bạn đã chi tiêu:\n`;
-  
+
   if (totalExpense === 0) {
     body += "Không có chi tiêu\n";
   } else {
@@ -223,19 +223,19 @@ export function generateMonthlyReport(
   body += `\n------------------\n`;
   body += `Tổng chi: 🔴 -${formatCurrency(totalExpense)}\nTổng thu: 🟢 +${formatCurrency(totalIncome)}\n`;
   body += `------------------\n`;
-
+  const prevMonthStr = `${String(prevMonthDate.getMonth() + 1).padStart(2, "0")}/${prevMonthDate.getFullYear()}`;
   if (hasPrevData) {
     const diff = totalExpense - prevTotalExpense;
     if (diff > 0) {
-      body += `So với tháng trước: Chi tiêu NHIỀU HƠN ${formatCurrency(diff)}`;
+      body += `So với tháng ${prevMonthStr}: Chi tiêu NHIỀU HƠN ${formatCurrency(diff)}`;
     } else if (diff < 0) {
-      body += `So với tháng trước: Chi tiêu ÍT HƠN ${formatCurrency(Math.abs(diff))}`;
+      body += `So với tháng ${prevMonthStr}: Chi tiêu ÍT HƠN ${formatCurrency(Math.abs(diff))}`;
     } else {
-      body += `So với tháng trước: Chi tiêu BẰNG NHAU`;
+      body += `So với tháng ${prevMonthStr}: Chi tiêu BẰNG NHAU`;
     }
   } else {
-    const prevMonthStr = `${String(prevMonthDate.getMonth() + 1).padStart(2, "0")}/${prevMonthDate.getFullYear()}`;
-    body += `So với tháng trước: tháng ${prevMonthStr} không có giao dịch`;
+    // const prevMonthStr = `${String(prevMonthDate.getMonth() + 1).padStart(2, "0")}/${prevMonthDate.getFullYear()}`;
+    body += `So với tháng ${prevMonthStr}: không có giao dịch`;
   }
 
   const title = `Báo cáo tài chính tháng ${monthStr} 📊`;
@@ -259,7 +259,7 @@ export function generateYearlyReport(
 
   // Lọc giao dịch của năm cần báo cáo
   const targetTxs = transactions.filter(tx => tx.timestamp >= targetStart && tx.timestamp <= targetEnd);
-  
+
   // Lọc giao dịch của năm trước đó để so sánh
   const prevTxs = transactions.filter(tx => tx.timestamp >= prevStart && tx.timestamp <= prevEnd);
 
@@ -296,7 +296,7 @@ export function generateYearlyReport(
 
   const yearStr = `${targetYear}`;
   let body = `Trong năm ${yearStr} bạn đã chi tiêu:\n`;
-  
+
   if (totalExpense === 0) {
     body += "Không có chi tiêu\n";
   } else {
@@ -321,14 +321,14 @@ export function generateYearlyReport(
   if (hasPrevData) {
     const diff = totalExpense - prevTotalExpense;
     if (diff > 0) {
-      body += `So với năm trước: Chi tiêu NHIỀU HƠN ${formatCurrency(diff)}`;
+      body += `So với năm ${prevYear}: Chi tiêu NHIỀU HƠN ${formatCurrency(diff)}`;
     } else if (diff < 0) {
-      body += `So với năm trước: Chi tiêu ÍT HƠN ${formatCurrency(Math.abs(diff))}`;
+      body += `So với năm ${prevYear}: Chi tiêu ÍT HƠN ${formatCurrency(Math.abs(diff))}`;
     } else {
-      body += `So với năm trước: Chi tiêu BẰNG NHAU`;
+      body += `So với năm ${prevYear}: Chi tiêu BẰNG NHAU`;
     }
   } else {
-    body += `So với năm trước: năm ${prevYear} không có giao dịch`;
+    body += `So với năm ${prevYear} không có giao dịch`;
   }
 
   const title = `Báo cáo tài chính năm ${yearStr} 📊`;
@@ -357,7 +357,7 @@ export async function syncNotificationHistory(transactions: Transaction[]) {
     const dateStr = formatDateString(d);
     const { title, body } = generateDailyReport(transactions, d);
     const triggerTime = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 2, 0, 0, 0).getTime();
-    
+
     newHistory.push({
       id: `history-day-${dateStr.replace(/\//g, "-")}`,
       dateStr,
@@ -432,12 +432,12 @@ export async function scheduleDailyReminder() {
 
   // Đồng bộ lịch sử báo cáo ngày hôm qua vào bộ nhớ
   await syncNotificationHistory(transactions);
-  
+
   // Xác định khoảng thời gian của ngày hôm nay
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-  
+
   const hasExpenseToday = transactions.some((tx) => {
     return (
       tx.type === "expense" &&
@@ -498,7 +498,7 @@ export async function scheduleDailyReminder() {
   for (let i = 1; i <= 7; i++) {
     // Thời điểm kích hoạt lúc 2:00 AM ngày thứ i trong tương lai
     const triggerDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, 2, 0, 0, 0);
-    
+
     // Ngày được thống kê (ngày hôm trước của triggerDate)
     const reportDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i - 1, 0, 0, 0, 0);
 

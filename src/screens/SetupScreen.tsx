@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,17 +8,56 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Modal,
+  ActivityIndicator,
 } from "react-native";
+import { X } from "lucide-react-native";
 import { Alert } from "../components/CustomAlert";
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import { storage } from "../store/storage";
 import * as DocumentPicker from "expo-document-picker";
 import { readAsStringAsync } from "expo-file-system/legacy";
+import {
+  initGoogleDrive,
+  signInGoogle,
+  restoreLatestBackupFromGoogleDrive,
+  signOutGoogle,
+  getAccessToken,
+} from "../utils/googleDrive";
 
 const SetupScreen = () => {
   const [name, setName] = useState("");
   const [balanceStr, setBalanceStr] = useState("");
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [showRestoreOptions, setShowRestoreOptions] = useState(false);
+  const [isGoogleSignedIn, setIsGoogleSignedIn] = useState(false);
+  const [googleUserEmail, setGoogleUserEmail] = useState<string | null>(null);
   const navigation = useNavigation();
+
+  const checkGoogleSignInStatus = async () => {
+    try {
+      const token = await getAccessToken();
+      if (token) {
+        setIsGoogleSignedIn(true);
+        const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+        const currentUser = await GoogleSignin.getCurrentUser();
+        if (currentUser && currentUser.user) {
+          setGoogleUserEmail(currentUser.user.email);
+        }
+      } else {
+        setIsGoogleSignedIn(false);
+        setGoogleUserEmail(null);
+      }
+    } catch (e) {
+      setIsGoogleSignedIn(false);
+      setGoogleUserEmail(null);
+    }
+  };
+
+  useEffect(() => {
+    initGoogleDrive();
+    checkGoogleSignInStatus();
+  }, []);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -71,6 +110,8 @@ const SetupScreen = () => {
   };
 
   const handleImport = async () => {
+    if (isRestoring) return;
+    setIsRestoring(true);
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: "text/plain",
@@ -96,11 +137,80 @@ const SetupScreen = () => {
             "Lỗi",
             "Dữ liệu không hợp lệ hoặc đã xảy ra lỗi trong quá trình phục hồi.",
           );
+          setIsRestoring(false);
         }
+      } else {
+        setIsRestoring(false);
       }
     } catch (e) {
       console.error(e);
       Alert.alert("Lỗi", "Không thể nhập dữ liệu.");
+      setIsRestoring(false);
+    }
+  };
+
+  const handleRestoreFromGoogleDrive = async () => {
+    if (isRestoring) return;
+    setIsRestoring(true);
+    try {
+      let signedIn = isGoogleSignedIn;
+      if (!signedIn) {
+        const signInRes = await signInGoogle();
+        if (signInRes.success && signInRes.userInfo) {
+          const userInfoAny = signInRes.userInfo as any;
+          setIsGoogleSignedIn(true);
+          setGoogleUserEmail(userInfoAny.user.email);
+          signedIn = true;
+        } else {
+          Alert.alert("Lỗi đăng nhập", signInRes.error || "Không thể đăng nhập Google.");
+          setIsRestoring(false);
+          return;
+        }
+      }
+
+      const res = await restoreLatestBackupFromGoogleDrive();
+      if (res.success && res.content) {
+        const success = await storage.importData(res.content);
+        if (success) {
+          Alert.alert("Thành công", "Dữ liệu đã được phục hồi từ Google Drive.");
+          await storage.setGoogleDriveAutoBackupEnabled(true);
+          const backupTime = res.timestamp || Date.now();
+          await storage.setGoogleDriveLastBackupTimestamp(backupTime);
+          await storage.setGoogleDriveLastBackupStatus("success");
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: "MainApp" }],
+            }),
+          );
+        } else {
+          Alert.alert(
+            "Lỗi phục hồi",
+            "Dữ liệu không hợp lệ hoặc đã xảy ra lỗi trong quá trình phục hồi."
+          );
+        }
+      } else {
+        Alert.alert("Lỗi khôi phục", res.message);
+      }
+    } catch (e: any) {
+      Alert.alert("Lỗi", e.message || String(e));
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
+  const handleGoogleLogout = async () => {
+    try {
+      const res = await signOutGoogle();
+      if (res.success) {
+        setIsGoogleSignedIn(false);
+        setGoogleUserEmail(null);
+        Alert.alert("Thành công", "Đã hủy liên kết tài khoản Google.");
+      } else {
+        Alert.alert("Lỗi", "Không thể đăng xuất.");
+      }
+    } catch (e: any) {
+      Alert.alert("Lỗi", e.message || String(e));
     }
   };
 
@@ -151,14 +261,73 @@ const SetupScreen = () => {
           <View style={styles.importContainer}>
             <Text style={styles.importText}>Đã có dữ liệu sẵn?</Text>
             <TouchableOpacity
-              style={styles.importButton}
-              onPress={handleImport}
+              style={[styles.importButton, isRestoring && { flexDirection: "row", gap: 8 }]}
+              onPress={() => setShowRestoreOptions(true)}
+              disabled={isRestoring}
             >
-              <Text style={styles.importButtonText}>Chọn file backup</Text>
+              {isRestoring && <ActivityIndicator size="small" color="#0fb5b1" />}
+              <Text style={styles.importButtonText}>
+                {isRestoring ? "Đang khôi phục..." : "Khôi phục dữ liệu"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
+
+      <Modal
+        visible={showRestoreOptions}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowRestoreOptions(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Khôi phục dữ liệu</Text>
+              <TouchableOpacity onPress={() => setShowRestoreOptions(false)}>
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalOptionButton}
+              onPress={async () => {
+                setShowRestoreOptions(false);
+                await handleImport();
+              }}
+              disabled={isRestoring}
+            >
+              <Text style={styles.modalOptionButtonText}>Khôi phục dữ liệu - Ngoại tuyến</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalOptionButton, { marginTop: 16, backgroundColor: "#0fb5b1" }]}
+              onPress={async () => {
+                setShowRestoreOptions(false);
+                await handleRestoreFromGoogleDrive();
+              }}
+              disabled={isRestoring}
+            >
+              <Text style={[styles.modalOptionButtonText, { color: "#ffffff" }]}>
+                {isRestoring ? "Đang khôi phục..." : "Khôi phục dữ liệu - Trực tuyến"}
+              </Text>
+            </TouchableOpacity>
+
+            {isGoogleSignedIn && googleUserEmail && (
+              <View style={styles.linkedAccountContainer}>
+                <Text style={styles.linkedAccountLabel}>Tài khoản đã liên kết:</Text>
+                <Text style={styles.linkedAccountEmail}>{googleUserEmail}</Text>
+                <TouchableOpacity
+                  style={styles.unlinkButton}
+                  onPress={handleGoogleLogout}
+                >
+                  <Text style={styles.unlinkButtonText}>Hủy liên kết</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -235,10 +404,79 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#0fb5b1",
     backgroundColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
   },
   importButtonText: {
     color: "#0fb5b1",
     fontSize: 16,
+    fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#0f172a",
+  },
+  modalOptionButton: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#0fb5b1",
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+  modalOptionButtonText: {
+    color: "#0fb5b1",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  linkedAccountContainer: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  linkedAccountLabel: {
+    fontSize: 12,
+    color: "#64748b",
+    marginBottom: 4,
+  },
+  linkedAccountEmail: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0f172a",
+    marginBottom: 12,
+  },
+  unlinkButton: {
+    alignSelf: "flex-start",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: "#fee2e2",
+  },
+  unlinkButtonText: {
+    color: "#ef4444",
+    fontSize: 14,
     fontWeight: "600",
   },
 });

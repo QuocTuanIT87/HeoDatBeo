@@ -9,6 +9,7 @@ export interface Transaction {
   timestamp: number;
 }
 
+// Có thể xóa estimatedEndDate và estimatedEndDateSetAt
 export interface CategoryBudget {
   name: string;      // Tên danh mục chi
   budget: number;    // Số tiền còn lại trong "túi" danh mục
