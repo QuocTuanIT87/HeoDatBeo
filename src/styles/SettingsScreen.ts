@@ -19,7 +19,7 @@ export const styles = StyleSheet.create({
     },
     body: {
         padding: 24,
-        gap: 16,
+        gap: 8,
     },
     card: {
         backgroundColor: "#ffffff",

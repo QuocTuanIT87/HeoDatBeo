@@ -144,7 +144,7 @@ const getOrCreateBackupFolder = async (accessToken: string): Promise<string | nu
 };
 
 /**
- * Thực hiện sao lưu dữ liệu hiện tại lên Google Drive và dọn dẹp dữ liệu cũ (chỉ giữ 7 ngày mới nhất)
+ * Thực hiện sao lưu dữ liệu hiện tại lên Google Drive và dọn dẹp dữ liệu cũ (chỉ giữ lại 3 bản sao lưu mới nhất khi đạt tối đa 20 bản)
  * @param dataStr Dữ liệu backup dạng JSON chuỗi
  */
 export const uploadBackupToGoogleDrive = async (dataStr: string): Promise<GoogleDriveBackupInfo> => {
@@ -201,7 +201,7 @@ export const uploadBackupToGoogleDrive = async (dataStr: string): Promise<Google
       throw new Error(`Upload thất bại: ${errorText}`);
     }
 
-    // 4. Dọn dẹp dữ liệu cũ: Quét các file trong thư mục, chỉ giữ tối đa 20 file gần nhất
+    // 4. Dọn dẹp dữ liệu cũ: Nếu số lượng file sao lưu đạt tối đa 20, xóa 17 bản cũ nhất, chỉ giữ lại 3 bản mới nhất
     const listFilesUrl = `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and mimeType='text/plain' and name contains 'heodatbeo_' and trashed=false&orderBy=name desc&pageSize=100`;
     const listResponse = await fetch(listFilesUrl, {
       method: 'GET',
@@ -209,8 +209,8 @@ export const uploadBackupToGoogleDrive = async (dataStr: string): Promise<Google
     });
 
     const listData = await listResponse.json();
-    if (listData.files && listData.files.length > 20) {
-      const filesToDelete = listData.files.slice(20); // Giữ lại 20 file mới nhất, xóa các file cũ hơn
+    if (listData.files && listData.files.length >= 20) {
+      const filesToDelete = listData.files.slice(3); // Giữ lại 3 bản sao lưu mới nhất, xóa các bản sao lưu cũ hơn
       for (const file of filesToDelete) {
         try {
           await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}`, {
