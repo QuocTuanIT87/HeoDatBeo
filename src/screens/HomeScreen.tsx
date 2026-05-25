@@ -40,6 +40,7 @@ import {
   Copy,
   Flame,
   RotateCcw,
+  HelpCircle,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { Transaction, UserProfile, CategoryBudget } from "../types";
@@ -56,6 +57,7 @@ import {
   getStreakLevelInfo,
 } from "../utils/streak";
 import { getMascotImage, MASCOT_LIST } from "../utils/mascot";
+import { styles } from "../styles/HomeScreen";
 
 const HIDE_BALANCE_KEY = "@hideBalance";
 
@@ -91,7 +93,7 @@ export const EXPENSE_ICONS: Record<string, any> = {
   http: require("../../assets/expense_icon/http.png"),
   "ice-cream": require("../../assets/expense_icon/ice-cream.png"),
   "interior-design": require("../../assets/expense_icon/interior-design.png"),
-  "interior-design_1": require("../../assets/expense_icon/interior-design_1.png"),
+  "maintenance": require("../../assets/expense_icon/maintenance.png"),
   internet: require("../../assets/expense_icon/internet.png"),
   internet_2: require("../../assets/expense_icon/internet_2.png"),
   invoice: require("../../assets/expense_icon/invoice.png"),
@@ -181,19 +183,57 @@ export const getIncomeIconSource = (
   return INCOME_ICONS["default"];
 };
 
+export const getGreeting = (): string => {
+  const hour = new Date().getHours();
+  if (hour >= 4 && hour < 6) return "Xin chào sáng sớm,";
+  if (hour >= 6 && hour < 11) return "Xin chào buổi sáng,";
+  if (hour >= 11 && hour < 14) return "Xin chào buổi trưa,";
+  if (hour >= 14 && hour < 18) return "Xin chào buổi chiều,";
+  if (hour >= 18 && hour < 22) return "Xin chào buổi tối,";
+  return "Xin chào đêm khuya,";
+};
+
 const HomeScreen = () => {
   const isFocused = useIsFocused();
   const navigation = useNavigation();
   const scrollRef = useRef<ScrollView>(null);
 
+  const handleShowTotalAssetInfo = () => {
+    Alert.normal(
+      "TỔNG TÀI SẢN",
+      "Đây là tổng số tiền bạn hiện có\n\nBao gồm tiền trong tất cả các Quỹ và số dư chưa phân bổ",
+      [
+        {
+          text: "Hướng dẫn",
+          onPress: () => {
+            navigation.navigate("Guide" as never);
+          },
+        },
+        {
+          text: "Đóng",
+          style: "cancel",
+        },
+      ]
+    );
+  };
+
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
   const pan = useRef(new Animated.ValueXY()).current;
+  const lastPosition = useRef({ x: 0, y: 0 });
+
+  const MASCOT_MIN_X = 10;
+  const MASCOT_MAX_X = SCREEN_WIDTH - 95 - 10;
+  const MASCOT_MIN_Y = 180;
+  const MASCOT_MAX_Y = SCREEN_HEIGHT - 95 - 100;
 
   useEffect(() => {
-    // Xuất hiện ngẫu nhiên trên màn hình
-    const randomX = Math.random() * (SCREEN_WIDTH - 100) + 10;
-    const randomY = Math.random() * (SCREEN_HEIGHT - 350) + 150;
+    // Xuất hiện ngẫu nhiên trên màn hình trong giới hạn cho phép
+    const safeMaxX = MASCOT_MAX_X > MASCOT_MIN_X ? MASCOT_MAX_X : MASCOT_MIN_X;
+    const safeMaxY = MASCOT_MAX_Y > MASCOT_MIN_Y ? MASCOT_MAX_Y : MASCOT_MIN_Y;
+    const randomX = Math.random() * (safeMaxX - MASCOT_MIN_X) + MASCOT_MIN_X;
+    const randomY = Math.random() * (safeMaxY - MASCOT_MIN_Y) + MASCOT_MIN_Y;
     pan.setValue({ x: randomX, y: randomY });
+    lastPosition.current = { x: randomX, y: randomY };
   }, []);
 
   const panResponder = useRef(
@@ -202,17 +242,39 @@ const HomeScreen = () => {
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: () => {
         pan.setOffset({
-          x: (pan.x as any)._value,
-          y: (pan.y as any)._value,
+          x: lastPosition.current.x,
+          y: lastPosition.current.y,
         });
         pan.setValue({ x: 0, y: 0 });
       },
-      onPanResponderMove: Animated.event(
-        [null, { dx: pan.x, dy: pan.y }],
-        { useNativeDriver: false }
-      ),
-      onPanResponderRelease: () => {
+      onPanResponderMove: (evt, gestureState) => {
+        const newX = lastPosition.current.x + gestureState.dx;
+        const newY = lastPosition.current.y + gestureState.dy;
+
+        const safeMaxX = MASCOT_MAX_X > MASCOT_MIN_X ? MASCOT_MAX_X : MASCOT_MIN_X;
+        const safeMaxY = MASCOT_MAX_Y > MASCOT_MIN_Y ? MASCOT_MAX_Y : MASCOT_MIN_Y;
+
+        const clampedX = Math.min(Math.max(newX, MASCOT_MIN_X), safeMaxX);
+        const clampedY = Math.min(Math.max(newY, MASCOT_MIN_Y), safeMaxY);
+
+        pan.setValue({
+          x: clampedX - lastPosition.current.x,
+          y: clampedY - lastPosition.current.y,
+        });
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        const newX = lastPosition.current.x + gestureState.dx;
+        const newY = lastPosition.current.y + gestureState.dy;
+
+        const safeMaxX = MASCOT_MAX_X > MASCOT_MIN_X ? MASCOT_MAX_X : MASCOT_MIN_X;
+        const safeMaxY = MASCOT_MAX_Y > MASCOT_MIN_Y ? MASCOT_MAX_Y : MASCOT_MIN_Y;
+
+        const clampedX = Math.min(Math.max(newX, MASCOT_MIN_X), safeMaxX);
+        const clampedY = Math.min(Math.max(newY, MASCOT_MIN_Y), safeMaxY);
+
+        lastPosition.current = { x: clampedX, y: clampedY };
         pan.flattenOffset();
+        pan.setValue({ x: clampedX, y: clampedY });
       },
     })
   ).current;
@@ -238,6 +300,7 @@ const HomeScreen = () => {
     useState<string>("");
   const [modalNoteInput, setModalNoteInput] = useState("");
   const [modalCustomCatName, setModalCustomCatName] = useState("");
+  const [suggestedNotes, setSuggestedNotes] = useState<string[]>([]);
   const [txDate, setTxDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<"date" | "time">("date");
@@ -300,7 +363,27 @@ const HomeScreen = () => {
     if (p) {
       const totalAllocated = cats.reduce((sum, c) => sum + c.budget, 0);
       const unallocated = Math.max(0, p.initialBalance - totalAllocated);
-      setTotalBalance(totalAllocated + unallocated);
+
+      // Calculate savings balance (Quỹ Tiết Kiệm)
+      let calcSaving = 0;
+      const txs = await storage.getTransactions();
+      txs.forEach((t) => {
+        if (t.category === "Tiết kiệm" || t.category === "Rút tiết kiệm") {
+          if (t.type === "expense" && t.category === "Tiết kiệm") {
+            calcSaving += t.amount;
+          } else if (t.type === "income" && t.category === "Rút tiết kiệm") {
+            calcSaving -= t.amount;
+          }
+        }
+      });
+
+      // Calculate custom funds total (Quỹ Khác)
+      let customFundsTotal = 0;
+      if (p.customFunds) {
+        customFundsTotal = p.customFunds.reduce((sum, f) => sum + f.balance, 0);
+      }
+
+      setTotalBalance(totalAllocated + unallocated + calcSaving + customFundsTotal);
     }
 
     try {
@@ -377,7 +460,7 @@ const HomeScreen = () => {
   };
 
   // Khi người dùng chọn danh mục từ modal
-  const handlePickCategory = (cat: string) => {
+  const handlePickCategory = async (cat: string) => {
     // Kiểm tra ngân sách sơ bộ
     if (type === "expense") {
       const catBudget = budgets.find((b) => b.name === cat);
@@ -410,6 +493,11 @@ const HomeScreen = () => {
     setModalCustomCatName("");
     setTxDate(new Date());
     setCategoryPickerVisible(false);
+
+    // Tải ghi chú gợi ý tương ứng với loại giao dịch (Thu / Chi)
+    const notes = await storage.getSuggestedNotes(type);
+    setSuggestedNotes(notes);
+
     setNoteModalVisible(true);
   };
 
@@ -532,6 +620,11 @@ const HomeScreen = () => {
     // Lưu Profile & Giao dịch
     await storage.saveUserProfile(nextProfile);
 
+    // Lưu ghi chú gợi ý nếu có nhập ghi chú
+    if (finalNote) {
+      await storage.addSuggestedNote(type, finalNote);
+    }
+
     const newTx: Transaction = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       type: type,
@@ -584,7 +677,7 @@ const HomeScreen = () => {
               <View style={styles.avatarStatus} />
             </View>
             <View style={styles.profileTextWrapper}>
-              <Text style={styles.greetingLabel}>Xin chào,</Text>
+              <Text style={styles.greetingLabel}>{getGreeting()}</Text>
               <Text style={styles.profileName} numberOfLines={1}>
                 {profile?.name || "Người dùng"}
               </Text>
@@ -668,7 +761,16 @@ const HomeScreen = () => {
 
           <View style={styles.cardBottom}>
             <View>
-              <Text style={styles.cardBalanceLabel}>SỐ DƯ KHẢ DỤNG</Text>
+              <View style={styles.cardBalanceLabelContainer}>
+                <Text style={styles.cardBalanceLabel}>TỔNG TÀI SẢN</Text>
+                <TouchableOpacity
+                  onPress={handleShowTotalAssetInfo}
+                  style={styles.helpIconTouch}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <HelpCircle color="#94a3b8" size={12} />
+                </TouchableOpacity>
+              </View>
               <Text style={styles.cardBalanceAmount}>
                 {showBudgets ? `${formatCurrency(totalBalance)} đ` : "•••••• đ"}
               </Text>
@@ -1108,6 +1210,27 @@ const HomeScreen = () => {
               numberOfLines={3}
             />
 
+            {suggestedNotes.length > 0 && (
+              <View style={styles.suggestionsContainer}>
+                <Text style={styles.suggestionsTitle}>Gợi ý ghi chú:</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.suggestionsScroll}
+                >
+                  {suggestedNotes.map((item, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.suggestionBadge}
+                      onPress={() => setModalNoteInput(item)}
+                    >
+                      <Text style={styles.suggestionText}>{item}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
             <View style={styles.customCatActions}>
               <TouchableOpacity
                 style={styles.customCatCancelBtn}
@@ -1337,8 +1460,8 @@ const HomeScreen = () => {
             pan.getLayout(),
             {
               position: "absolute",
-              width: 80,
-              height: 80,
+              width: 95,
+              height: 95,
               zIndex: 9999,
               alignItems: "center",
               justifyContent: "center",
@@ -1359,8 +1482,8 @@ const HomeScreen = () => {
           <View
             style={{
               position: "absolute",
-              top: -50,
-              left: 10,
+              top: -45,
+              left: 27.5,
               width: 40,
               height: 40,
               borderRadius: 20,
@@ -1386,822 +1509,5 @@ const HomeScreen = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8fafc" },
-  header: {
-    // backgroundColor: "#0c2340", // Deep navy blue (Vietcombank/premium style)
-    backgroundColor: "#5596e0ff", // Deep navy blue (Vietcombank/premium style)
-
-    paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 40,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-  },
-  headerTopBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  profileSection: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  avatarContainer: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-  },
-  avatarImage: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-  },
-  avatarText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  avatarStatus: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#10b981",
-    borderWidth: 1.5,
-    borderColor: "#0c2340",
-  },
-  profileTextWrapper: {
-    marginLeft: 10,
-  },
-  greetingLabel: {
-    color: "#cccccc",
-    fontSize: 12,
-  },
-  profileName: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "bold",
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  actionBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-  },
-  actionBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#ef4444",
-  },
-  bankCard: {
-    backgroundColor: "#1e293b", // Slate-800
-    borderRadius: 18,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  cardBrandWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  cardBrandText: {
-    color: "#f59e0b",
-    fontSize: 11,
-    fontWeight: "bold",
-    letterSpacing: 1,
-  },
-  cardChip: {
-    width: 32,
-    height: 24,
-    borderRadius: 4,
-    backgroundColor: "#f59e0b",
-    opacity: 0.8,
-  },
-  cardMiddle: {
-    marginBottom: 18,
-  },
-  cardAccountLabel: {
-    color: "#94a3b8",
-    fontSize: 10,
-    letterSpacing: 0.5,
-  },
-  accountNumberContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 2,
-  },
-  cardAccountNumber: {
-    color: "#ffffff",
-    fontSize: 17,
-    fontWeight: "bold",
-    letterSpacing: 1.5,
-  },
-  copyBtn: {
-    padding: 4,
-  },
-  cardBottom: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-  },
-  cardBalanceLabel: {
-    color: "#94a3b8",
-    fontSize: 10,
-    letterSpacing: 0.5,
-  },
-  cardBalanceAmount: {
-    color: "#ffffff",
-    fontSize: 24,
-    fontWeight: "bold",
-    marginTop: 2,
-  },
-  cardEyeBtn: {
-    padding: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderRadius: 10,
-  },
-  budgetChips: { gap: 10, paddingBottom: 4 },
-  budgetChip: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    minWidth: 110,
-  },
-  chipName: { color: "#fdf4ff", fontSize: 12, marginBottom: 2 },
-  chipAmount: { color: "#ffffff", fontSize: 15, fontWeight: "bold" },
-  body: { flex: 1 },
-  bodyContent: { paddingHorizontal: 20, paddingTop: 10 },
-  tabSection: {
-    paddingHorizontal: 20,
-    marginTop: -25,
-    zIndex: 10,
-  },
-  tabs: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 6,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
-  },
-  tabActiveExpense: { backgroundColor: "#ef4444" },
-  tabActiveIncome: { backgroundColor: "#10b981" },
-  tabText: { fontSize: 15, fontWeight: "600", color: "#64748b" },
-  tabTextActive: { color: "#ffffff" },
-  amountDisplay: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    elevation: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    paddingVertical: 16,
-    marginBottom: 16,
-  },
-  amountText: { fontSize: 48, fontWeight: "bold" },
-  expenseText: { color: "#ef4444" },
-  incomeText: { color: "#10b981" },
-  currencyLabel: {
-    fontSize: 20,
-    color: "#64748b",
-    marginLeft: 8,
-    marginTop: 16,
-  },
-  budgetHint: {
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginBottom: 12,
-  },
-  budgetHintText: { fontSize: 14, fontWeight: "600" },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "bold",
-    color: "#334155",
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  noBudgetBox: {
-    backgroundColor: "#fff7ed",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#fed7aa",
-  },
-  noBudgetText: { color: "#c2410c", fontSize: 14, lineHeight: 20 },
-  categoryContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 16,
-  },
-  categoryBadge: {
-    backgroundColor: "#e2e8f0",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 16,
-    minWidth: 90,
-  },
-  categoryBadgeActive: { backgroundColor: "#3b82f6" },
-  categoryBadgeEmpty: {
-    backgroundColor: "#fef2f2",
-    borderWidth: 1,
-    borderColor: "#fecaca",
-  },
-  categoryText: { color: "#475569", fontWeight: "600", fontSize: 14 },
-  categoryTextActive: { color: "#ffffff" },
-  categoryTextEmpty: { color: "#ef4444" },
-  categorySubAmount: {
-    fontSize: 12,
-    color: "#64748b",
-    marginTop: 2,
-    fontWeight: "500",
-  },
-  modalFieldLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#475569",
-    marginBottom: 6,
-    marginTop: 10,
-  },
-  modalNoteInput: {
-    borderWidth: 1.5,
-    borderColor: "#cbd5e1",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: "#0f172a",
-    backgroundColor: "#f8fafc",
-    marginBottom: 20,
-    textAlignVertical: "top",
-    minHeight: 80,
-  },
-  actionButtonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-    marginTop: 10,
-    marginBottom: 40,
-  },
-  actionNextBtn: {
-    flex: 1,
-    height: 54,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionCancelBtn: {
-    width: 54,
-    height: 54,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  saveButton: {
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  saveExpense: { backgroundColor: "#ef4444" },
-  saveIncome: { backgroundColor: "#10b981" },
-  saveDisabled: { backgroundColor: "#cbd5e1", elevation: 0, shadowOpacity: 0 },
-  saveButtonText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
-  cancelButton: {
-    backgroundColor: "#fee2e2",
-    borderWidth: 1,
-    borderColor: "#fecaca",
-  },
-  cancelButtonText: {
-    color: "#ef4444",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  // Footer / Manual Input Styles
-  footerAction: {
-    backgroundColor: "#ffffff",
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
-    elevation: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-  },
-  manualInputSection: {
-    marginBottom: 16,
-  },
-  manualInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f8fafc",
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    paddingRight: 12,
-  },
-  manualInput: {
-    flex: 1,
-    padding: 16,
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#0f172a",
-    textAlign: "center",
-  },
-  clearManualBtn: {
-    padding: 8,
-  },
-  openManualBtn: {
-    backgroundColor: "#ffffff",
-    borderWidth: 2,
-    borderColor: "#3b82f6",
-    borderStyle: "dashed",
-    borderRadius: 16,
-    paddingVertical: 20,
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  openManualBtnText: {
-    color: "#3b82f6",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  manualInputModalBox: {
-    backgroundColor: "#ffffff",
-    width: "96%",
-    borderRadius: 24,
-    padding: 24,
-    elevation: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-  },
-  manualInputLarge: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#0f172a",
-    textAlign: "center",
-    paddingVertical: 24,
-    borderBottomWidth: 2,
-    borderBottomColor: "#e2e8f0",
-    marginBottom: 24,
-  },
-  manualInputDoneBtn: {
-    backgroundColor: "#3b82f6",
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-  manualInputDoneBtnText: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  modalOverlayTop: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.7)",
-    justifyContent: "flex-start",
-    alignItems: "center",
-    paddingTop: 100,
-  },
-  modalOverlayCenter: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(15, 23, 42, 0.7)",
-    justifyContent: "flex-start",
-    alignItems: "center",
-    paddingTop: "30%",
-    zIndex: 999,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.65)",
-    justifyContent: "flex-end",
-    paddingHorizontal: 0,
-  },
-  catPickerOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.65)",
-    justifyContent: "flex-end",
-  },
-  customCatModal: {
-    backgroundColor: "#ffffff",
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    padding: 24,
-    width: "100%",
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    paddingBottom: 40,
-  },
-  noteModal: {
-    backgroundColor: "#ffffff",
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    padding: 24,
-    width: "100%",
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    paddingBottom: 40,
-    minHeight: "60%",
-  },
-  noteModalBackBtn: {
-    alignSelf: "flex-start",
-    paddingVertical: 6,
-    paddingHorizontal: 2,
-    marginBottom: 12,
-  },
-  noteModalBackText: {
-    color: "#3b82f6",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  customCatTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#0f172a",
-    marginBottom: 8,
-  },
-  customCatInput: {
-    borderWidth: 1.5,
-    borderColor: "#cbd5e1",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: "#0f172a",
-    backgroundColor: "#f8fafc",
-    marginBottom: 20,
-  },
-  customCatActions: { flexDirection: "row", gap: 12 },
-  datePickerBtn: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 12,
-    padding: 14,
-    alignItems: "center",
-  },
-  datePickerBtnText: {
-    fontSize: 16,
-    color: "#0f172a",
-    fontWeight: "500",
-  },
-  customCatCancelBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    backgroundColor: "#f1f5f9",
-  },
-  customCatCancelText: { color: "#64748b", fontWeight: "600", fontSize: 15 },
-  customCatConfirmBtn: {
-    flex: 2,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  customCatConfirmExpense: { backgroundColor: "#ef4444" },
-  customCatConfirmIncome: { backgroundColor: "#10b981" },
-  customCatConfirmText: { color: "#ffffff", fontWeight: "bold", fontSize: 15 },
-  welcomeModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  welcomeModalContent: {
-    backgroundColor: "#ffffff",
-    borderRadius: 24,
-    padding: 30,
-    alignItems: "center",
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#0f172a",
-    marginBottom: 12,
-  },
-  welcomeText: {
-    fontSize: 16,
-    color: "#64748b",
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  welcomeActions: { flexDirection: "row", gap: 12, width: "100%" },
-  welcomeSkipBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    alignItems: "center",
-    borderRadius: 12,
-    backgroundColor: "#f1f5f9",
-  },
-  welcomeSkipText: { color: "#64748b", fontWeight: "600" },
-  welcomeViewBtn: {
-    flex: 2,
-    paddingVertical: 14,
-    alignItems: "center",
-    borderRadius: 12,
-    backgroundColor: "#d946ef",
-  },
-  welcomeViewText: { color: "#ffffff", fontWeight: "bold" },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#0f172a",
-  },
-  inputMethodToggleRow: {
-    flexDirection: "row",
-    paddingHorizontal: 6,
-    marginBottom: 8,
-  },
-  quickToggleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-  },
-  quickToggleBtnCircle: {
-    backgroundColor: "#ffffff",
-    width: 34,
-    height: 34,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  // Category Picker Modal Styles
-  catPickerModal: {
-    backgroundColor: "#ffffff",
-    width: "100%",
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    padding: 24,
-    paddingBottom: 40,
-    elevation: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    marginTop: 80,
-    flex: 1,
-  },
-  catPickerKhacLabel: {
-    flex: 1,
-  },
-  catPickerKhacHint: {
-    fontSize: 12,
-    color: "#7c3aed",
-    opacity: 0.7,
-    marginTop: 2,
-  },
-  catPickerItemKhac: {
-    backgroundColor: "#f5f3ff",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    marginTop: 4,
-  },
-  catPickerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 4,
-  },
-  catPickerSubtitle: {
-    fontSize: 13,
-    color: "#64748b",
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  catPickerList: {
-    marginTop: 8,
-    flex: 1,
-  },
-  catPickerItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 4,
-  },
-  catPickerItemName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#0f172a",
-    flex: 1,
-  },
-  catPickerItemRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  catPickerItemBudget: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#10b981",
-  },
-  catPickerSeparator: {
-    height: 1,
-    backgroundColor: "#f1f5f9",
-  },
-  emptyCatContainer: {
-    paddingVertical: 32,
-    alignItems: "center",
-  },
-  emptyCatText: {
-    fontSize: 14,
-    color: "#94a3b8",
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  streakHeaderChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-  },
-  streakHeaderTxt: {
-    color: "#ffffff",
-    fontWeight: "800",
-    fontSize: 16,
-  },
-  streakModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.75)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  streakModalContent: {
-    backgroundColor: "#ffffff",
-    borderRadius: 28,
-    padding: 24,
-    alignItems: "center",
-    width: "85%",
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#ffedd5",
-  },
-  streakModalStatus: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#ea580c",
-    letterSpacing: 1.2,
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  streakModalCount: {
-    fontSize: 36,
-    fontWeight: "900",
-    color: "#0c2340",
-    marginBottom: 12,
-  },
-  streakModalImg: {
-    width: 140,
-    height: 140,
-    resizeMode: "contain",
-    marginVertical: 12,
-  },
-  streakModalLevelBadge: {
-    backgroundColor: "#fff7ed",
-    borderWidth: 1.5,
-    borderColor: "#ffedd5",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    marginBottom: 12,
-  },
-  streakModalLevelTxt: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#ea580c",
-  },
-  streakModalRecoveryInfo: {
-    fontSize: 12,
-    color: "#64748b",
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-  streakModalHint: {
-    fontSize: 14,
-    color: "#64748b",
-    textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 20,
-    paddingHorizontal: 8,
-  },
-  streakModalBtn: {
-    backgroundColor: "#0c2340",
-    borderRadius: 16,
-    paddingVertical: 14,
-    width: "100%",
-    alignItems: "center",
-    shadowColor: "#0c2340",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  streakModalBtnText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-});
 
 export default HomeScreen;

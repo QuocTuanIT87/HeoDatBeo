@@ -23,7 +23,15 @@ import {
   ArrowUpCircle,
   PieChart,
   BarChart3,
+  Cloud,
+  Upload,
+  Download,
+  RefreshCw,
+  Trash2,
+  Lock,
+  ArrowRight,
 } from "lucide-react-native";
+import { styles } from "../styles/GuideScreen";
 
 const GuideScreen = () => {
   const navigation = useNavigation();
@@ -85,7 +93,7 @@ const GuideScreen = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>2. Chia Tiền (Lập ngân sách)</Text>
           <Text style={styles.guideText}>
-            Sau khi có tiền Chưa phân bổ, bạn sang tab{" "}
+            Sau khi có tiền Chưa phân bổ, bạn sang màn hình{" "}
             <Text style={{ fontWeight: "bold" }}>Chia Tiền</Text> để lập kế
             hoạch chi tiêu. Hệ thống hỗ trợ 2 loại danh mục:
           </Text>
@@ -199,7 +207,7 @@ const GuideScreen = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>4. Tiết kiệm (Heo Đất)</Text>
           <Text style={styles.guideText}>
-            Tab <Text style={{ fontWeight: "bold" }}>Tiết Kiệm</Text> là két sắt
+            Màn hình <Text style={{ fontWeight: "bold" }}>Tiết Kiệm</Text> là két sắt
             dài hạn. Tiền nạp vào Heo Đất được lấy trực tiếp từ quỹ "Chưa phân
             bổ". Rút từ Heo Đất sẽ trả tiền ngược lại về "Chưa phân bổ".
           </Text>
@@ -223,7 +231,7 @@ const GuideScreen = () => {
             5. Quản lý Quỹ (Phân chia quỹ)
           </Text>
           <Text style={styles.guideText}>
-            Tab <Text style={{ fontWeight: "bold" }}>Quỹ</Text> là trung tâm
+            Màn hình <Text style={{ fontWeight: "bold" }}>Quỹ</Text> là trung tâm
             điều phối tài chính. Toàn bộ tiền của bạn được phân chia vào các
             "quỹ" với mục đích riêng biệt, giúp bạn luôn biết tiền đang ở đâu.
           </Text>
@@ -270,7 +278,7 @@ const GuideScreen = () => {
 
             {/* Quỹ tùy chỉnh */}
             <Text style={[styles.mockGroupLabel, { marginTop: 12 }]}>
-              Quỹ tùy chỉnh
+              Quỹ khác
             </Text>
             <View style={styles.mockFundRow}>
               <View style={[styles.mockFundCard, { borderColor: "#bae6fd" }]}>
@@ -334,7 +342,7 @@ const GuideScreen = () => {
 
           <Text style={[styles.guideText, { marginTop: 16 }]}>
             Để tạo quỹ mới, nhấn nút{" "}
-            <Text style={{ fontWeight: "bold" }}>"+ Thêm mới"</Text> trong tab
+            <Text style={{ fontWeight: "bold" }}>"+ Thêm mới"</Text> trong màn hình
             Quỹ. Tên quỹ phải bắt đầu bằng chữ{" "}
             <Text style={{ fontWeight: "bold" }}>"Quỹ"</Text> (vd: Quỹ Du Lịch,
             Quỹ Khẩn Cấp...). Xóa quỹ sẽ hoàn toàn bộ số dư về "Chưa phân bổ".
@@ -413,470 +421,250 @@ const GuideScreen = () => {
           </View>
         </View>
 
-        {/* LƯU Ý KHÁC */}
+        {/* SECTION 7: SAO LƯU TỰ ĐỘNG BẰNG GOOGLE DRIVE */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>7. Một số lưu ý quan trọng</Text>
-          <View style={styles.noteItem}>
-            <AlertCircle color="#f59e0b" size={20} />
-            <Text style={styles.noteText}>
-              Bạn{" "}
-              <Text style={{ fontWeight: "bold" }}>
-                bắt buộc phải chọn một danh mục
-              </Text>{" "}
-              khi ghi chép Thu/Chi. Nếu không chọn danh mục có sẵn, hệ thống sẽ
-              yêu cầu bạn nhập tên danh mục mới thì mới có thể lưu giao dịch.
-            </Text>
-          </View>
-          <View style={styles.noteItem}>
-            <AlertCircle color="#f59e0b" size={20} />
-            <Text style={styles.noteText}>
-              Để{" "}
-              <Text style={{ fontWeight: "bold" }}>
-                Quản lý danh mục thu tiền
-              </Text>{" "}
-              (thêm, bớt nguồn thu), bạn hãy vào tab Cài Đặt và chọn "Quản lý
-              danh mục thu".
-            </Text>
-          </View>
-          <View style={styles.noteItem}>
-            <AlertCircle color="#f59e0b" size={20} />
-            <Text style={styles.noteText}>
-              Bạn chỉ có thể <Text style={{ fontWeight: "bold" }}>xóa</Text>{" "}
-              giao dịch vừa tạo trong vòng{" "}
-              <Text style={{ color: "#ef4444" }}>3 ngày</Text>. Sau thời gian
-              này, giao dịch sẽ chốt sổ vĩnh viễn.
-            </Text>
-          </View>
-          <View style={styles.noteItem}>
-            <AlertCircle color="#f59e0b" size={20} />
-            <Text style={styles.noteText}>
-              Khi một danh mục bị xóa, toàn bộ lịch sử giao dịch của nó sẽ được
-              tự động gom vào mục{" "}
-              <Text style={{ fontWeight: "bold" }}>"Khác"</Text> trong bảng
-              thống kê để đảm bảo số liệu tổng không bị sai lệch.
-            </Text>
-          </View>
-          <View style={styles.noteItem}>
-            <AlertCircle color="#f59e0b" size={20} />
-            <Text style={styles.noteText}>
-              Nên tạo tệp sao lưu (.txt) trong trang Cài Đặt thường xuyên để đề
-              phòng mất dữ liệu.
-            </Text>
-          </View>
-          <View style={styles.noteItem}>
-            <AlertCircle color="#f59e0b" size={20} />
-            <Text style={styles.noteText}>
-              Khi <Text style={{ fontWeight: "bold" }}>xóa quỹ tùy chỉnh</Text>,
-              toàn bộ số dư trong quỹ đó sẽ được hoàn tự động về{" "}
-              <Text style={{ fontWeight: "bold" }}>\"Chưa phân bổ\"</Text>. Bạn
-              cần nhập đúng cú pháp{" "}
-              <Text style={{ color: "#ef4444" }}>DELETE [Tên quỹ]</Text> để xác
-              nhận.
-            </Text>
-          </View>
-          <View style={styles.noteItem}>
-            <AlertCircle color="#f59e0b" size={20} />
-            <Text style={styles.noteText}>
-              Xem{" "}
-              <Text style={{ fontWeight: "bold" }}>lịch sử giao dịch quỹ</Text>{" "}
-              bằng cách nhấn icon{" "}
-              <Text style={{ fontWeight: "bold" }}>đồng hồ 🕐</Text> ở góc phải
-              màn hình Quỹ. Các giao dịch này chỉ dùng để lưu vết, không thể
-              xóa.
-            </Text>
+          <Text style={styles.sectionTitle}>7. Sao lưu tự động bằng Google Drive</Text>
+          <Text style={styles.guideText}>
+            Hệ thống hỗ trợ tự động đồng bộ và sao lưu dữ liệu của bạn lên Google Drive cá nhân. 
+            Khi bật tính năng này, ứng dụng sẽ tự động sao lưu định kỳ giúp bảo vệ an toàn tuyệt đối 
+            cho tài sản dữ liệu của bạn, không lo thất lạc khi thay đổi thiết bị.
+          </Text>
+
+          <View style={styles.mockupContainer}>
+            <View style={styles.mockCard}>
+              <View style={styles.mockRow}>
+                <View style={[styles.iconCircle, { backgroundColor: "#ecfeff" }]}>
+                  <Cloud color="#0891b2" size={24} />
+                </View>
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  <Text style={styles.mockLabel}>Sao lưu trực tuyến</Text>
+                  <Text style={[styles.mockValueBlue, { color: "#0891b2", fontSize: 16 }]}>Đã liên kết Google Drive</Text>
+                  <Text style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>heodatbeo.user@gmail.com</Text>
+                </View>
+              </View>
+              
+              <View style={{ borderTopWidth: 1, borderColor: "#f1f5f9", paddingTop: 12, marginTop: 4 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155" }}>Tự động sao lưu hàng ngày</Text>
+                    <Text style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Tự động chạy lúc 01:00 hàng ngày</Text>
+                  </View>
+                  {/* Fake Switch (ON) */}
+                  <View style={{ width: 44, height: 24, borderRadius: 12, backgroundColor: "#0891b2", padding: 2, justifyContent: "center", alignItems: "flex-end" }}>
+                    <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: "#ffffff" }} />
+                  </View>
+                </View>
+              </View>
+
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#f0fdf4", padding: 8, borderRadius: 8, marginTop: 12 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#22c55e" }} />
+                <Text style={{ fontSize: 12, color: "#16a34a", fontWeight: "500" }}>
+                  Đồng bộ thành công: Hôm nay lúc 01:00
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
 
+        {/* SECTION 8: SAO LƯU THỦ CÔNG */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>8. Sao lưu và khôi phục thủ công</Text>
+          <Text style={styles.guideText}>
+            Bạn có thể chủ động sao lưu dữ liệu bất kỳ lúc nào bằng cách xuất dữ liệu ra file văn bản (`.txt`) đã mã hóa hoặc nhấn nút sao lưu thủ công lên Google Drive. Khi đổi máy hoặc cài lại ứng dụng, chỉ cần chọn nhập file để phục hồi 100% dữ liệu.
+          </Text>
+
+          <View style={styles.mockupContainer}>
+            <View style={{ gap: 12 }}>
+              <View style={styles.mockCard}>
+                <Text style={styles.mockSectionLabel}>Sao lưu trực tuyến (Google Drive)</Text>
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+                  <View style={[styles.mockBtnBlue, { flex: 1, backgroundColor: "#0ea5e9" }]}>
+                    <Cloud color="#ffffff" size={16} />
+                    <Text style={[styles.mockBtnText, { fontSize: 13 }]}> Sao lưu ngay</Text>
+                  </View>
+                  <View style={[styles.mockBtnBlue, { flex: 1, backgroundColor: "#3b82f6" }]}>
+                    <RefreshCw color="#ffffff" size={16} />
+                    <Text style={[styles.mockBtnText, { fontSize: 13 }]}> Khôi phục</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.mockCard}>
+                <Text style={styles.mockSectionLabel}>Sao lưu ngoại tuyến (File .txt)</Text>
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+                  <View style={[styles.mockBtnBlue, { flex: 1, backgroundColor: "#4f46e5" }]}>
+                    <Upload color="#ffffff" size={16} />
+                    <Text style={[styles.mockBtnText, { fontSize: 13 }]}> Xuất file .txt</Text>
+                  </View>
+                  <View style={[styles.mockBtnBlue, { flex: 1, backgroundColor: "#10b981" }]}>
+                    <Download color="#ffffff" size={16} />
+                    <Text style={[styles.mockBtnText, { fontSize: 13 }]}> Nhập file .txt</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* SECTION 9: BẮT BUỘC CHỌN DANH MỤC */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>9. Bắt buộc chọn danh mục khi ghi chép</Text>
+          <Text style={styles.guideText}>
+            Để quản lý chi tiêu rõ ràng, bạn bắt buộc phải phân bổ từng giao dịch vào một danh mục cụ thể. 
+            Nếu danh mục bạn cần chưa tồn tại, hãy tạo nhanh trực tiếp trong giao diện ghi chép.
+          </Text>
+
+          <View style={styles.mockupContainer}>
+            <View style={styles.mockCard}>
+              <Text style={[styles.mockSectionLabel, { color: "#dc2626" }]}>⚠️ Yêu cầu chọn danh mục</Text>
+              
+              <View style={{ backgroundColor: "#fee2e2", padding: 12, borderRadius: 8, borderWidth: 1, borderColor: "#fca5a5", marginTop: 4, marginBottom: 12 }}>
+                <Text style={{ fontSize: 13, color: "#991b1b", fontWeight: "500" }}>
+                  Vui lòng nhập hoặc chọn danh mục để lưu giao dịch!
+                </Text>
+              </View>
+
+              <Text style={{ fontSize: 13, fontWeight: "600", color: "#475569", marginBottom: 6 }}>Tạo nhanh danh mục mới:</Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <View style={{ flex: 1, height: 40, borderWidth: 1, borderColor: "#cbd5e1", borderRadius: 8, justifyContent: "center", paddingLeft: 12, backgroundColor: "#f8fafc" }}>
+                  <Text style={{ color: "#94a3b8", fontSize: 13 }}>Tên danh mục mới (vd: Sửa xe)...</Text>
+                </View>
+                <View style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: "#3b82f6", justifyContent: "center", alignItems: "center" }}>
+                  <Plus color="#ffffff" size={20} />
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* SECTION 10: QUẢN LÝ DANH MỤC THU TIỀN */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>10. Quản lý danh mục thu tiền</Text>
+          <Text style={styles.guideText}>
+            Bạn có thể tùy ý cá nhân hóa các nguồn thu nhập của mình (Lương, Thưởng, Bán hàng...) trong phần cài đặt danh mục. Hệ thống cho phép thêm mới danh mục nguồn thu và thay đổi biểu tượng đại diện cực kỳ đa dạng.
+          </Text>
+
+          <View style={styles.mockupContainer}>
+            <View style={styles.mockCard}>
+              <Text style={styles.mockSectionLabel}>Danh sách danh mục thu</Text>
+              
+              <View style={{ gap: 8, marginTop: 4 }}>
+                {/* Item 1 */}
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderColor: "#f1f5f9" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "#e0f2fe", justifyContent: "center", alignItems: "center" }}>
+                      <Wallet color="#0ea5e9" size={16} />
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: "600", color: "#334155" }}>Lương tháng</Text>
+                  </View>
+                  <Trash2 color="#94a3b8" size={18} />
+                </View>
+
+                {/* Item 2 */}
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderColor: "#f1f5f9" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "#fef3c7", justifyContent: "center", alignItems: "center" }}>
+                      <PlusCircle color="#d97706" size={16} />
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: "600", color: "#334155" }}>Bán hàng online</Text>
+                  </View>
+                  <Trash2 color="#94a3b8" size={18} />
+                </View>
+              </View>
+
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12, justifyContent: "center" }}>
+                <PlusCircle color="#3b82f6" size={16} />
+                <Text style={{ color: "#3b82f6", fontWeight: "bold", fontSize: 13 }}>Thêm danh mục thu mới</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* SECTION 11: GIỚI HẠN XÓA GIAO DỊCH */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>11. Giới hạn thời gian sửa/xóa giao dịch</Text>
+          <Text style={styles.guideText}>
+            Để đảm bảo tính trung thực và kỷ luật của số liệu, các giao dịch chỉ được phép thay đổi hoặc xóa bỏ trong vòng <Text style={{ color: "#ef4444", fontWeight: "bold" }}>3 ngày</Text> kể từ thời điểm tạo. Sau thời hạn này, giao dịch sẽ chốt sổ khóa vĩnh viễn.
+          </Text>
+
+          <View style={styles.mockupContainer}>
+            <View style={{ gap: 10 }}>
+              {/* Giao dịch mới dưới 3 ngày */}
+              <View style={[styles.mockCard, { borderColor: "#bbf7d0" }]}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View>
+                    <Text style={{ fontSize: 14, fontWeight: "bold", color: "#1e293b" }}>Ăn trưa (Mới tạo)</Text>
+                    <Text style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Hôm nay lúc 12:15</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={{ fontSize: 14, fontWeight: "bold", color: "#ef4444" }}>- 45,000 đ</Text>
+                    <View style={{ backgroundColor: "#dcfce7", padding: 4, borderRadius: 4 }}>
+                      <Trash2 color="#16a34a" size={14} />
+                    </View>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 11, color: "#16a34a", marginTop: 6, fontWeight: "500" }}>✓ Có thể xóa (Còn 2 ngày 23 giờ)</Text>
+              </View>
+
+              {/* Giao dịch cũ trên 3 ngày */}
+              <View style={[styles.mockCard, { borderColor: "#cbd5e1", backgroundColor: "#f8fafc" }]}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", opacity: 0.7 }}>
+                  <View>
+                    <Text style={{ fontSize: 14, fontWeight: "bold", color: "#475569" }}>Mua áo thun</Text>
+                    <Text style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>5 ngày trước</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={{ fontSize: 14, fontWeight: "bold", color: "#64748b" }}>- 250,000 đ</Text>
+                    <View style={{ backgroundColor: "#f1f5f9", padding: 4, borderRadius: 4 }}>
+                      <Lock color="#94a3b8" size={14} />
+                    </View>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 11, color: "#64748b", marginTop: 6, fontWeight: "500" }}>🔒 Đã chốt sổ vĩnh viễn (Không thể xóa)</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* SECTION 12: GOM GIAO DỊCH KHI XÓA DANH MỤC */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>12. Tự động gom giao dịch khi xóa danh mục</Text>
+          <Text style={styles.guideText}>
+            Khi bạn quyết định xóa một danh mục chi tiêu, để tránh làm mất lịch sử và sai lệch biểu đồ báo cáo tài chính, toàn bộ các giao dịch cũ thuộc danh mục này sẽ tự động được gom và chuyển vào danh mục chung tên là <Text style={{ fontWeight: "bold" }}>"Khác"</Text>.
+          </Text>
+
+          <View style={styles.mockupContainer}>
+            <View style={styles.mockCard}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12 }}>
+                <View style={{ alignItems: "center" }}>
+                  <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#fee2e2", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#fca5a5" }}>
+                    <Trash2 color="#ef4444" size={20} />
+                  </View>
+                  <Text style={{ fontSize: 12, fontWeight: "bold", color: "#ef4444", marginTop: 6 }}>Đã xóa "Du lịch"</Text>
+                </View>
+
+                <ArrowRight color="#94a3b8" size={20} />
+
+                <View style={{ alignItems: "center" }}>
+                  <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#f1f5f9", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#cbd5e1" }}>
+                    <Layers color="#475569" size={20} />
+                  </View>
+                  <Text style={{ fontSize: 12, fontWeight: "bold", color: "#475569", marginTop: 6 }}>Gom vào "Khác"</Text>
+                </View>
+              </View>
+
+              <View style={{ backgroundColor: "#eff6ff", padding: 8, borderRadius: 6, marginTop: 12 }}>
+                <Text style={{ fontSize: 11, color: "#1e40af", textAlign: "center", fontWeight: "500" }}>
+                  ✓ Đảm bảo tổng chi tiêu trên các báo cáo luôn chính xác 100%
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
         <View style={styles.footerSpace} />
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-  },
-  header: {
-    backgroundColor: "#3b82f6",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingTop: Platform.OS === "android" ? 40 : 16,
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#ffffff",
-  },
-  scrollContent: {
-    padding: 16,
-  },
-  introBox: {
-    backgroundColor: "#ffffff",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  introText: {
-    fontSize: 15,
-    color: "#334155",
-    lineHeight: 22,
-  },
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#0f172a",
-    marginBottom: 8,
-  },
-  guideText: {
-    fontSize: 15,
-    color: "#475569",
-    lineHeight: 22,
-    marginBottom: 16,
-  },
-  mockupContainer: {
-    backgroundColor: "#f1f5f9",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  mockCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#bfdbfe",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  mockRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  mockLabel: {
-    fontSize: 14,
-    color: "#64748b",
-    fontWeight: "500",
-  },
-  mockLabelRed: {
-    fontSize: 16,
-    color: "#ef4444",
-    fontWeight: "bold",
-  },
-  mockValueBlue: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#3b82f6",
-    marginTop: 2,
-  },
-  mockBtnBlue: {
-    backgroundColor: "#3b82f6",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  mockBtnText: {
-    color: "#ffffff",
-    fontWeight: "bold",
-    fontSize: 15,
-  },
-  mockFlow: {
-    alignItems: "center",
-  },
-  mockPillBlue: {
-    backgroundColor: "#3b82f6",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  mockPillText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  mockGrid: {
-    flexDirection: "row",
-    gap: 12,
-    width: "100%",
-  },
-  mockCategory: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    alignItems: "center",
-  },
-  mockCatName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#334155",
-  },
-  mockCatValue: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "#10b981",
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  mockActionBadge: {
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  mockActionBadgeText: {
-    fontSize: 12,
-    color: "#64748b",
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  mockGuideSubText: {
-    fontSize: 14,
-    color: "#334155",
-    marginBottom: 8,
-  },
-  mockPiggyCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#fbcfe8",
-  },
-  noteItem: {
-    flexDirection: "row",
-    marginBottom: 12,
-    alignItems: "flex-start",
-    backgroundColor: "#fffbeb",
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#fde68a",
-  },
-  noteText: {
-    fontSize: 14,
-    color: "#451a03",
-    lineHeight: 20,
-    marginLeft: 8,
-    flex: 1,
-  },
-  footerSpace: {
-    height: 40,
-  },
-  mockSectionLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#64748b",
-    marginBottom: 10,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  mockTotalBar: {
-    backgroundColor: "#1e293b",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  mockTotalAmount: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#ffffff",
-  },
-  mockGroupLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#94a3b8",
-    marginBottom: 8,
-    textTransform: "uppercase",
-  },
-  mockFundRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  mockFundCard: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 12,
-    alignItems: "center",
-    borderWidth: 1.5,
-  },
-  mockFundIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-  },
-  mockFundName: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#334155",
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  mockFundBalance: {
-    fontSize: 13,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  mockTransferBox: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    overflow: "hidden",
-  },
-  mockTransferRow: {
-    flexDirection: "row",
-  },
-  mockTransferBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 14,
-  },
-  mockTransferDivider: {
-    width: 1,
-    backgroundColor: "#e2e8f0",
-  },
-  mockTransferText: {
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  mockTransferNote: {
-    fontSize: 12,
-    color: "#64748b",
-    textAlign: "center",
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderColor: "#f1f5f9",
-    lineHeight: 18,
-  },
-  mockChartBox: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  mockChartHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 16,
-  },
-  mockChartTitle: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "#0f172a",
-  },
-  mockPieContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    marginBottom: 20,
-  },
-  mockPieCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#f1f5f9",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-  },
-  mockLegend: {
-    gap: 4,
-  },
-  mockLegendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  legendText: {
-    fontSize: 12,
-    color: "#475569",
-  },
-  mockBarContainer: {
-    borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
-    paddingTop: 12,
-  },
-  mockBarHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 10,
-  },
-  mockChartTitleSmall: {
-    fontSize: 13,
-    fontWeight: "bold",
-    color: "#334155",
-  },
-  mockBarRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 8,
-  },
-  mockBarTrack: {
-    flex: 1,
-    height: 8,
-    backgroundColor: "#f1f5f9",
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  mockBarFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  mockBarLabel: {
-    width: 30,
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#64748b",
-  },
-});
 
 export default GuideScreen;

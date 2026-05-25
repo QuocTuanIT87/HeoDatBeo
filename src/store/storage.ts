@@ -73,6 +73,9 @@ export const storage = {
       await AsyncStorage.removeItem(CATEGORY_BUDGETS_KEY);
       await AsyncStorage.removeItem(TRANSACTION_DATE_INDEX_KEY);
       await AsyncStorage.removeItem(NOTIFICATION_HISTORY_KEY);
+      await AsyncStorage.removeItem('@googleDriveAutoBackupEnabled');
+      await AsyncStorage.removeItem('@googleDriveLastBackupTimestamp');
+      await AsyncStorage.removeItem('@googleDriveLastBackupStatus');
       return true;
     } catch (e) {
       console.error('Error clearing data', e);
@@ -413,6 +416,41 @@ export const storage = {
       return true;
     } catch (e) {
       return false;
+    }
+  },
+
+  async getSuggestedNotes(type: 'expense' | 'income'): Promise<string[]> {
+    try {
+      const key = `@suggestedNotes_${type}`;
+      const data = await AsyncStorage.getItem(key);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error('Error fetching suggested notes', e);
+      return [];
+    }
+  },
+
+  async addSuggestedNote(type: 'expense' | 'income', note: string): Promise<void> {
+    try {
+      const trimmed = note.trim();
+      if (!trimmed) return;
+      const key = `@suggestedNotes_${type}`;
+      const existing = await this.getSuggestedNotes(type);
+      const updated = [trimmed, ...existing.filter(n => n !== trimmed)].slice(0, 10);
+      await AsyncStorage.setItem(key, JSON.stringify(updated));
+    } catch (e) {
+      console.error('Error saving suggested note', e);
+    }
+  },
+
+  async deleteSuggestedNote(type: 'expense' | 'income', note: string): Promise<void> {
+    try {
+      const key = `@suggestedNotes_${type}`;
+      const existing = await this.getSuggestedNotes(type);
+      const updated = existing.filter(n => n !== note);
+      await AsyncStorage.setItem(key, JSON.stringify(updated));
+    } catch (e) {
+      console.error('Error deleting suggested note', e);
     }
   }
 };

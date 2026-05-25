@@ -38,6 +38,7 @@ import Keypad from "../components/Keypad";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
+import { styles } from "../styles/SavingScreen";
 
 const SavingScreen = () => {
   const isFocused = useIsFocused();
@@ -307,43 +308,10 @@ const SavingScreen = () => {
         {/* Top bar: Avatar + năm + actions */}
         <View style={styles.headerTopBar}>
           <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              {profile?.avatar ? (
-                <Image
-                  source={{ uri: profile.avatar }}
-                  style={styles.avatarImage}
-                />
-              ) : (
-                <Text style={styles.avatarText}>
-                  {profile?.name ? profile.name.charAt(0).toUpperCase() : "U"}
-                </Text>
-              )}
-            </View>
-            <View style={styles.profileTextWrapper}>
-              <Text style={styles.greetingLabel}>Tiết kiệm,</Text>
-              <Text style={styles.profileName} numberOfLines={1}>
-                {profile?.name || "Người dùng"}
-              </Text>
-            </View>
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <TouchableOpacity
-              onPress={() => setShowAmount(!showAmount)}
-              style={styles.eyeBtn}
-            >
-              {showAmount ? (
-                <Eye color="#ffffff" size={20} />
-              ) : (
-                <EyeOff color="#ffffff" size={20} />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => navigation.navigate("SavingHistory")}
-              style={styles.historyBtn}
-            >
-              <HistoryIcon color="#ffffff" size={20} />
-            </TouchableOpacity>
+          
           </View>
         </View>
 
@@ -354,7 +322,16 @@ const SavingScreen = () => {
               <PiggyBank color="#f59e0b" size={16} />
               <Text style={styles.cardBrandText}>HEO ĐẤT BÉO {currentYear}</Text>
             </View>
+             
+            <View style={styles.row}>
+              <TouchableOpacity
+              onPress={() => navigation.navigate("SavingHistory")}
+              style={styles.historyBtn}
+            >
+              <HistoryIcon color="#ffffff" size={15} />
+            </TouchableOpacity>
             <View style={styles.cardChip} />
+            </View>
           </View>
 
           {/* Mục tiêu năm ở đầu */}
@@ -448,16 +425,16 @@ const SavingScreen = () => {
                 {showAmount ? `${formatCurrency(savingBalance)} đ` : "••••••"}
               </Text>
             </View>
-            <View style={styles.cardStatDivider} />
-            <View style={styles.cardStat}>
-              <Text style={styles.cardStatLabel}>CHƯA PHÂN BỔ</Text>
-              <Text style={[
-                styles.cardStatValue,
-                { color: unallocated <= 0 ? "#fca5a5" : "#ffffff" },
-              ]}>
-                {showAmount ? `${formatCurrency(unallocated)} đ` : "••••••"}
-              </Text>
-            </View>
+             <TouchableOpacity
+              onPress={() => setShowAmount(!showAmount)}
+              style={styles.eyeBtn}
+            >
+              {showAmount ? (
+                <Eye color="#ffffff" size={15} />
+              ) : (
+                <EyeOff color="#ffffff" size={15} />
+              )}
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -658,435 +635,5 @@ const SavingScreen = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8fafc" },
-  header: {
-    backgroundColor: "#f59e0b",
-    paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 40,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-  },
-  headerTopBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  profileSection: { flexDirection: "row", alignItems: "center" },
-  avatarContainer: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarImage: { width: 42, height: 42, borderRadius: 21 },
-  avatarText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
-  profileTextWrapper: { marginLeft: 10 },
-  greetingLabel: { color: "rgba(255,255,255,0.8)", fontSize: 12 },
-  profileName: { color: "#ffffff", fontSize: 15, fontWeight: "bold" },
-  eyeBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  historyBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bankCard: {
-    backgroundColor: "#1e293b",
-    borderRadius: 18,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  cardBrandWrapper: { flexDirection: "row", alignItems: "center", gap: 6 },
-  cardBrandText: { color: "#f59e0b", fontSize: 11, fontWeight: "bold", letterSpacing: 1 },
-  cardChip: { width: 32, height: 24, borderRadius: 4, backgroundColor: "#f59e0b", opacity: 0.8 },
-  cardGoalLabel: { color: "#94a3b8", fontSize: 10, letterSpacing: 0.5, marginBottom: 6 },
-  cardGoalRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 },
-  cardGoalAmount: { color: "#ffffff", fontSize: 18, fontWeight: "bold" },
-  goalEditBtn: { padding: 6, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 8 },
-  goalEditBtnDisabled: { opacity: 0.4 },
-  inlineEditRow: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
-  inlineInput: {
-    flex: 1,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-    color: "#ffffff",
-  },
-  inlineSaveBtn: {
-    backgroundColor: "#f59e0b",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-  },
-  inlineSaveBtnText: { color: "#1e293b", fontWeight: "bold", fontSize: 13 },
-  inlineCancelBtn: {
-    padding: 8,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 8,
-  },
-  progressTrack: {
-    height: 6,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 3,
-    overflow: "hidden",
-    marginBottom: 4,
-  },
-  progressFill: { height: 6, backgroundColor: "#f59e0b", borderRadius: 3 },
-  progressHint: { color: "rgba(255,255,255,0.6)", fontSize: 11 },
-  cardStats: {
-    flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.07)",
-    borderRadius: 12,
-    padding: 12,
-    alignItems: "center",
-  },
-  cardStat: { flex: 1 },
-  cardStatDivider: { width: 1, height: 30, backgroundColor: "rgba(255,255,255,0.2)", marginHorizontal: 12 },
-  cardStatLabel: { color: "#94a3b8", fontSize: 10, letterSpacing: 0.5, marginBottom: 4 },
-  cardStatValue: { color: "#ffffff", fontSize: 14, fontWeight: "bold" },
-  // Legacy - kept for compatibility
-  headerTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 },
-  headerTitle: { color: "#ffffff", fontSize: 24, fontWeight: "bold" },
-  balancesContainer: { backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 16, padding: 16 },
-  balanceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  balanceRowDivider: { height: 1, backgroundColor: "rgba(255,255,255,0.2)", marginBottom: 8 },
-  balanceLabel: { color: "#fef3c7", fontSize: 14 },
-  balanceAmount: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
-  body: { flex: 1 },
-  bodyContent: { padding: 20 },
-  targetCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  targetHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#334155" },
-  viewHistoryBtn: {
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  viewHistoryText: { fontSize: 12, color: "#64748b", fontWeight: "600" },
-  targetDisplayRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  targetValueText: { fontSize: 24, fontWeight: "bold", color: "#0f172a" },
-  editBtn: { padding: 8, backgroundColor: "#eff6ff", borderRadius: 8 },
-  editBtnDisabled: { backgroundColor: "#f1f5f9" },
-  targetEditRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  targetInput: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  saveTargetBtn: {
-    backgroundColor: "#3b82f6",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  saveTargetBtnText: { color: "#fff", fontWeight: "bold" },
-  cancelBtn: {
-    backgroundColor: "#ef4444",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  cancelBtnText: { color: "#fff", fontWeight: "bold" },
-  progressContainer: {
-    height: 8,
-    backgroundColor: "#e2e8f0",
-    borderRadius: 4,
-    overflow: "hidden",
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  progressBar: { height: "100%", backgroundColor: "#10b981" },
-  progressText: { fontSize: 13, color: "#64748b" },
-  tabs: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 6,
-    marginBottom: 20,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 11,
-    borderRadius: 12,
-    gap: 8,
-  },
-  tabActiveDeposit: { backgroundColor: "#f59e0b" },
-  tabActiveWithdraw: { backgroundColor: "#ef4444" },
-  tabText: { fontSize: 16, fontWeight: "600", color: "#64748b" },
-  tabTextActive: { color: "#ffffff" },
-  withdrawNotice: {
-    flexDirection: "row",
-    backgroundColor: "#fef2f2",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 20,
-    alignItems: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "#fee2e2",
-  },
-  withdrawNoticeText: {
-    fontSize: 13,
-    color: "#b91c1c",
-    flex: 1,
-    lineHeight: 18,
-    fontWeight: "500",
-  },
-  amountDisplay: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 14,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    borderWidth: 1,
-  },
-  borderDeposit: { borderColor: "#f59e0b", backgroundColor: "#fffbeb" },
-  borderWithdraw: { borderColor: "#ef4444", backgroundColor: "#fef2f2" },
-  amountText: { fontSize: 48, fontWeight: "bold" },
-  depositText: { color: "#f59e0b" },
-  withdrawText: { color: "#ef4444" },
-  currencyLabel: {
-    fontSize: 20,
-    color: "#64748b",
-    marginLeft: 8,
-    marginTop: 16,
-  },
-  actionButtonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-    marginTop: 24,
-  },
-  actionNextBtn: {
-    flex: 1,
-    height: 54,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionCancelBtn: {
-    width: 54,
-    height: 54,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  saveButton: {
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-  },
-  saveDeposit: { backgroundColor: "#f59e0b" },
-  saveWithdraw: { backgroundColor: "#ef4444" },
-  saveDisabled: { backgroundColor: "#cbd5e1", elevation: 0, shadowOpacity: 0 },
-  saveButtonText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
-  cancelButton: {
-    backgroundColor: "#fee2e2",
-    borderWidth: 1,
-    borderColor: "#fecaca",
-  },
-  cancelButtonText: {
-    color: "#ef4444",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  cooldownContainer: { alignItems: "center", paddingVertical: 10 },
-  cooldownCircle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    borderWidth: 8,
-    borderColor: "#ef4444",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  cooldownBigNumber: { fontSize: 40, fontWeight: "bold", color: "#ef4444" },
-  cooldownDaysLabel: { fontSize: 14, color: "#94a3b8" },
-  // Manual Input Styles
-  manualInputSection: {
-    marginBottom: 10,
-    marginTop: 10,
-  },
-  manualInput: {
-    backgroundColor: "#ffffff",
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    borderRadius: 16,
-    padding: 16,
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#0f172a",
-    textAlign: "center",
-  },
-  clearManualBtn: {
-    marginTop: 4,
-    alignSelf: "flex-end",
-    padding: 4,
-  },
-  clearManualBtnText: {
-    color: "#64748b",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  openManualBtn: {
-    backgroundColor: "#ffffff",
-    borderWidth: 2,
-    borderColor: "#3b82f6",
-    borderStyle: "dashed",
-    borderRadius: 16,
-    paddingVertical: 20,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  openManualBtnText: {
-    color: "#3b82f6",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.65)",
-    justifyContent: "flex-start",
-    paddingTop: 80,
-    paddingHorizontal: 12,
-  },
-  manualInputModalBox: {
-    backgroundColor: "#ffffff",
-    width: "100%",
-    borderRadius: 24,
-    padding: 24,
-    elevation: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-  },
-  modalHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#0f172a",
-  },
-  manualInputLarge: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#0f172a",
-    textAlign: "center",
-    paddingVertical: 24,
-    borderBottomWidth: 2,
-    borderBottomColor: "#e2e8f0",
-    marginBottom: 24,
-  },
-  confirmManualBtn: {
-    backgroundColor: "#3b82f6",
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-  confirmManualBtnText: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-    marginTop: 10,
-    paddingHorizontal: 4,
-  },
-  quickToggleBtnCircle: {
-    backgroundColor: "#ffffff",
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-  },
-});
 
 export default SavingScreen;

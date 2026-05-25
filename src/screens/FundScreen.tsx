@@ -26,11 +26,13 @@ import {
   EyeOff,
   History,
   RotateCcw,
+  HelpCircle,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { UserProfile, Transaction, CategoryBudget, CustomFund } from "../types";
 import { BottomTabParamList } from "../navigation/types";
 import Keypad from "../components/Keypad";
+import { styles } from "../styles/FundScreen";
 
 const FUND_ICONS: Record<string, any> = {
   default: require("../../assets/fund_icon/default.png"),
@@ -59,6 +61,23 @@ type FundScreenNavigationProp = BottomTabNavigationProp<
 const FundScreen = () => {
   const navigation = useNavigation<FundScreenNavigationProp>();
   const isFocused = useIsFocused();
+
+  const handleShowTotalFundInfo = () => {
+    Alert.normal(
+      "TỔNG TIỀN QUỸ",
+      "Đây là tổng số tiền có trong các quỹ của bạn\n\nKhông bao gồm số dư chưa phân bổ",
+      [
+        {
+          text: "Hướng dẫn",
+          onPress: () => (navigation as any).navigate("Guide"),
+        },
+        {
+          text: "Đóng",
+          style: "cancel",
+        },
+      ]
+    );
+  };
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [totalAllocated, setTotalAllocated] = useState<number>(0);
@@ -136,12 +155,12 @@ const FundScreen = () => {
       const unalloc = Math.max(0, p.initialBalance - allocated);
       setUnallocated(unalloc);
 
-      // Calculate total balance
+      // Calculate total funds (excluding unallocated)
       let customFundsTotal = 0;
       if (p.customFunds) {
         customFundsTotal = p.customFunds.reduce((sum, f) => sum + f.balance, 0);
       }
-      setTotalBalance(allocated + unalloc + calcSaving + customFundsTotal);
+      setTotalBalance(allocated + calcSaving + customFundsTotal);
     }
   };
 
@@ -404,35 +423,16 @@ const FundScreen = () => {
         {/* Top bar with User Profile and history action */}
         <View style={styles.headerTopBar}>
           <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              {profile?.avatar ? (
-                <Image
-                  source={{ uri: profile.avatar }}
-                  style={styles.avatarImage}
-                />
-              ) : (
-                <Text style={styles.avatarText}>
-                  {profile?.name ? profile.name.charAt(0).toUpperCase() : "U"}
-                </Text>
-              )}
-              <View style={styles.avatarStatus} />
-            </View>
-            <View style={styles.profileTextWrapper}>
-              <Text style={styles.greetingLabel}>Hệ thống quỹ</Text>
-              <Text style={styles.profileName} numberOfLines={1}>
-                {profile?.name || "Người dùng"}
-              </Text>
-            </View>
           </View>
 
           <View style={styles.headerActions}>
-            <TouchableOpacity
+            {/* <TouchableOpacity
               onPress={() => navigation.navigate("FundHistory" as any)}
               style={styles.actionBtn}
               activeOpacity={0.7}
             >
               <History color="#ffffff" size={20} />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </View>
 
@@ -440,37 +440,50 @@ const FundScreen = () => {
         <View style={styles.bankCard}>
           <View style={styles.cardHeader}>
             <View style={styles.cardBrandWrapper}>
+              
               <Wallet color="#f59e0b" size={18} />
               <Text style={styles.cardBrandText}>HEO ĐẤT BÉO DIGITAL</Text>
             </View>
+            <View style={styles.row}>
+               <TouchableOpacity
+              onPress={() => navigation.navigate("FundHistory" as any)}
+              style={styles.actionBtn}
+              activeOpacity={0.7}
+            >
+              <History color="#ffffff" size={15} />
+            </TouchableOpacity>
             <View style={styles.cardChip} />
+            </View>
           </View>
 
           <View style={styles.cardMiddle}>
-            <Text style={styles.cardAccountLabel}>TỔNG TÀI SẢN</Text>
-            <Text style={styles.cardBalanceAmount}>
+            <View style={styles.cardAccountLabelContainer}>
+              <Text style={styles.cardAccountLabel}>TỔNG TIỀN QUỸ</Text>
+              <TouchableOpacity
+                onPress={handleShowTotalFundInfo}
+                style={styles.helpIconTouch}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <HelpCircle color="#94a3b8" size={12} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.cardBalanceAmount}>
               {showAmount ? `${formatCurrency(totalBalance)} đ` : "•••••• đ"}
             </Text>
-          </View>
-
-          <View style={styles.cardBottom}>
-            <View>
-              <Text style={styles.cardBalanceLabel}>CHƯA PHÂN BỔ</Text>
-              <Text style={styles.unallocBalanceAmount}>
-                {showAmount ? `${formatCurrency(unallocated)} đ` : "•••••• đ"}
-              </Text>
-            </View>
             <TouchableOpacity
               onPress={() => setShowAmount(!showAmount)}
               style={styles.cardEyeBtn}
               activeOpacity={0.7}
             >
               {showAmount ? (
-                <Eye color="#ffffff" size={20} />
+                <Eye color="#ffffff" size={15} />
               ) : (
-                <EyeOff color="#ffffff" size={20} />
+                <EyeOff color="#ffffff" size={15} />
               )}
             </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -544,7 +557,7 @@ const FundScreen = () => {
         </TouchableOpacity>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Quỹ tùy chỉnh</Text>
+          <Text style={styles.sectionTitle}>Quỹ khác</Text>
           <TouchableOpacity
             style={styles.addFundBtn}
             onPress={() => {
@@ -902,414 +915,6 @@ const FundScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8fafc" },
-  header: {
-    backgroundColor: "#5596e0ff",
-    paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 24,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-  },
-  headerTopBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  profileSection: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  avatarContainer: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(255, 255, 255, 0.25)",
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-  },
-  avatarImage: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-  },
-  avatarText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  avatarStatus: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#10b981",
-    borderWidth: 1.5,
-    borderColor: "#5596e0ff",
-  },
-  profileTextWrapper: {
-    marginLeft: 10,
-  },
-  greetingLabel: {
-    color: "rgba(255, 255, 255, 0.75)",
-    fontSize: 11,
-    fontWeight: "500",
-  },
-  profileName: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "bold",
-    marginTop: 1,
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  actionBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bankCard: {
-    backgroundColor: "#1e293b", // Slate-800
-    borderRadius: 18,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  cardBrandWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  cardBrandText: {
-    color: "#f59e0b",
-    fontSize: 11,
-    fontWeight: "bold",
-    letterSpacing: 1,
-  },
-  cardChip: {
-    width: 32,
-    height: 24,
-    borderRadius: 4,
-    backgroundColor: "#f59e0b",
-    opacity: 0.8,
-  },
-  cardMiddle: {
-    marginBottom: 18,
-  },
-  cardAccountLabel: {
-    color: "#94a3b8",
-    fontSize: 10,
-    letterSpacing: 0.5,
-  },
-  cardBalanceAmount: {
-    color: "#ffffff",
-    fontSize: 24,
-    fontWeight: "bold",
-    marginTop: 2,
-  },
-  cardBottom: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-  },
-  cardBalanceLabel: {
-    color: "#94a3b8",
-    fontSize: 10,
-    letterSpacing: 0.5,
-  },
-  unallocBalanceAmount: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 2,
-  },
-  cardEyeBtn: {
-    padding: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderRadius: 10,
-  },
 
-  body: { flex: 1, padding: 20 },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  sectionTitle: { fontSize: 16, fontWeight: "bold", color: "#64748b" },
-  addFundBtn: { flexDirection: "row", alignItems: "center", gap: 6 },
-  addFundText: { fontSize: 14, color: "#3b82f6", fontWeight: "600" },
-
-  fundCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ffffff",
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-  },
-  fundIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  fundInfo: { flex: 1 },
-  fundName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#1e293b",
-    marginBottom: 4,
-  },
-  fundDesc: { fontSize: 13, color: "#64748b" },
-  fundBalanceContainer: { alignItems: "flex-end", flexDirection: "row" },
-  fundBalance: { fontSize: 16, fontWeight: "bold", color: "#0f172a" },
-  currencyLabel: {
-    fontSize: 12,
-    color: "#64748b",
-    marginLeft: 4,
-    marginBottom: 2,
-  },
-
-  emptyState: { alignItems: "center", padding: 40, opacity: 0.5 },
-  emptyStateText: { marginTop: 12, fontSize: 14, color: "#64748b" },
-
-  deleteFundBtn: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  deleteWarningBox: {
-    backgroundColor: "#fff1f2",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#fecdd3",
-    gap: 8,
-  },
-  deleteWarningText: { fontSize: 14, color: "#be123c", lineHeight: 20 },
-  deleteRefundText: { fontSize: 14, color: "#0f172a", lineHeight: 20 },
-  deleteHintText: { fontSize: 14, color: "#475569", marginBottom: 8 },
-  deleteHintCode: {
-    fontFamily: "monospace",
-    backgroundColor: "#f1f5f9",
-    color: "#ef4444",
-    fontWeight: "bold",
-  },
-  deleteActions: { flexDirection: "row", gap: 12 },
-  deleteCancelBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    backgroundColor: "#f1f5f9",
-  },
-  deleteCancelText: { color: "#64748b", fontWeight: "600", fontSize: 15 },
-  deleteConfirmBtn: {
-    flex: 2,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    backgroundColor: "#ef4444",
-  },
-  deleteConfirmText: { color: "#ffffff", fontWeight: "bold", fontSize: 15 },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    padding: 24,
-  },
-  allocModalContent: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    padding: 24,
-    marginTop: 100,
-    marginBottom: "auto",
-  },
-  modalHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: { fontSize: 20, fontWeight: "bold", color: "#0f172a" },
-  modalSubtitle: { fontSize: 15, color: "#64748b", marginBottom: 20 },
-  modalHighlight: { fontWeight: "bold", color: "#0f172a" },
-
-  textInput: {
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: "#0f172a",
-    marginBottom: 24,
-  },
-  amountInputModal: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#0f172a",
-    textAlign: "center",
-    marginVertical: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: "#cbd5e1",
-    paddingBottom: 8,
-  },
-
-  confirmBtn: {
-    backgroundColor: "#3b82f6",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  confirmBtnText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
-
-  actionButtonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-    marginTop: 24,
-  },
-  actionConfirmBtn: {
-    flex: 1,
-    height: 54,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionCancelBtn: {
-    width: 54,
-    height: 54,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fee2e2",
-    borderWidth: 1,
-    borderColor: "#fecaca",
-  },
-  cancelBtnText: {
-    color: "#ef4444",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  bgDeposit: { backgroundColor: "#10b981" },
-  bgWithdraw: { backgroundColor: "#ef4444" },
-  bgDisabled: { backgroundColor: "#cbd5e1" },
-
-  tabs: {
-    flexDirection: "row",
-    backgroundColor: "#f1f5f9",
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 8,
-    gap: 8,
-  },
-  tabActiveDeposit: { backgroundColor: "#10b981", elevation: 2 },
-  tabActiveWithdraw: { backgroundColor: "#ef4444", elevation: 2 },
-  tabText: { fontSize: 15, fontWeight: "600", color: "#64748b" },
-  tabTextActive: { color: "#ffffff" },
-  modalOverlayCenter: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  iconModalContent: {
-    backgroundColor: "#ffffff",
-    borderRadius: 24,
-    padding: 24,
-    width: "100%",
-    maxHeight: "80%",
-    elevation: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  iconModalSubtitle: {
-    fontSize: 14,
-    color: "#64748b",
-    marginBottom: 20,
-  },
-  iconGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingVertical: 10,
-  },
-  iconGridItem: {
-    width: "22%",
-    aspectRatio: 1,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#f8fafc",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  iconItemImage: {
-    width: 38,
-    height: 38,
-    resizeMode: "contain",
-  },
-});
 
 export default FundScreen;

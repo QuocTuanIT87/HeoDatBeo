@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './src/navigation/RootNavigator';
@@ -9,13 +9,22 @@ import { CustomAlert } from './src/components/CustomAlert';
 const navigationRef = createNavigationContainerRef<any>();
 
 export default function App() {
+  const [isReady, setIsReady] = useState(false);
   const lastNotificationResponse = Notifications.useLastNotificationResponse();
+  const handledNotifications = useRef<string[]>([]);
 
   useEffect(() => {
     if (
       lastNotificationResponse &&
+      isReady &&
       navigationRef.isReady()
     ) {
+      const notificationId = lastNotificationResponse.notification.request.identifier;
+      if (handledNotifications.current.includes(notificationId)) {
+        return;
+      }
+      handledNotifications.current.push(notificationId);
+
       const type = lastNotificationResponse.notification.request.content.data?.type;
       if (type === 'daily_report' || type === 'monthly_report' || type === 'yearly_report') {
         navigationRef.navigate('MainApp', { screen: 'Statistics', params: { openHistory: true } });
@@ -23,11 +32,14 @@ export default function App() {
         navigationRef.navigate('MainApp', { screen: 'Home' });
       }
     }
-  }, [lastNotificationResponse]);
+  }, [lastNotificationResponse, isReady]);
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer
+        ref={navigationRef}
+        onReady={() => setIsReady(true)}
+      >
         <RootNavigator />
       </NavigationContainer>
       <CustomAlert />

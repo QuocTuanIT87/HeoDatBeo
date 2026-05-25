@@ -47,22 +47,22 @@ export const MASCOT_LIST: MascotOption[] = [
   },
   {
     key: 'clock_conan',
-    name: 'Conan (Đồng hồ)',
+    name: 'Conan',
     image: require('../../assets/series/mascot/clock_conan.png'),
   },
   {
     key: 'cute_conan',
-    name: 'Conan (Dễ thương)',
+    name: 'Conan',
     image: require('../../assets/series/mascot/cute_conan.png'),
   },
   {
     key: 'doremon_cute',
-    name: 'Doraemon (Dễ thương)',
+    name: 'Doraemon',
     image: require('../../assets/series/mascot/doremon_cute.png'),
   },
   {
     key: 'doremon_solider',
-    name: 'Doraemon (Chiến binh)',
+    name: 'Doraemon',
     image: require('../../assets/series/mascot/doremon_solider.png'),
   },
   {
@@ -72,7 +72,7 @@ export const MASCOT_LIST: MascotOption[] = [
   },
   {
     key: 'focus_conan',
-    name: 'Conan (Tập trung)',
+    name: 'Conan',
     image: require('../../assets/series/mascot/focus_conan.png'),
   },
   {
@@ -87,7 +87,7 @@ export const MASCOT_LIST: MascotOption[] = [
   },
   {
     key: 'guitar_minion',
-    name: 'Minion (Guitar)',
+    name: 'Minion',
     image: require('../../assets/series/mascot/guitar_minion.png'),
   },
   {
@@ -167,7 +167,7 @@ export const MASCOT_LIST: MascotOption[] = [
   },
   {
     key: 'three_minion',
-    name: 'Minion (Bộ ba)',
+    name: 'Bộ ba Minion',
     image: require('../../assets/series/mascot/three_minion.png'),
   },
   {

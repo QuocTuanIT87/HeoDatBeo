@@ -25,12 +25,14 @@ import {
   Keyboard,
   ArrowRightLeft,
   RotateCcw,
+  HelpCircle,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { CategoryBudget, UserProfile } from "../types";
 import { formatCurrency } from "../utils/format";
 import Keypad from "../components/Keypad";
-import { useIsFocused } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { styles } from "../styles/BudgetScreen";
 
 export const EXPENSE_ICONS: Record<string, any> = {
   badminton: require("../../assets/expense_icon/badminton.png"),
@@ -62,7 +64,7 @@ export const EXPENSE_ICONS: Record<string, any> = {
   http: require("../../assets/expense_icon/http.png"),
   "ice-cream": require("../../assets/expense_icon/ice-cream.png"),
   "interior-design": require("../../assets/expense_icon/interior-design.png"),
-  "interior-design_1": require("../../assets/expense_icon/interior-design_1.png"),
+  "maintenance": require("../../assets/expense_icon/maintenance.png"),
   internet: require("../../assets/expense_icon/internet.png"),
   internet_2: require("../../assets/expense_icon/internet_2.png"),
   invoice: require("../../assets/expense_icon/invoice.png"),
@@ -109,6 +111,45 @@ export const EXPENSE_ICONS: Record<string, any> = {
 // Màn hình BudgetScreen: Quản lý chia tiền vào các danh mục chi tiêu theo tháng
 const BudgetScreen = () => {
   const isFocused = useIsFocused();
+  const navigation = useNavigation<any>();
+
+  const handleShowTotalFundInfo = () => {
+    Alert.normal(
+      "TỔNG QUỸ TIÊU SÀI",
+      "Đây là tổng số tiền trong các danh mục bạn đã chia tiền\n",
+      [
+        {
+          text: "Hướng dẫn",
+          onPress: () => {
+            navigation.navigate("Guide");
+          },
+        },
+        {
+          text: "Đóng",
+          style: "cancel",
+        },
+      ]
+    );
+  };
+
+  const handleShowUnallocatedInfo = () => {
+    Alert.normal(
+      "SỐ DƯ CHƯA PHÂN BỔ",
+      "Số dư chưa phân bổ là số tiền bạn dùng để phân chia vào danh mục cần nạp tiền và các loại quỹ.",
+      [
+        {
+          text: "Hướng dẫn",
+          onPress: () => {
+            navigation.navigate("Guide");
+          },
+        },
+        {
+          text: "Đóng",
+          style: "cancel",
+        },
+      ]
+    );
+  };
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [budgets, setBudgets] = useState<CategoryBudget[]>([]);
@@ -456,7 +497,7 @@ const BudgetScreen = () => {
   };
 
   const totalBalance =
-    budgets.reduce((sum, c) => sum + c.budget, 0) + unallocated;
+    budgets.reduce((sum, c) => sum + c.budget, 0);
 
   const renderCategoryItem = (cat: CategoryBudget) => {
     const spent = cat.spent || 0;
@@ -553,37 +594,9 @@ const BudgetScreen = () => {
         {/* Top bar */}
         <View style={styles.headerTopBar}>
           <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              {profile?.avatar ? (
-                <Image
-                  source={{ uri: profile.avatar }}
-                  style={styles.avatarImage}
-                />
-              ) : (
-                <Text style={styles.avatarText}>
-                  {profile?.name ? profile.name.charAt(0).toUpperCase() : "U"}
-                </Text>
-              )}
-              <View style={styles.avatarStatus} />
-            </View>
-            <View style={styles.profileTextWrapper}>
-              <Text style={styles.greetingLabel}>Ngân sách chi tiêu,</Text>
-              <Text style={styles.profileName} numberOfLines={1}>
-                {profile?.name || "Người dùng"}
-              </Text>
-            </View>
           </View>
 
-          <TouchableOpacity
-            onPress={() => setShowAmount(!showAmount)}
-            style={styles.eyeBtn}
-          >
-            {showAmount ? (
-              <Eye color="#ffffff" size={20} />
-            ) : (
-              <EyeOff color="#ffffff" size={20} />
-            )}
-          </TouchableOpacity>
+         
         </View>
 
         {/* Bank Card */}
@@ -596,14 +609,44 @@ const BudgetScreen = () => {
             <View style={styles.cardChip} />
           </View>
 
-          <Text style={styles.cardBalanceLabel}>SỐ DƯ CHƯA PHÂN BỔ</Text>
-          <Text style={styles.cardBalanceAmount}>
+          <View style={styles.cardBalanceLabelContainer}>
+            <Text style={styles.cardBalanceLabel}>SỐ DƯ CHƯA PHÂN BỔ</Text>
+            <TouchableOpacity
+              onPress={handleShowUnallocatedInfo}
+              style={styles.helpIconTouch}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <HelpCircle color="#94a3b8" size={12} />
+            </TouchableOpacity>
+          </View>
+         <View style={styles.rowmb10}>
+           <Text style={styles.cardBalanceAmount}>
             {showAmount ? `${formatCurrency(unallocated)} đ` : "•••••• đ"}
           </Text>
+           <TouchableOpacity
+            onPress={() => setShowAmount(!showAmount)}
+            style={styles.eyeBtn}
+          >
+            {showAmount ? (
+              <Eye color="#ffffff" size={15} />
+            ) : (
+              <EyeOff color="#ffffff" size={15} />
+            )}
+          </TouchableOpacity>
+         </View>
 
           <View style={styles.cardStats}>
             <View style={styles.cardStat}>
-              <Text style={styles.cardStatLabel}>TỔNG QUỸ</Text>
+              <View style={styles.cardStatLabelContainer}>
+                <Text style={styles.cardStatLabel}>TỔNG QUỸ</Text>
+                <TouchableOpacity
+                  onPress={handleShowTotalFundInfo}
+                  style={styles.helpIconTouch}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <HelpCircle color="#94a3b8" size={12} />
+                </TouchableOpacity>
+              </View>
               <Text style={styles.cardStatValue}>
                 {showAmount ? `${formatCurrency(totalBalance)} đ` : "••••••"}
               </Text>
@@ -671,7 +714,7 @@ const BudgetScreen = () => {
         {activeTab === "direct" && (
           <View style={styles.tabNoteBox}>
             <Text style={styles.tabNoteText}>
-              💡 Giao dịch từ các danh mục này sẽ được trừ trực tiếp vào số tiền
+              💡 Giao dịch từ các danh mục này sẽ được trừ trực tiếp vào số dư
               chưa phân bổ của bạn.
             </Text>
           </View>
@@ -1047,548 +1090,5 @@ const BudgetScreen = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8fafc" },
-  header: {
-    backgroundColor: "#5596e0",
-    paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 40,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-  },
-  headerTopBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  profileSection: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  avatarContainer: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-  },
-  avatarImage: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-  },
-  avatarText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  avatarStatus: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#10b981",
-    borderWidth: 1.5,
-    borderColor: "#5596e0",
-  },
-  profileTextWrapper: { marginLeft: 10 },
-  greetingLabel: { color: "#cccccc", fontSize: 12 },
-  profileName: { color: "#ffffff", fontSize: 15, fontWeight: "bold" },
-  eyeBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bankCard: {
-    backgroundColor: "#1e293b",
-    borderRadius: 18,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  cardBrandWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  cardBrandText: {
-    color: "#f59e0b",
-    fontSize: 11,
-    fontWeight: "bold",
-    letterSpacing: 1,
-  },
-  cardChip: {
-    width: 32,
-    height: 24,
-    borderRadius: 4,
-    backgroundColor: "#f59e0b",
-    opacity: 0.8,
-  },
-  cardBalanceLabel: {
-    color: "#94a3b8",
-    fontSize: 10,
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  cardBalanceAmount: {
-    color: "#ffffff",
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 18,
-  },
-  cardStats: {
-    flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.07)",
-    borderRadius: 12,
-    padding: 12,
-    alignItems: "center",
-  },
-  cardStat: { flex: 1 },
-  cardStatDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    marginHorizontal: 12,
-  },
-  cardStatLabel: {
-    color: "#94a3b8",
-    fontSize: 10,
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  cardStatValue: { color: "#ffffff", fontSize: 14, fontWeight: "bold" },
-  // Legacy styles kept for references but no longer used in header
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
-  headerTitle: { fontSize: 16, color: "#fdf4ff", opacity: 0.9 },
-  headerSubtitle: { fontSize: 13, color: "#fdf4ff", opacity: 0.7, marginTop: 4 },
-  unallocatedBox: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
-  unallocatedAmount: { color: "#ffffff", fontSize: 32, fontWeight: "bold", marginLeft: 10 },
-  headerCards: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 20, padding: 16, alignItems: "center" },
-  headerCard: { flex: 1 },
-  headerDivider: { width: 1, height: 35, backgroundColor: "rgba(255,255,255,0.3)", marginHorizontal: 12 },
-  headerCardLabel: { color: "#ede9fe", fontSize: 13, marginBottom: 4 },
-  headerCardValue: { color: "#ffffff", fontSize: 17, fontWeight: "bold" },
-  body: { flex: 1 },
-  bodyContent: { paddingHorizontal: 20, paddingTop: 10 },
-  tabSection: {
-    paddingHorizontal: 20,
-    marginTop: -25,
-    zIndex: 10,
-  },
-  tabContainer: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 6,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-    borderRadius: 12,
-  },
-  tabActive: {
-    backgroundColor: "#7c3aed",
-  },
-  tabText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#64748b",
-  },
-  tabTextActive: {
-    color: "#ffffff",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 24,
-    marginBottom: 16,
-  },
-  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#1e293b" },
-  addCatBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f5f3ff",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    gap: 4,
-  },
-  addCatText: { color: "#7c3aed", fontWeight: "bold", fontSize: 13 },
-  emptyBox: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    padding: 40,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#f1f5f9",
-    marginTop: 20,
-    elevation: 1,
-  },
-  emptyText: {
-    color: "#94a3b8",
-    textAlign: "center",
-    lineHeight: 22,
-    fontSize: 15,
-  },
-  catCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-  },
-  catInfo: { flex: 1 },
-  catNameRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  catName: { fontSize: 17, fontWeight: "bold", color: "#334155" },
-  catBudget: { fontSize: 16, fontWeight: "bold" },
-  progressContainer: { marginTop: 16 },
-  progressTrack: {
-    height: 8,
-    backgroundColor: "#f1f5f9",
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  progressFill: { height: "100%", borderRadius: 4 },
-  progressLabelRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 6,
-  },
-  progressText: { fontSize: 13, color: "#64748b" },
-  progressPercent: { fontSize: 13, fontWeight: "600", color: "#64748b" },
-  deleteBtn: { padding: 10, marginLeft: 10 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.7)",
-    justifyContent: "flex-start",
-  },
-  modalContent: {
-    backgroundColor: "#ffffff",
-    borderRadius: 24,
-    padding: 24,
-    paddingBottom: 40,
-    paddingTop: 90,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: { fontSize: 19, fontWeight: "bold", color: "#0f172a" },
-  allocTabs: {
-    flexDirection: "row",
-    backgroundColor: "#f1f5f9",
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
-  },
-  allocTab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 10,
-  },
-  allocTabActiveDeposit: { backgroundColor: "#10b981" },
-  allocTabActiveWithdraw: { backgroundColor: "#ef4444" },
-  allocTabText: { fontWeight: "bold", color: "#64748b" },
-  allocTabTextActive: { color: "#ffffff" },
-  modalSubtitle: { fontSize: 15, color: "#64748b", marginBottom: 16 },
-  modalHighlight: { color: "#0f172a", fontWeight: "bold" },
-  amountDisplayModal: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 16,
-    padding: 20,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  amountTextModal: { fontSize: 32, fontWeight: "bold", color: "#0f172a" },
-  currencyLabelModal: {
-    fontSize: 16,
-    color: "#64748b",
-    marginLeft: 8,
-    marginTop: 8,
-  },
-  actionButtonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-    marginTop: 24,
-  },
-  actionConfirmBtn: {
-    flex: 1,
-    height: 54,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionCancelBtn: {
-    width: 54,
-    height: 54,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fee2e2",
-    borderWidth: 1,
-    borderColor: "#fecaca",
-  },
-  confirmDisabled: {
-    backgroundColor: "#cbd5e1",
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  cancelBtnText: {
-    color: "#ef4444",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  confirmBtnText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  confirmBtn: {
-    backgroundColor: "#7c3aed",
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: "center",
-    marginTop: 24,
-  },
-  modalOverlayCenter: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  inputModalContent: {
-    backgroundColor: "#ffffff",
-    borderRadius: 24,
-    padding: 24,
-    width: "100%",
-    elevation: 20,
-  },
-  textInput: {
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: "#0f172a",
-    marginBottom: 16,
-    backgroundColor: "#f8fafc",
-    textAlignVertical: "center",
-  },
-  typeLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748b",
-    marginBottom: 10,
-  },
-  typeToggleRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
-  typeToggleBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-    borderRadius: 10,
-    backgroundColor: "#f1f5f9",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  typeToggleBtnActive: { backgroundColor: "#7c3aed", borderColor: "#7c3aed" },
-  typeToggleText: { fontSize: 14, color: "#64748b", fontWeight: "600" },
-  typeToggleTextActive: { color: "#ffffff" },
-  listSection: { marginBottom: 10 },
-  listSectionTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#64748b",
-    marginBottom: 12,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  deleteMsg: {
-    fontSize: 14,
-    color: "#475569",
-    lineHeight: 22,
-    marginBottom: 12,
-  },
-  warningBox: {
-    backgroundColor: "#fff7ed",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#fed7aa",
-  },
-  warningText: { fontSize: 13, color: "#c2410c", lineHeight: 18 },
-  deleteLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#334155",
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  requiredText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#ef4444",
-    marginBottom: 12,
-    backgroundColor: "#fef2f2",
-    padding: 10,
-    borderRadius: 8,
-    textAlign: "center",
-    borderStyle: "dashed",
-    borderWidth: 1,
-    borderColor: "#fca5a5",
-  },
-  tabNoteBox: {
-    backgroundColor: "#eff6ff",
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#bfdbfe",
-  },
-  tabNoteText: {
-    fontSize: 10,
-    color: "#1e40af",
-    lineHeight: 18,
-    fontWeight: "500",
-  },
-  inputMethodToggleRow: {
-    flexDirection: "row",
-    paddingHorizontal: 6,
-    marginBottom: 16,
-    marginTop: 10,
-  },
-  quickToggleBtnCircle: {
-    backgroundColor: "#ffffff",
-    width: 34,
-    height: 34,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  manualInputWrapper: {
-    marginBottom: 20,
-  },
-  manualInput: {
-    backgroundColor: "#f8fafc",
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    borderRadius: 16,
-    padding: 20,
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#0f172a",
-    textAlign: "center",
-  },
-  catIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: "#f5f3ff",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 14,
-  },
-  catIcon: {
-    width: 32,
-    height: 32,
-    resizeMode: "contain",
-  },
-  iconModalContent: {
-    backgroundColor: "#ffffff",
-    borderRadius: 24,
-    padding: 24,
-    width: "100%",
-    maxHeight: "80%",
-    elevation: 20,
-  },
-  iconModalSubtitle: {
-    fontSize: 14,
-    color: "#64748b",
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  iconGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingVertical: 10,
-  },
-  iconGridItem: {
-    width: "22%",
-    aspectRatio: 1,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#f8fafc",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  iconItemImage: {
-    width: 38,
-    height: 38,
-    resizeMode: "contain",
-  },
-});
 
 export default BudgetScreen;
