@@ -107,6 +107,7 @@ export const getIncomeIconSource = (
 };
 
 const VERSION_HISTORY = [
+  { version: "26.05.2026", description: "Cập nhật xóa bản sao lưu cũ khi sao lưu đạt tối đa 20 bản\nSửa giao diện trang cài đặt", order: 12 },
   { version: "25.05.2026", description: "Sửa lỗi sao lưu tự động\nSửa giao diện hiển thị\nSửa lỗi ấn vào thông báo hằng ngày\nThêm chức năng sửa chú thích giao dịch\nThêm chức năng hiển thị gợi ý ghi chú\nHiển thị bản sao lưu mới nhất khi ấn khôi phục", order: 11 },
   { version: "23.05.2026", description: "Sửa phần hiển thị tên ở các trang khác\nSửa hiển thị báo cáo tài chính\nSửa trang hướng dẫn sinh động hơn\nThu nhỏ icon ẩn tiền\nHiển thị lọc theo điều kiện nào ở biểu đồ tròn", order: 10 },
   { version: "22.05.2026", description: "Cập nhật sao lưu dữ liệu ở trang bắt đầu\nThay đổi cơ chế linh vật\nBổ sung hướng dẫn chi tiết\nLời chào trang chủ chi tiết hơn\nSửa lỗi hiển thị tên người dùng\nTối ưu giao diện hiển thị tiền\nSửa lỗi sao lưu dữ liệu\nSửa lỗi hiển thị bản sao lưu mới nhất", order: 9 },
@@ -1010,7 +1011,7 @@ const SettingsScreen = () => {
 
                 <View style={styles.driveWarningBox}>
                   <Text style={styles.driveWarningText}>
-                    * Lưu ý: Mỗi lần sao lưu sẽ tạo một file riêng có tên dạng heodatbeo_YYYY-MM-DD_[giây UTC].txt. Google Drive chỉ giữ tối đa 20 file gần nhất trong thư mục "data_heo_dat_beo". Các file cũ hơn sẽ tự động được xóa bỏ.
+                    * Lưu ý: Mỗi lần sao lưu sẽ tạo một file riêng có tên dạng heodatbeo_YYYY-MM-DD_[giây UTC].txt. Khi đạt tối đa 20 bản sao lưu trên Google Drive, hệ thống sẽ tự động xóa 17 bản sao lưu cũ nhất và chỉ giữ lại 3 bản sao lưu mới nhất.
                   </Text>
                 </View>
               </View>
