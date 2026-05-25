@@ -1,0 +1,150 @@
+import { Platform, StyleSheet } from "react-native";
+
+export const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: "#f0f5f6ff",
+    },
+    content: {
+        flex: 1,
+        padding: 24,
+        justifyContent: "center",
+    },
+    header: {
+        alignItems: "center",
+        marginBottom: 48,
+    },
+    title: {
+        fontSize: 24,
+        color: "#64748b",
+        marginTop: 16,
+    },
+    appName: {
+        fontSize: 36,
+        fontWeight: "bold",
+        color: "#0fb5b1",
+        marginTop: 8,
+    },
+    form: {
+        width: "100%",
+    },
+    label: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#334155",
+        marginBottom: 8,
+    },
+    input: {
+        backgroundColor: "#f8fafc",
+        borderWidth: 1,
+        borderColor: "#e2e8f0",
+        borderRadius: 12,
+        padding: 16,
+        fontSize: 16,
+        marginBottom: 24,
+        color: "#0f172a",
+    },
+    button: {
+        backgroundColor: "#0fb5b1",
+        padding: 18,
+        borderRadius: 12,
+        alignItems: "center",
+        marginTop: 8,
+    },
+    buttonText: {
+        color: "#ffffff",
+        fontSize: 18,
+        fontWeight: "bold",
+    },
+    importContainer: {
+        marginTop: 32,
+        alignItems: "center",
+    },
+    importText: {
+        fontSize: 14,
+        color: "#64748b",
+        marginBottom: 8,
+    },
+    importButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "#0fb5b1",
+        backgroundColor: "transparent",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    importButtonText: {
+        color: "#0fb5b1",
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "flex-end",
+    },
+    modalContent: {
+        backgroundColor: "#ffffff",
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: 24,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    },
+    modalHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 24,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: "#0f172a",
+    },
+    modalOptionButton: {
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#0fb5b1",
+        alignItems: "center",
+        backgroundColor: "transparent",
+    },
+    modalOptionButtonText: {
+        color: "#0fb5b1",
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    linkedAccountContainer: {
+        marginTop: 16,
+        padding: 16,
+        borderRadius: 12,
+        backgroundColor: "#f8fafc",
+        borderWidth: 1,
+        borderColor: "#e2e8f0",
+    },
+    linkedAccountLabel: {
+        fontSize: 12,
+        color: "#64748b",
+        marginBottom: 4,
+    },
+    linkedAccountEmail: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#0f172a",
+        marginBottom: 12,
+    },
+    unlinkButton: {
+        alignSelf: "flex-start",
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 6,
+        backgroundColor: "#fee2e2",
+    },
+    unlinkButtonText: {
+        color: "#ef4444",
+        fontSize: 14,
+        fontWeight: "600",
+    },
+});

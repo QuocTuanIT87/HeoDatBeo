@@ -1,6 +1,6 @@
 {
   "name": "heodatbeo",
-  "version": "23.05.2026",
+  "version": "25.05.2026",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",

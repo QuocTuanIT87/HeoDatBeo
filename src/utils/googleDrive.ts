@@ -258,40 +258,108 @@ export const checkAndRunAutoBackup = async () => {
     const day = String(now.getDate()).padStart(2, '0');
     const todayStr = `${year}-${month}-${day}`;
 
-    const lastBackupTs = await storage.getGoogleDriveLastBackupTimestamp();
-    let shouldBackup = false;
+    // Chỉ thực hiện tự động sao lưu sau 1h sáng
+    if (now.getHours() < 1) return;
 
-    if (lastBackupTs === 0) {
-      // Chưa từng backup -> backup luôn nếu giờ >= 1
-      if (now.getHours() >= 1) {
-        shouldBackup = true;
-      }
-    } else {
+    // 1. Kiểm tra local storage trước để tránh gọi API Google Drive nhiều lần không cần thiết
+    const lastBackupTs = await storage.getGoogleDriveLastBackupTimestamp();
+    const lastBackupStatus = await storage.getGoogleDriveLastBackupStatus();
+    if (lastBackupTs !== 0 && lastBackupStatus === 'success') {
       const lastBackupDate = new Date(lastBackupTs);
       const ly = lastBackupDate.getFullYear();
       const lm = String(lastBackupDate.getMonth() + 1).padStart(2, '0');
       const ld = String(lastBackupDate.getDate()).padStart(2, '0');
       const lastBackupDateStr = `${ly}-${lm}-${ld}`;
-
-      // Nếu hôm nay chưa backup, và giờ hiện tại đã >= 1:00 sáng
-      if (lastBackupDateStr !== todayStr && now.getHours() >= 1) {
-        shouldBackup = true;
+      if (lastBackupDateStr === todayStr) {
+        // Đã có sao lưu thành công ngày hôm nay được lưu locally -> bỏ qua
+        return;
       }
     }
 
-    if (shouldBackup) {
-      console.log('Bắt đầu tự động sao lưu dữ liệu lên Google Drive...');
-      const dataStr = await storage.exportData();
-      const res = await uploadBackupToGoogleDrive(dataStr);
-      const backupTime = Date.now();
-      await storage.setGoogleDriveLastBackupTimestamp(backupTime);
-      await storage.setGoogleDriveLastBackupStatus(res.success ? 'success' : 'failed');
-      console.log('Kết quả tự động sao lưu:', res.message);
+    // 2. Kiểm tra trên Google Drive xem đã có bản sao lưu nào ngày hôm nay chưa
+    console.log('Đang kiểm tra phiên bản sao lưu hôm nay trên Google Drive...');
+    const driveBackup = await checkLatestBackupOnGoogleDrive();
+    if (driveBackup && driveBackup.success && driveBackup.timestamp) {
+      const driveBackupDate = new Date(driveBackup.timestamp);
+      const dy = driveBackupDate.getFullYear();
+      const dm = String(driveBackupDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(driveBackupDate.getDate()).padStart(2, '0');
+      const driveBackupDateStr = `${dy}-${dm}-${dd}`;
+
+      if (driveBackupDateStr === todayStr) {
+        // Nếu rồi thì lấy đó là bản sao lưu mới nhất, lưu thành thông tin sao lưu mới nhất
+        await storage.setGoogleDriveLastBackupTimestamp(driveBackup.timestamp);
+        await storage.setGoogleDriveLastBackupStatus('success');
+        console.log('Hôm nay đã có bản sao lưu trên Google Drive. Cập nhật thông tin sao lưu mới nhất và bỏ qua tự động sao lưu.');
+        return;
+      }
     }
+
+    // 3. Nếu chưa có bản sao lưu nào ngày hôm nay -> Tiến hành sao lưu tự động
+    console.log('Bắt đầu tự động sao lưu dữ liệu lên Google Drive...');
+    const dataStr = await storage.exportData();
+    const res = await uploadBackupToGoogleDrive(dataStr);
+    const backupTime = Date.now();
+    await storage.setGoogleDriveLastBackupTimestamp(backupTime);
+    await storage.setGoogleDriveLastBackupStatus(res.success ? 'success' : 'failed');
+    console.log('Kết quả tự động sao lưu:', res.message);
   } catch (e) {
     console.error('Lỗi trong quá trình tự động sao lưu:', e);
   } finally {
     isAutoBackupRunning = false;
+  }
+};
+
+/**
+ * Lấy thông tin chi tiết bản sao lưu mới nhất trên Google Drive (tên file và mốc thời gian)
+ */
+export const getLatestBackupDetailsOnGoogleDrive = async (): Promise<{ success: boolean; message: string; name?: string; timestamp?: number }> => {
+  try {
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      return { success: false, message: 'Chưa đăng nhập tài khoản Google hoặc phiên làm việc đã hết hạn.' };
+    }
+
+    const folderId = await getOrCreateBackupFolder(accessToken);
+    if (!folderId) {
+      return { success: false, message: 'Không thể truy cập thư mục lưu trữ trên Google Drive.' };
+    }
+
+    const listFilesUrl = `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and mimeType='text/plain' and name contains 'heodatbeo_' and trashed=false&orderBy=name desc&pageSize=1`;
+    const listResponse = await fetch(listFilesUrl, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!listResponse.ok) {
+      const errText = await listResponse.text();
+      return { success: false, message: `Không thể tìm danh sách bản sao lưu: ${errText}` };
+    }
+
+    const listData = await listResponse.json();
+    if (!listData.files || listData.files.length === 0) {
+      return { success: false, message: 'Không tìm thấy bản sao lưu nào trên tài khoản Google Drive của bạn.' };
+    }
+
+    const latestFile = listData.files[0];
+    let fileTimestamp = Date.now();
+    const match = latestFile.name.match(/_(\d+)\.txt$/);
+    if (match) {
+      fileTimestamp = parseInt(match[1], 10) * 1000;
+    }
+
+    return {
+      success: true,
+      message: 'Lấy thông tin bản sao lưu mới nhất thành công.',
+      name: latestFile.name,
+      timestamp: fileTimestamp,
+    };
+  } catch (error: any) {
+    console.error('Lỗi khi lấy thông tin bản sao lưu từ Google Drive:', error);
+    return {
+      success: false,
+      message: error.message || String(error),
+    };
   }
 };
 

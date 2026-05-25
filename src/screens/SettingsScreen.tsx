@@ -28,6 +28,7 @@ import {
   getAccessToken,
   restoreLatestBackupFromGoogleDrive,
   checkLatestBackupOnGoogleDrive,
+  getLatestBackupDetailsOnGoogleDrive,
 } from "../utils/googleDrive";
 import {
   CommonActions,
@@ -52,9 +53,11 @@ import {
   Link,
   Cloud,
   Database,
+  PencilLine,
 } from "lucide-react-native";
 import { UserProfile, CategoryBudget, Transaction } from "../types";
 import { scheduleTestNotification } from "../utils/notifications";
+import { styles } from "../styles/SettingsScreen";
 
 const DEFAULT_INCOME_CATEGORIES = ["Lương", "Thưởng", "Bán hàng"];
 
@@ -104,6 +107,7 @@ export const getIncomeIconSource = (
 };
 
 const VERSION_HISTORY = [
+  { version: "25.05.2026", description: "Sửa lỗi sao lưu tự động\nSửa giao diện hiển thị\nSửa lỗi ấn vào thông báo hằng ngày\nThêm chức năng sửa chú thích giao dịch\nThêm chức năng hiển thị gợi ý ghi chú\nHiển thị bản sao lưu mới nhất khi ấn khôi phục", order: 11 },
   { version: "23.05.2026", description: "Sửa phần hiển thị tên ở các trang khác\nSửa hiển thị báo cáo tài chính\nSửa trang hướng dẫn sinh động hơn\nThu nhỏ icon ẩn tiền\nHiển thị lọc theo điều kiện nào ở biểu đồ tròn", order: 10 },
   { version: "22.05.2026", description: "Cập nhật sao lưu dữ liệu ở trang bắt đầu\nThay đổi cơ chế linh vật\nBổ sung hướng dẫn chi tiết\nLời chào trang chủ chi tiết hơn\nSửa lỗi hiển thị tên người dùng\nTối ưu giao diện hiển thị tiền\nSửa lỗi sao lưu dữ liệu\nSửa lỗi hiển thị bản sao lưu mới nhất", order: 9 },
   { version: "21.05.2026", description: "Sửa giao diện profile\nMã hóa dữ liệu\nThêm linh vật", order: 8 },
@@ -145,6 +149,10 @@ const SettingsScreen = () => {
   const [isRestoring, setIsRestoring] = useState(false);
   const [isHistoryModalVisible, setHistoryModalVisible] = useState(false);
   const [isOfflineModalVisible, setOfflineModalVisible] = useState(false);
+  const [isNotesModalVisible, setNotesModalVisible] = useState(false);
+  const [notesTab, setNotesTab] = useState<'expense' | 'income'>('expense');
+  const [newNoteText, setNewNoteText] = useState("");
+  const [suggestedNotes, setSuggestedNotes] = useState<string[]>([]);
 
   useEffect(() => {
     initGoogleDrive();
@@ -159,6 +167,47 @@ const SettingsScreen = () => {
       loadBackupSettings();
     }
   }, [isFocused]);
+
+  useEffect(() => {
+    if (isNotesModalVisible) {
+      loadSuggestedNotes();
+    }
+  }, [isNotesModalVisible, notesTab]);
+
+  const loadSuggestedNotes = async () => {
+    const notes = await storage.getSuggestedNotes(notesTab);
+    setSuggestedNotes(notes);
+  };
+
+  const handleAddNote = async () => {
+    const trimmed = newNoteText.trim();
+    if (!trimmed) return;
+    if (suggestedNotes.includes(trimmed)) {
+      Alert.alert("Lỗi", "Ghi chú này đã tồn tại trong gợi ý.");
+      return;
+    }
+    await storage.addSuggestedNote(notesTab, trimmed);
+    setNewNoteText("");
+    loadSuggestedNotes();
+  };
+
+  const handleDeleteNote = async (note: string) => {
+    Alert.alert(
+      "Xác nhận xóa",
+      `Bạn có chắc muốn xóa ghi chú gợi ý này?\n"${note}"`,
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: async () => {
+            await storage.deleteSuggestedNote(notesTab, note);
+            loadSuggestedNotes();
+          }
+        }
+      ]
+    );
+  };
 
   const checkGoogleSignInStatus = async () => {
     try {
@@ -296,49 +345,75 @@ const SettingsScreen = () => {
       return;
     }
 
-    Alert.alert(
-      "Khôi phục dữ liệu",
-      "Bạn có chắc chắn muốn khôi phục dữ liệu từ bản sao lưu gần nhất trên Google Drive? Dữ liệu hiện tại trên thiết bị sẽ bị ghi đè và thay thế hoàn toàn.",
-      [
-        { text: "Hủy bỏ", style: "cancel" },
-        {
-          text: "Khôi phục",
-          style: "destructive",
-          onPress: async () => {
-            setIsRestoring(true);
-            try {
-              const res = await restoreLatestBackupFromGoogleDrive();
-              if (res.success && res.content) {
-                const success = await storage.importData(res.content);
-                if (success) {
-                  const backupTime = res.timestamp || Date.now();
-                  await storage.setGoogleDriveLastBackupTimestamp(backupTime);
-                  await storage.setGoogleDriveLastBackupStatus("success");
-                  setLastBackupTimestamp(backupTime);
-                  setLastBackupStatus("success");
-                  Alert.alert(
-                    "Thành công",
-                    "Dữ liệu đã được phục hồi từ Google Drive. Vui lòng mở lại ứng dụng hoặc chuyển tab để làm mới."
-                  );
-                  loadProfile();
+    setIsRestoring(true);
+    try {
+      // 1. Tải thông tin bản sao lưu mới nhất trước để hiển thị xác nhận cho người dùng
+      const detailsRes = await getLatestBackupDetailsOnGoogleDrive();
+      if (!detailsRes.success || !detailsRes.name || !detailsRes.timestamp) {
+        Alert.alert("Không tìm thấy bản sao lưu", detailsRes.message || "Không thể lấy thông tin bản sao lưu.");
+        setIsRestoring(false);
+        return;
+      }
+
+      // Định dạng ngày giờ bản sao lưu
+      const date = new Date(detailsRes.timestamp);
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      const hh = String(date.getHours()).padStart(2, '0');
+      const min = String(date.getMinutes()).padStart(2, '0');
+      const ss = String(date.getSeconds()).padStart(2, '0');
+      const formattedTime = `${dd}/${mm}/${yyyy} lúc ${hh}:${min}:${ss}`;
+
+      setIsRestoring(false); // Tắt spinner để hiển thị hộp thoại xác nhận
+
+      Alert.alert(
+        "Khôi phục dữ liệu",
+        `Tìm thấy bản sao lưu gần nhất trên Google Drive:\n📁 Tên file: ${detailsRes.name}\n⏰ Thời gian: ${formattedTime}\n\nDữ liệu hiện tại trên thiết bị sẽ bị ghi đè và thay thế hoàn toàn.`,
+        [
+          { text: "Hủy bỏ", style: "cancel" },
+          {
+            text: "Xác nhận",
+            style: "destructive",
+            onPress: async () => {
+              setIsRestoring(true);
+              try {
+                const res = await restoreLatestBackupFromGoogleDrive();
+                if (res.success && res.content) {
+                  const success = await storage.importData(res.content);
+                  if (success) {
+                    const backupTime = res.timestamp || detailsRes.timestamp || Date.now();
+                    await storage.setGoogleDriveLastBackupTimestamp(backupTime);
+                    await storage.setGoogleDriveLastBackupStatus("success");
+                    setLastBackupTimestamp(backupTime);
+                    setLastBackupStatus("success");
+                    Alert.alert(
+                      "Thành công",
+                      "Dữ liệu đã được phục hồi từ Google Drive. Vui lòng mở lại ứng dụng hoặc chuyển tab để làm mới."
+                    );
+                    loadProfile();
+                  } else {
+                    Alert.alert(
+                      "Lỗi phục hồi",
+                      "Dữ liệu không hợp lệ hoặc đã xảy ra lỗi trong quá trình phục hồi."
+                    );
+                  }
                 } else {
-                  Alert.alert(
-                    "Lỗi phục hồi",
-                    "Dữ liệu không hợp lệ hoặc đã xảy ra lỗi trong quá trình phục hồi."
-                  );
+                  Alert.alert("Lỗi khôi phục", res.message);
                 }
-              } else {
-                Alert.alert("Lỗi khôi phục", res.message);
+              } catch (e: any) {
+                Alert.alert("Lỗi", e.message || String(e));
+              } finally {
+                setIsRestoring(false);
               }
-            } catch (e: any) {
-              Alert.alert("Lỗi", e.message || String(e));
-            } finally {
-              setIsRestoring(false);
             }
           }
-        }
-      ]
-    );
+        ]
+      );
+    } catch (e: any) {
+      Alert.alert("Lỗi", e.message || String(e));
+      setIsRestoring(false);
+    }
   };
 
   const formatLastBackupTime = (ts: number) => {
@@ -730,6 +805,18 @@ const SettingsScreen = () => {
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.cardTitle}>Sao lưu dữ liệu - Ngoại tuyến</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => setNotesModalVisible(true)}
+        >
+          <View style={[styles.iconContainer, { backgroundColor: "#fee2e2" }]}>
+            <PencilLine color="#dc2626" size={18} />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Quản lý gợi ý ghi chú</Text>
           </View>
         </TouchableOpacity>
 
@@ -1142,6 +1229,102 @@ const SettingsScreen = () => {
         </View>
       </Modal>
 
+      {/* Modal: Quản lý ghi chú gợi ý */}
+      <Modal
+        visible={isNotesModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setNotesModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Quản lý gợi ý ghi chú</Text>
+              <TouchableOpacity onPress={() => setNotesModalVisible(false)}>
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalTabs}>
+              <TouchableOpacity
+                style={[
+                  styles.modalTab,
+                  notesTab === "expense" && styles.modalTabActiveExpense,
+                ]}
+                onPress={() => setNotesTab("expense")}
+              >
+                <Text
+                  style={[
+                    styles.modalTabText,
+                    notesTab === "expense" && styles.modalTabTextActive,
+                  ]}
+                >
+                  Ghi chú Chi tiền
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalTab,
+                  notesTab === "income" && styles.modalTabActiveIncome,
+                ]}
+                onPress={() => setNotesTab("income")}
+              >
+                <Text
+                  style={[
+                    styles.modalTabText,
+                    notesTab === "income" && styles.modalTabTextActive,
+                  ]}
+                >
+                  Ghi chú Thu tiền
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.addCategoryRow}>
+              <TextInput
+                style={styles.addCategoryInput}
+                placeholder="Nhập ghi chú gợi ý mới..."
+                value={newNoteText}
+                onChangeText={setNewNoteText}
+                onSubmitEditing={handleAddNote}
+              />
+              <TouchableOpacity
+                style={styles.addCategoryBtn}
+                onPress={handleAddNote}
+              >
+                <Plus color="#ffffff" size={20} />
+              </TouchableOpacity>
+            </View>
+
+            {suggestedNotes.length === 0 ? (
+              <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 40 }}>
+                <Text style={{ color: "#94a3b8", fontSize: 16 }}>Chưa có ghi chú gợi ý nào.</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={suggestedNotes}
+                keyExtractor={(item) => item}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                renderItem={({ item }) => (
+                  <View style={styles.categoryListItem}>
+                    <Text style={[styles.categoryListName, { flex: 1, paddingRight: 10 }]} numberOfLines={2}>
+                      {item}
+                    </Text>
+                    <TouchableOpacity onPress={() => handleDeleteNote(item)}>
+                      <Trash2 color="#cccccc" size={20} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* Modal: Chọn Icon Thu Nhập */}
       <Modal
         visible={isIconModalVisible}
@@ -1202,492 +1385,6 @@ const SettingsScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-  },
-  header: {
-    backgroundColor: "#ffffff",
-    padding: 24,
-    paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#0f172a",
-  },
-  body: {
-    padding: 24,
-    gap: 16,
-  },
-  card: {
-    backgroundColor: "#ffffff",
-    padding: 12,
-    borderRadius: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-  },
-  iconContainer: {
-    padding: 8,
-    borderRadius: 12,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1e293b",
-    marginBottom: 4,
-  },
-  cardDesc: {
-    fontSize: 14,
-    color: "#64748b",
-    lineHeight: 20,
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#ffffff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 24,
-    paddingHorizontal: 20,
-    height: "75%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#0f172a",
-  },
-  modalTitleSub: {
-    fontSize: 14,
-    color: "#64748b",
-  },
-  modalTabs: {
-    flexDirection: "row",
-    backgroundColor: "#f1f5f9",
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
-  },
-  modalTab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 8,
-  },
-  modalTabActiveExpense: {
-    backgroundColor: "#ef4444",
-  },
-  modalTabActiveIncome: {
-    backgroundColor: "#10b981",
-  },
-  modalTabText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748b",
-  },
-  modalTabTextActive: {
-    color: "#ffffff",
-  },
-  addCategoryRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 20,
-  },
-  addCategoryInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: "#f8fafc",
-  },
-  addCategoryBtn: {
-    backgroundColor: "#3b82f6",
-    borderRadius: 12,
-    width: 48,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  categoryListItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-  },
-  categoryListName: {
-    fontSize: 16,
-    color: "#334155",
-    fontWeight: "500",
-  },
-  footerInfo: {
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
-    backgroundColor: "#ffffff",
-  },
-  versionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  versionText: {
-    fontSize: 14,
-    color: "#64748b",
-    fontWeight: "500",
-  },
-  versionSeparator: {
-    marginHorizontal: 8,
-    color: "#cbd5e1",
-    fontSize: 14,
-  },
-  versionHistoryBtn: {
-    fontSize: 14,
-    color: "#3b82f6",
-    fontWeight: "600",
-    textDecorationLine: "underline",
-  },
-  authorText: {
-    fontSize: 14,
-    color: "#64748b",
-  },
-  authorHighlight: {
-    fontWeight: "bold",
-    color: "#3b82f6",
-    fontStyle: "italic",
-    fontSize: 15,
-  },
-  historyList: {
-    marginTop: 8,
-  },
-  historyItem: {
-    flexDirection: "row",
-    marginBottom: 16,
-  },
-  historyDotContainer: {
-    alignItems: "center",
-    marginRight: 12,
-    width: 16,
-  },
-  historyDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#3b82f6",
-    marginTop: 6,
-  },
-  historyLine: {
-    width: 2,
-    flex: 1,
-    backgroundColor: "#e2e8f0",
-    marginTop: 4,
-    marginBottom: -16,
-  },
-  historyContent: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  historyVersion: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#1e293b",
-    marginBottom: 4,
-  },
-  historyDesc: {
-    fontSize: 13,
-    color: "#475569",
-    lineHeight: 18,
-    fontStyle: "italic",
-    marginBottom: 8
-  },
-  // Setting styles
-  settingSectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#64748b",
-    marginBottom: 12,
-    marginTop: 10,
-    letterSpacing: 0.5,
-  },
-  settingGroup: {
-    gap: 12,
-  },
-  settingOption: {
-    backgroundColor: "#f8fafc",
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  settingOptionActive: {
-    backgroundColor: "#eff6ff",
-    borderColor: "#3b82f6",
-  },
-  settingOptionInfo: {
-    flex: 1,
-  },
-  settingOptionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0f172a", // Dark blue/black
-    marginBottom: 4,
-  },
-  settingOptionTextActive: {
-    color: "#2563eb", // Primary blue
-  },
-  settingOptionDesc: {
-    fontSize: 13,
-    color: "#475569", // Darker gray
-    lineHeight: 18,
-  },
-  modalOverlayCenter: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  settingsModalBox: {
-    backgroundColor: "#ffffff",
-    borderRadius: 24,
-    padding: 24,
-    width: "90%",
-    maxWidth: 400,
-    elevation: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-  },
-  settingItem: {
-    marginBottom: 20,
-  },
-  closeSettingsBtn: {
-    backgroundColor: "#f1f5f9",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    marginBottom: 46,
-  },
-  closeSettingsBtnText: {
-    color: "#1e293b",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  categoryIconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 8,
-    backgroundColor: "#ecfdf5",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  categoryIcon: {
-    width: 26,
-    height: 26,
-    resizeMode: "contain",
-  },
-  iconModalContent: {
-    backgroundColor: "#ffffff",
-    borderRadius: 24,
-    padding: 24,
-    width: "100%",
-    maxHeight: "80%",
-    elevation: 20,
-  },
-  iconModalSubtitle: {
-    fontSize: 14,
-    color: "#64748b",
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  iconGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingVertical: 10,
-  },
-  iconGridItem: {
-    width: "22%",
-    aspectRatio: 1,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#f8fafc",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  iconItemImage: {
-    width: 38,
-    height: 38,
-    resizeMode: "contain",
-  },
-  driveStatusCard: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    marginBottom: 20,
-  },
-  driveLoginBtn: {
-    backgroundColor: "#0891b2",
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  driveLoginBtnText: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "bold",
-  },
-  driveLogoutBtn: {
-    backgroundColor: "#fee2e2",
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#fecaca",
-  },
-  driveLogoutBtnText: {
-    color: "#dc2626",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  driveOptionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-    marginBottom: 16,
-  },
-  driveOptionTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1e293b",
-    marginBottom: 4,
-  },
-  driveOptionDesc: {
-    fontSize: 12,
-    color: "#64748b",
-    lineHeight: 16,
-  },
-  driveActionBox: {
-    marginBottom: 20,
-  },
-  driveSectionTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1e293b",
-    marginBottom: 6,
-  },
-  driveSectionDesc: {
-    fontSize: 13,
-    color: "#64748b",
-    marginBottom: 12,
-  },
-  driveManualBtn: {
-    backgroundColor: "#0891b2",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  driveManualBtnText: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "bold",
-  },
-  driveBtnDisabled: {
-    backgroundColor: "#cbd5e1",
-  },
-  driveHistoryBox: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  driveHistoryTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: 12,
-  },
-  driveHistoryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  driveHistoryLabel: {
-    fontSize: 13,
-    color: "#64748b",
-  },
-  driveHistoryValue: {
-    fontSize: 13,
-    color: "#1e293b",
-  },
-  driveWarningBox: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
-  },
-  driveWarningText: {
-    fontSize: 11,
-    color: "#94a3b8",
-    lineHeight: 15,
-  },
-  driveRestoreBtn: {
-    backgroundColor: "#16a34a",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  driveRestoreBtnText: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "bold",
-  },
-});
+
 
 export default SettingsScreen;
