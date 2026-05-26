@@ -2133,7 +2133,7 @@ const StatisticsScreen = () => {
                         <TouchableOpacity
                           style={styles.pieDetailLoadMoreBtn}
                           onPress={() => setPieDetailLimit((prev) => prev + 10)}
-                          activeOpacity={0.7}
+                          activeOpacity={0.85}
                         >
                           <Text style={styles.pieDetailLoadMoreTxt}>Tải thêm</Text>
                         </TouchableOpacity>

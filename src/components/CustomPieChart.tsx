@@ -479,7 +479,7 @@ const CustomPieChart: React.FC<Props> = ({
         <TouchableOpacity
           style={styles.expandBtn}
           onPress={() => setShowExpandedModal(true)}
-          activeOpacity={0.7}
+          activeOpacity={0.85}
         >
           <Maximize2 color="#64748b" size={16} />
         </TouchableOpacity>
@@ -508,7 +508,7 @@ const CustomPieChart: React.FC<Props> = ({
             <TouchableOpacity
               style={styles.expandedCloseBtn}
               onPress={() => setShowExpandedModal(false)}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
               <X color="#0f172a" size={20} />
             </TouchableOpacity>

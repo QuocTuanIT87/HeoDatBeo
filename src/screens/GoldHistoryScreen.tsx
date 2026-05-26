@@ -25,8 +25,11 @@ import {
   PlusCircle,
   TrendingDown,
   Info,
+  HelpCircle,
   RotateCcw,
   Trash2,
+  Eye,
+  EyeOff,
 } from "lucide-react-native";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -39,9 +42,17 @@ const GoldHistoryScreen = () => {
   const isFocused = useIsFocused();
   const navigation = useNavigation();
 
+  const handleShowHelp = () => {
+    Alert.alert(
+      "Giao dịch Vàng",
+      "Đây là chức năng giúp bạn ghi chép và theo dõi các giao dịch mua, bán, và chuyển đổi vàng cá nhân.\n\nLưu ý: Trang này chỉ đóng vai trò ghi chép lịch sử tích lũy vàng. Số dư các quỹ, tiền tiết kiệm và tiền chưa phân bổ của bạn sẽ hoàn toàn không bị ảnh hưởng."
+    );
+  };
+
   const [tab, setTab] = useState<GoldTab>("active");
   const [goldItems, setGoldItems] = useState<GoldItem[]>([]);
   const [goldSales, setGoldSales] = useState<GoldSaleRecord[]>([]);
+  const [showAmount, setShowAmount] = useState(false);
 
   // Modals Visibility
   const [buyVisible, setBuyVisible] = useState(false);
@@ -50,7 +61,7 @@ const GoldHistoryScreen = () => {
 
   // Buy Form States
   const [buyQty, setBuyQty] = useState("");
-  const [buyUnit, setBuyUnit] = useState<"phân" | "chỉ" | "cây">("chỉ");
+  const [buyUnit, setBuyUnit] = useState<"phân" | "chỉ" | "cây">("phân");
   const [buyPrice, setBuyPrice] = useState("");
   const [buyCraftFee, setBuyCraftFee] = useState("");
   const [buyDate, setBuyDate] = useState(new Date());
@@ -69,7 +80,7 @@ const GoldHistoryScreen = () => {
   const [selectedExchangeIds, setSelectedExchangeIds] = useState<Record<string, boolean>>({});
   const [exchangeComp, setExchangeComp] = useState("");
   const [exchangeCraftFee, setExchangeCraftFee] = useState("");
-  const [exchangeUnit, setExchangeUnit] = useState<"phân" | "chỉ" | "cây">("chỉ");
+  const [exchangeUnit, setExchangeUnit] = useState<"phân" | "chỉ" | "cây">("phân");
   const [exchangeDate, setExchangeDate] = useState(new Date());
   const [showExchangeDatePicker, setShowExchangeDatePicker] = useState(false);
   const [showExchangeTimePicker, setShowExchangeTimePicker] = useState(false);
@@ -455,7 +466,7 @@ const GoldHistoryScreen = () => {
     setSelectedExchangeIds({});
     setExchangeComp("");
     setExchangeCraftFee("");
-    setExchangeUnit("chỉ");
+    setExchangeUnit("phân");
     setExchangeDate(new Date());
   };
 
@@ -859,7 +870,7 @@ const GoldHistoryScreen = () => {
         }}>
           <View>
             <Text style={{ fontSize: 18, fontWeight: "900", color: goldStyle.textPrimary, letterSpacing: 0.2 }}>
-              {formatGoldQty(item.quantityInPhan)}
+              {showAmount ? formatGoldQty(item.quantityInPhan) : "••••••"}
             </Text>
             {/* {isTichTru && (
               <Text style={{ fontSize: 9, color: goldStyle.textSecondary, letterSpacing: 0.2, marginTop: 2 }}>
@@ -877,13 +888,13 @@ const GoldHistoryScreen = () => {
           <View style={styles.detailItem}>
             <Text style={[styles.detailLabel, { color: goldStyle.textLabel, fontSize: 10, marginBottom: 1 }]}>Giá mua vào</Text>
             <Text style={{ color: goldStyle.textPrimary, fontSize: 13, fontWeight: "700" }}>
-              {formatCurrency(item.buyPrice)} đ
+              {showAmount ? `${formatCurrency(item.buyPrice)} đ` : "•••••• đ"}
             </Text>
           </View>
           <View style={styles.detailItem}>
             <Text style={[styles.detailLabel, { color: goldStyle.textLabel, fontSize: 10, marginBottom: 1 }]}>Phí gia công</Text>
             <Text style={{ color: goldStyle.textPrimary, fontSize: 13, fontWeight: "700" }}>
-              {formatCurrency(item.craftFee)} đ
+              {showAmount ? `${formatCurrency(item.craftFee)} đ` : "•••••• đ"}
             </Text>
           </View>
         </View>
@@ -895,7 +906,7 @@ const GoldHistoryScreen = () => {
           </Text>
           {item.exchangeFee !== undefined && (
             <Text style={{ color: goldStyle.textSecondary, fontSize: 11 }}>
-              Phí đổi: {formatCurrency(item.exchangeFee)} đ
+              Phí đổi: {showAmount ? `${formatCurrency(item.exchangeFee)} đ` : "•••••• đ"}
             </Text>
           )}
         </View>
@@ -992,7 +1003,7 @@ const GoldHistoryScreen = () => {
           <View style={badgeStyle}>
             <Text style={textStyle}>
               {item.status}: {isProfit ? "+" : ""}
-              {formatCurrency(item.difference)} đ
+              {showAmount ? `${formatCurrency(item.difference)} đ` : "•••••• đ"}
             </Text>
           </View>
         </View>
@@ -1001,13 +1012,13 @@ const GoldHistoryScreen = () => {
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Giá bán ra</Text>
             <Text style={[styles.detailValue, { color: "#1e293b", fontSize: 14 }]}>
-              {formatCurrency(item.sellPrice)} đ
+              {showAmount ? `${formatCurrency(item.sellPrice)} đ` : "•••••• đ"}
             </Text>
           </View>
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Giá mua vào</Text>
             <Text style={[styles.detailValue, { color: "#64748b", fontSize: 14 }]}>
-              {formatCurrency(item.buyPrice)} đ
+              {showAmount ? `${formatCurrency(item.buyPrice)} đ` : "•••••• đ"}
             </Text>
           </View>
           <View style={styles.detailItem}>
@@ -1019,7 +1030,7 @@ const GoldHistoryScreen = () => {
               ]}
             >
               {isProfit ? "+" : ""}
-              {formatCurrency(item.difference)} đ
+              {showAmount ? `${formatCurrency(item.difference)} đ` : "•••••• đ"}
             </Text>
           </View>
         </View>
@@ -1049,7 +1060,7 @@ const GoldHistoryScreen = () => {
                     Loại vàng: {sold.goldType || "Chưa xác định"}
                   </Text>
                   <Text style={{ fontSize: 12, fontWeight: "bold", color: "#475569" }}>
-                    {formatGoldQty(sold.quantityInPhan)}
+                    {showAmount ? formatGoldQty(sold.quantityInPhan) : "••••••"}
                   </Text>
                 </View>
                 
@@ -1058,7 +1069,7 @@ const GoldHistoryScreen = () => {
                     Ngày mua: {formatDateTime(new Date(sold.buyDate))}
                   </Text>
                   <Text style={{ fontSize: 10, color: "#64748b" }}>
-                    Phí GC: {formatCurrency(sold.craftFee)} đ {sold.exchangeFee !== undefined ? `| Phí đổi: ${formatCurrency(sold.exchangeFee)} đ` : ""}
+                    Phí GC: {showAmount ? `${formatCurrency(sold.craftFee)} đ` : "•••••• đ"} {sold.exchangeFee !== undefined ? `| Phí đổi: ${showAmount ? `${formatCurrency(sold.exchangeFee)} đ` : "•••••• đ"}` : ""}
                   </Text>
                 </View>
               </View>
@@ -1099,15 +1110,35 @@ const GoldHistoryScreen = () => {
           >
             <ArrowLeft color="#ffffff" size={22} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Giao Dịch Vàng</Text>
-          <View style={styles.headerPlaceholder} />
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Text style={styles.headerTitle}>Giao Dịch Vàng</Text>
+            <TouchableOpacity
+              onPress={handleShowHelp}
+              style={styles.helpIconTouch}
+              activeOpacity={0.85}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <HelpCircle color="#fbbf24" size={16} />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            onPress={() => setShowAmount(!showAmount)}
+            style={styles.eyeButton}
+            activeOpacity={0.85}
+          >
+            {showAmount ? (
+              <Eye color="#ffffff" size={15} />
+            ) : (
+              <EyeOff color="#ffffff" size={15} />
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* SUMMARY CARD */}
         <View style={styles.summaryCard}>
           <Text style={styles.summaryTitle}>TỔNG VÀNG ĐANG TÍCH TRỮ</Text>
           <Text style={styles.summaryValue}>
-            {formatGoldQty(totalActiveQtyInPhan)}
+            {showAmount ? formatGoldQty(totalActiveQtyInPhan) : "••••••"}
           </Text>
 
           <View style={{ marginBottom: 14 }}>
@@ -1118,20 +1149,21 @@ const GoldHistoryScreen = () => {
               color: totalProfit >= 0 ? "#10b981" : "#ef4444",
               marginTop: 2,
             }}>
-              {totalProfit >= 0 ? "+" : "-"}
-              {formatCurrency(Math.abs(totalProfit))} đ
+              {showAmount ? `${totalProfit >= 0 ? "+" : "-"}${formatCurrency(Math.abs(totalProfit))} đ` : "•••••• đ"}
             </Text>
           </View>
           <View style={styles.summarySubRow}>
             <View>
               <Text style={styles.summarySubLabel}>Tổng Vốn Đầu Tư</Text>
               <Text style={styles.summarySubValue}>
-                {formatCurrency(totalActivePrice)} đ
+                {showAmount ? `${formatCurrency(totalActivePrice)} đ` : "•••••• đ"}
               </Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
               <Text style={styles.summarySubLabel}>Tổng số miếng</Text>
-              <Text style={styles.summarySubValue}>{activeItems.length} miếng</Text>
+              <Text style={styles.summarySubValue}>
+                {showAmount ? `${activeItems.length} miếng` : "•••••• miếng"}
+              </Text>
             </View>
           </View>
         </View>
@@ -1252,7 +1284,7 @@ const GoldHistoryScreen = () => {
             }}
             activeOpacity={0.8}
           >
-            <TrendingDown color="#ffffff" size={16} />
+            <TrendingUp color="#ffffff" size={16} />
             <Text style={styles.fabText}>Bán vàng</Text>
           </TouchableOpacity>
 
@@ -1502,7 +1534,7 @@ const GoldHistoryScreen = () => {
                           {formatGoldQty(item.quantityInPhan)} {item.goldType ? `(${item.goldType})` : ""}
                         </Text>
                         <Text style={styles.selectableSub}>
-                          Mua vào: {formatCurrency(item.buyPrice)} đ | Phí GC: {formatCurrency(item.craftFee)} đ {item.exchangeFee !== undefined ? `| Phí đổi: ${formatCurrency(item.exchangeFee)} đ` : ""} | TT: {item.status}
+                          Mua vào: {formatCurrency(item.buyPrice)} đ | Phí GC: {formatCurrency(item.craftFee)} đ{item.exchangeFee !== undefined ? ` | Phí đổi: ${formatCurrency(item.exchangeFee)} đ` : ""} | TT: {item.status}
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -1678,7 +1710,7 @@ const GoldHistoryScreen = () => {
                             {formatGoldQty(item.quantityInPhan)} {item.goldType ? `(${item.goldType})` : ""}
                           </Text>
                           <Text style={styles.selectableSub}>
-                            Mua vào: {formatCurrency(item.buyPrice)} đ | Phí GC: {formatCurrency(item.craftFee)} đ {item.exchangeFee !== undefined ? `| Phí đổi: ${formatCurrency(item.exchangeFee)} đ` : ""} | TT: {item.status}
+                            Mua vào: {formatCurrency(item.buyPrice)} đ | Phí GC: {formatCurrency(item.craftFee)} đ{item.exchangeFee !== undefined ? ` | Phí đổi: ${formatCurrency(item.exchangeFee)} đ` : ""} | TT: {item.status}
                           </Text>
                         </View>
                       </TouchableOpacity>

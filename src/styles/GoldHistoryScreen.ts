@@ -31,6 +31,14 @@ export const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "rgba(255,255,255,0.1)",
   },
+  eyeButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   headerTitle: {
     color: "#ffffff",
     fontSize: 20,
@@ -538,5 +546,11 @@ export const styles = StyleSheet.create({
   },
   submitButtonDisabled: {
     backgroundColor: "#cbd5e1",
+  },
+  helpIconTouch: {
+    padding: 4,
+    marginLeft: 4,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

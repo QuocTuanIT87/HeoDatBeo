@@ -746,7 +746,7 @@ const ProfileScreen = () => {
                             styles.historyItemWrap,
                             editAvatar === histUri && styles.historyItemActive,
                           ]}
-                          activeOpacity={0.7}
+                          activeOpacity={0.85}
                         >
                           <Image
                             source={{ uri: histUri }}
@@ -828,7 +828,7 @@ const ProfileScreen = () => {
                   <TouchableOpacity
                     style={styles.datePickerBtn}
                     onPress={() => setShowDatePicker(true)}
-                    activeOpacity={0.7}
+                    activeOpacity={0.85}
                   >
                     <Calendar color={NAVY} size={16} />
                     <Text

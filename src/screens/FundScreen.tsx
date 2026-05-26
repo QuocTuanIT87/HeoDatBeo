@@ -426,7 +426,7 @@ const FundScreen = () => {
             {/* <TouchableOpacity
               onPress={() => navigation.navigate("FundHistory" as any)}
               style={styles.actionBtn}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
               <History color="#ffffff" size={20} />
             </TouchableOpacity> */}
@@ -445,7 +445,7 @@ const FundScreen = () => {
                <TouchableOpacity
               onPress={() => navigation.navigate("FundHistory" as any)}
               style={styles.actionBtn}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
               <History color="#ffffff" size={15} />
             </TouchableOpacity>
@@ -459,7 +459,7 @@ const FundScreen = () => {
               <TouchableOpacity
                 onPress={handleShowTotalFundInfo}
                 style={styles.helpIconTouch}
-                activeOpacity={0.7}
+                activeOpacity={0.85}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <HelpCircle color="#94a3b8" size={12} />
@@ -472,7 +472,7 @@ const FundScreen = () => {
             <TouchableOpacity
               onPress={() => setShowAmount(!showAmount)}
               style={styles.cardEyeBtn}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
               {showAmount ? (
                 <Eye color="#ffffff" size={15} />

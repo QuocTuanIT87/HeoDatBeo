@@ -819,8 +819,8 @@ const SettingsScreen = () => {
           style={styles.card}
           onPress={() => setNotesModalVisible(true)}
         >
-          <View style={[styles.iconContainer, { backgroundColor: "#fee2e2" }]}>
-            <PencilLine color="#dc2626" size={18} />
+          <View style={[styles.iconContainer, { backgroundColor: "#f0fdf4" }]}>
+            <PencilLine color="#16a34a" size={18} />
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.cardTitle}>Quản lý gợi ý ghi chú</Text>

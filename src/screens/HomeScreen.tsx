@@ -690,7 +690,7 @@ const HomeScreen = () => {
             <TouchableOpacity
               onPress={() => navigation.navigate("Guide" as never)}
               style={styles.actionBtn}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
               <Sparkles color="#ffffff" size={20} />
               <View style={styles.actionBadge} />
@@ -700,7 +700,7 @@ const HomeScreen = () => {
                 navigation.navigate("Settings" as never);
               }}
               style={styles.actionBtn}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
               <Settings color="#ffffff" size={20} />
             </TouchableOpacity>
@@ -758,7 +758,7 @@ const HomeScreen = () => {
             <TouchableOpacity
               onPress={toggleShowBudgets}
               style={styles.cardEyeBtn}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
               {showBudgets ? (
                 <Eye color="#ffffff" size={20} />
