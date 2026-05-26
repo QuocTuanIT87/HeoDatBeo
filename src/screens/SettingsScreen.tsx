@@ -384,7 +384,7 @@ const SettingsScreen = () => {
                     setLastBackupStatus("success");
                     Alert.alert(
                       "Thành công",
-                      "Dữ liệu đã được phục hồi từ Google Drive. Vui lòng mở lại ứng dụng hoặc chuyển tab để làm mới."
+                      "Dữ liệu đã được phục hồi từ Google Drive. Vui lòng mở lại ứng dụng hoặc chuyển màn hình để làm mới."
                     );
                     loadProfile();
                   } else {
@@ -474,7 +474,7 @@ const SettingsScreen = () => {
         if (success) {
           Alert.alert(
             "Thành công",
-            "Dữ liệu đã được phục hồi. Vui lòng mở lại ứng dụng hoặc chuyển tab để làm mới.",
+            "Dữ liệu đã được phục hồi. Vui lòng mở lại ứng dụng hoặc chuyển màn hình để làm mới.",
           );
           loadProfile();
         } else {

@@ -621,7 +621,7 @@ const HomeScreen = () => {
     } else {
       Alert.alert(
         "Thành công",
-        'Đã lưu khoản thu. Vào tab "Chia Tiền" để phân bổ.',
+        'Đã lưu khoản thu. Vào màn hình "Chia Tiền" để phân bổ.',
       );
     }
 
@@ -936,7 +936,7 @@ const HomeScreen = () => {
             {pickerCategories.length === 0 ? (
               <View style={styles.emptyCatContainer}>
                 <Text style={styles.emptyCatText}>
-                  Chưa có danh mục. Vào tab "Chia Tiền" để tạo danh mục.
+                  Chưa có danh mục. Vào màn hình "Chia Tiền" để tạo danh mục.
                 </Text>
               </View>
             ) : (
