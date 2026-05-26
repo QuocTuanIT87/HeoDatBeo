@@ -85,7 +85,7 @@ const FundScreen = () => {
   const [unallocated, setUnallocated] = useState<number>(0);
   const [totalBalance, setTotalBalance] = useState<number>(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showAmount, setShowAmount] = useState(true);
+  const [showAmount, setShowAmount] = useState(false);
 
   // Thêm Quỹ mới
   const [addFundModalVisible, setAddFundModalVisible] = useState(false);

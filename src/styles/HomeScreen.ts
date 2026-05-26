@@ -3,9 +3,7 @@ import { StyleSheet } from "react-native";
 export const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#f8fafc" },
     header: {
-        // backgroundColor: "#0c2340", // Deep navy blue (Vietcombank/premium style)
-        backgroundColor: "#5596e0ff", // Deep navy blue (Vietcombank/premium style)
-
+        backgroundColor: "#5596e0ff",
         paddingHorizontal: 20,
         paddingTop: 54,
         paddingBottom: 40,

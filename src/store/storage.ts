@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Transaction, UserProfile, CategoryBudget, TransactionDateIndex, NotificationHistoryItem } from '../types';
+import { Transaction, UserProfile, CategoryBudget, TransactionDateIndex, NotificationHistoryItem, GoldItem, GoldSaleRecord } from '../types';
 import { Paths } from 'expo-file-system';
 import { readAsStringAsync, writeAsStringAsync } from 'expo-file-system/legacy';
 
@@ -8,6 +8,8 @@ const USER_PROFILE_KEY = '@userProfile';
 const CATEGORY_BUDGETS_KEY = '@categoryBudgets';
 const TRANSACTION_DATE_INDEX_KEY = '@transaction_date_index';
 const NOTIFICATION_HISTORY_KEY = '@notificationHistory';
+const GOLD_ITEMS_KEY = '@goldItems';
+const GOLD_SALES_KEY = '@goldSales';
 
 const ENCRYPTION_PREFIX = 'HDB_ENC_';
 const XOR_KEY = 87; // QuocTuanIT87 / SatsBoy87
@@ -76,6 +78,8 @@ export const storage = {
       await AsyncStorage.removeItem('@googleDriveAutoBackupEnabled');
       await AsyncStorage.removeItem('@googleDriveLastBackupTimestamp');
       await AsyncStorage.removeItem('@googleDriveLastBackupStatus');
+      await AsyncStorage.removeItem(GOLD_ITEMS_KEY);
+      await AsyncStorage.removeItem(GOLD_SALES_KEY);
       return true;
     } catch (e) {
       console.error('Error clearing data', e);
@@ -253,6 +257,8 @@ export const storage = {
     const profile = await this.getUserProfile();
     const transactions = await this.getTransactions();
     const categoryBudgets = await this.getCategoryBudgets();
+    const goldItems = await this.getGoldItems();
+    const goldSales = await this.getGoldSales();
 
     const avatarMap: Record<string, string> = {};
 
@@ -280,7 +286,7 @@ export const storage = {
       }
     }
 
-    const jsonStr = JSON.stringify({ profile, transactions, categoryBudgets, avatarMap });
+    const jsonStr = JSON.stringify({ profile, transactions, categoryBudgets, goldItems, goldSales, avatarMap });
     return encrypt(jsonStr);
   },
 
@@ -331,6 +337,12 @@ export const storage = {
       }
       if (parsed.categoryBudgets) {
         await AsyncStorage.setItem(CATEGORY_BUDGETS_KEY, JSON.stringify(parsed.categoryBudgets));
+      }
+      if (parsed.goldItems) {
+        await AsyncStorage.setItem(GOLD_ITEMS_KEY, JSON.stringify(parsed.goldItems));
+      }
+      if (parsed.goldSales) {
+        await AsyncStorage.setItem(GOLD_SALES_KEY, JSON.stringify(parsed.goldSales));
       }
       // Rebuild index sau khi import
       await this._rebuildTransactionDateIndex();
@@ -451,6 +463,95 @@ export const storage = {
       await AsyncStorage.setItem(key, JSON.stringify(updated));
     } catch (e) {
       console.error('Error deleting suggested note', e);
+    }
+  },
+
+  // Gold Items
+  async getGoldItems(): Promise<GoldItem[]> {
+    try {
+      const data = await AsyncStorage.getItem(GOLD_ITEMS_KEY);
+      const parsed = data ? JSON.parse(data) : [];
+      return parsed.sort((a: GoldItem, b: GoldItem) => b.buyDate - a.buyDate);
+    } catch (e) {
+      console.error('Error fetching gold items', e);
+      return [];
+    }
+  },
+
+  async saveGoldItem(item: GoldItem): Promise<boolean> {
+    try {
+      const current = await this.getGoldItems();
+      const updated = [item, ...current];
+      await AsyncStorage.setItem(GOLD_ITEMS_KEY, JSON.stringify(updated));
+      return true;
+    } catch (e) {
+      console.error('Error saving gold item', e);
+      return false;
+    }
+  },
+
+  async updateGoldItemsBulk(updatedItems: GoldItem[]): Promise<boolean> {
+    try {
+      const current = await this.getGoldItems();
+      const updated = current.map(item => {
+        const match = updatedItems.find(u => u.id === item.id);
+        return match ? match : item;
+      });
+      const newItems = updatedItems.filter(u => !current.some(item => item.id === u.id));
+      const finalItems = [...updated, ...newItems];
+      await AsyncStorage.setItem(GOLD_ITEMS_KEY, JSON.stringify(finalItems));
+      return true;
+    } catch (e) {
+      console.error('Error updating gold items in bulk', e);
+      return false;
+    }
+  },
+
+  // Gold Sales
+  async getGoldSales(): Promise<GoldSaleRecord[]> {
+    try {
+      const data = await AsyncStorage.getItem(GOLD_SALES_KEY);
+      const parsed = data ? JSON.parse(data) : [];
+      return parsed.sort((a: GoldSaleRecord, b: GoldSaleRecord) => b.sellDate - a.sellDate);
+    } catch (e) {
+      console.error('Error fetching gold sales', e);
+      return [];
+    }
+  },
+
+  async saveGoldSale(sale: GoldSaleRecord): Promise<boolean> {
+    try {
+      const current = await this.getGoldSales();
+      const updated = [sale, ...current];
+      await AsyncStorage.setItem(GOLD_SALES_KEY, JSON.stringify(updated));
+      return true;
+    } catch (e) {
+      console.error('Error saving gold sale', e);
+      return false;
+    }
+  },
+
+  async deleteGoldItemsBulk(ids: string[]): Promise<boolean> {
+    try {
+      const current = await this.getGoldItems();
+      const updated = current.filter((item) => !ids.includes(item.id));
+      await AsyncStorage.setItem(GOLD_ITEMS_KEY, JSON.stringify(updated));
+      return true;
+    } catch (e) {
+      console.error('Error deleting gold items in bulk', e);
+      return false;
+    }
+  },
+
+  async deleteGoldSale(id: string): Promise<boolean> {
+    try {
+      const current = await this.getGoldSales();
+      const updated = current.filter((sale) => sale.id !== id);
+      await AsyncStorage.setItem(GOLD_SALES_KEY, JSON.stringify(updated));
+      return true;
+    } catch (e) {
+      console.error('Error deleting gold sale', e);
+      return false;
     }
   }
 };

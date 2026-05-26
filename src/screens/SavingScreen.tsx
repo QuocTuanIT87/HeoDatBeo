@@ -25,6 +25,8 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   RotateCcw,
+  Coins,
+  Bitcoin,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import {
@@ -53,7 +55,7 @@ const SavingScreen = () => {
 
   const [type, setType] = useState<"deposit" | "withdraw">("deposit");
   const [amount, setAmount] = useState<number>(0);
-  const [showAmount, setShowAmount] = useState(true);
+  const [showAmount, setShowAmount] = useState(false);
   const [manualModalVisible, setManualModalVisible] = useState(false);
   const manualInputRef = React.useRef<TextInput>(null);
 
@@ -325,12 +327,18 @@ const SavingScreen = () => {
              
             <View style={styles.row}>
               <TouchableOpacity
-              onPress={() => navigation.navigate("SavingHistory")}
-              style={styles.historyBtn}
-            >
-              <HistoryIcon color="#ffffff" size={15} />
-            </TouchableOpacity>
-            <View style={styles.cardChip} />
+                onPress={() => navigation.navigate("SavingHistory")}
+                style={styles.historyBtn}
+              >
+                <HistoryIcon color="#ffffff" size={15} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("GoldHistory")}
+                style={styles.goldBtn}
+              >
+                <Bitcoin color="#fbbf24" size={15} />
+              </TouchableOpacity>
+              <View style={styles.cardChip} />
             </View>
           </View>
 

@@ -182,7 +182,7 @@ const BudgetScreen = () => {
   const [catToDelete, setCatToDelete] = useState<CategoryBudget | null>(null);
   const [deleteInput, setDeleteInput] = useState("");
   const [hasTxToDelete, setHasTxToDelete] = useState(false);
-  const [showAmount, setShowAmount] = useState(true);
+  const [showAmount, setShowAmount] = useState(false);
   const [activeTab, setActiveTab] = useState<"recharge" | "direct">("recharge");
 
   const now = new Date();

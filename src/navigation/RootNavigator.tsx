@@ -7,6 +7,7 @@ import SavingHistoryScreen from "../screens/SavingHistoryScreen";
 import FundHistoryScreen from "../screens/FundHistoryScreen";
 import GuideScreen from "../screens/GuideScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import GoldHistoryScreen from "../screens/GoldHistoryScreen";
 import { storage } from "../store/storage";
 import { View, ActivityIndicator } from "react-native";
 import { scheduleDailyReminder } from "../utils/notifications";
@@ -47,6 +48,7 @@ const RootNavigator = () => {
       <Stack.Screen name="FundHistory" component={FundHistoryScreen} />
       <Stack.Screen name="Guide" component={GuideScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="GoldHistory" component={GoldHistoryScreen} />
     </Stack.Navigator>
   );
 };

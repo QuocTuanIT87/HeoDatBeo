@@ -57,6 +57,15 @@ export const styles = StyleSheet.create({
         alignItems: "center",
         marginRight: 10
     },
+    goldBtn: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: "rgba(255,255,255,0.2)",
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 10
+    },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
