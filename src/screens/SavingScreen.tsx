@@ -2,12 +2,10 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   TextInput,
   ScrollView,
   Modal,
-  Image,
 } from "react-native";
 import { Alert } from "../components/CustomAlert";
 import {
@@ -17,15 +15,10 @@ import {
   History as HistoryIcon,
   Eye,
   EyeOff,
-  PencilLine,
-  PenOff,
   X,
-  LayoutGrid,
-  Keyboard,
   ArrowUpCircle,
   ArrowDownCircle,
   RotateCcw,
-  Coins,
   Bitcoin,
 } from "lucide-react-native";
 import { storage } from "../store/storage";

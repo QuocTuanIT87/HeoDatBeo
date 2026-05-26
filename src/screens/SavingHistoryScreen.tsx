@@ -2,14 +2,13 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
   TouchableOpacity,
   ScrollView,
 } from "react-native";
 import { Alert } from "../components/CustomAlert";
 import { storage } from "../store/storage";
-import { Transaction, UserProfile, SavingHistoryItem } from "../types";
+import { Transaction, SavingHistoryItem } from "../types";
 import { formatCurrency, formatPercent } from "../utils/format";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { ArrowLeft, Trash2, Trophy, Clock } from "lucide-react-native";

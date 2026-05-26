@@ -8,7 +8,6 @@ import {
   TextInput,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { Alert } from "../components/CustomAlert";
 import { storage } from "../store/storage";
@@ -162,6 +161,11 @@ const GoldHistoryScreen = () => {
     const parsedQty = parseFloat(buyQty.replace(",", "."));
     if (isNaN(parsedQty) || parsedQty <= 0) {
       Alert.alert("Lỗi", "Vui lòng nhập số lượng vàng hợp lệ.");
+      return;
+    }
+
+    if ((buyUnit === "phân" || buyUnit === "chỉ") && parsedQty > 9) {
+      Alert.alert("Lỗi", `Số lượng mua đối với ${buyUnit} không được vượt quá 9.`);
       return;
     }
 
@@ -348,10 +352,11 @@ const GoldHistoryScreen = () => {
     const firstUnit = selectedExchangeItems[0].rawUnit;
     const totalRawQty = selectedExchangeItems.reduce((sum, item) => sum + item.rawQuantity, 0);
     const divided = totalRawQty / 10;
-    const isInteger = Math.abs(divided - Math.round(divided)) < 1e-9;
-    if (isInteger) {
+    const remainder = divided % 0.5;
+    const isMultipleOfHalf = Math.abs(remainder) < 1e-9 || Math.abs(remainder - 0.5) < 1e-9;
+    if (isMultipleOfHalf) {
       displayExchangeTargetUnit = firstUnit === "phân" ? "chỉ" : "cây";
-      displayExchangeTargetQty = Math.round(divided);
+      displayExchangeTargetQty = divided;
     } else {
       displayExchangeTargetUnit = firstUnit;
       displayExchangeTargetQty = totalRawQty;
@@ -361,6 +366,11 @@ const GoldHistoryScreen = () => {
   const handleExchangeSubmit = async () => {
     if (selectedExchangeItems.length === 0) {
       Alert.alert("Lỗi", "Vui lòng chọn ít nhất một miếng vàng để đổi.");
+      return;
+    }
+
+    if (selectedExchangeItems.length < 2) {
+      Alert.alert("Lỗi", "Vui lòng chọn từ 2 miếng vàng trở lên để thực hiện quy đổi.");
       return;
     }
 
@@ -379,26 +389,26 @@ const GoldHistoryScreen = () => {
     // Sum of raw quantities
     const totalRawQty = selectedExchangeItems.reduce((sum, item) => sum + item.rawQuantity, 0);
 
-    // Divisible by 5 validation
+    const unitLabel = firstUnit === "phân" ? "phân" : "chỉ";
     const isDivisibleBy5 = Math.abs(totalRawQty % 5) < 1e-9 || Math.abs((totalRawQty % 5) - 5) < 1e-9;
     if (!isDivisibleBy5) {
-      const unitLabel = firstUnit === "phân" ? "phân" : "chỉ";
       Alert.alert(
         "Lỗi",
-        `Tổng số lượng để quy đổi phải chia hết cho 5. Hiện tại đang chọn tổng cộng ${totalRawQty} ${unitLabel}, vui lòng chọn lại.`
+        `Tổng số lượng để quy đổi phải chia hết cho 5 (ví dụ: 5, 10, 15...). Hiện tại đang chọn tổng cộng ${totalRawQty} ${unitLabel}.`
       );
       return;
     }
 
     const divided = totalRawQty / 10;
-    const isInteger = Math.abs(divided - Math.round(divided)) < 1e-9;
+    const remainder = divided % 0.5;
+    const isMultipleOfHalf = Math.abs(remainder) < 1e-9 || Math.abs(remainder - 0.5) < 1e-9;
 
     let targetUnit: "phân" | "chỉ" | "cây";
     let newRawQuantity: number;
 
-    if (isInteger) {
+    if (isMultipleOfHalf) {
       targetUnit = firstUnit === "phân" ? "chỉ" : "cây";
-      newRawQuantity = Math.round(divided);
+      newRawQuantity = divided;
     } else {
       targetUnit = firstUnit;
       newRawQuantity = totalRawQty;
@@ -851,11 +861,11 @@ const GoldHistoryScreen = () => {
             <Text style={{ fontSize: 18, fontWeight: "900", color: goldStyle.textPrimary, letterSpacing: 0.2 }}>
               {formatGoldQty(item.quantityInPhan)}
             </Text>
-            {isTichTru && (
+            {/* {isTichTru && (
               <Text style={{ fontSize: 9, color: goldStyle.textSecondary, letterSpacing: 0.2, marginTop: 2 }}>
                 Lượng gốc: {item.rawQuantity} {item.rawUnit}
               </Text>
-            )}
+            )} */}
           </View>
           <Text style={{ fontSize: 9, fontWeight: "700", color: goldStyle.textSecondary, opacity: 0.8 }}>
             NO.{item.id.substring(item.id.length - 6).toUpperCase()}
@@ -1298,7 +1308,15 @@ const GoldHistoryScreen = () => {
                         styles.unitButton,
                         buyUnit === u && styles.unitButtonActive,
                       ]}
-                      onPress={() => setBuyUnit(u)}
+                      onPress={() => {
+                        setBuyUnit(u);
+                        if (u === "phân" || u === "chỉ") {
+                          const parsed = parseFloat(buyQty.replace(",", "."));
+                          if (!isNaN(parsed) && parsed > 9) {
+                            setBuyQty("9");
+                          }
+                        }
+                      }}
                     >
                       <Text
                         style={[
@@ -1337,7 +1355,15 @@ const GoldHistoryScreen = () => {
                     placeholderTextColor="#94a3b8"
                     keyboardType="numeric"
                     value={buyQty}
-                    onChangeText={setBuyQty}
+                    onChangeText={(text) => {
+                      if (buyUnit === "phân" || buyUnit === "chỉ") {
+                        const parsed = parseFloat(text.replace(",", "."));
+                        if (!isNaN(parsed) && parsed > 9) {
+                          return;
+                        }
+                      }
+                      setBuyQty(text);
+                    }}
                   />
                   <Text style={styles.inputSuffix}>{buyUnit}</Text>
                 </View>
@@ -1617,7 +1643,7 @@ const GoldHistoryScreen = () => {
                   Chọn các miếng vàng muốn đổi ({selectedExchangeItems.length} đã chọn)
                 </Text>
                 <Text style={{ fontSize: 11, color: "#64748b", marginBottom: 8, fontStyle: "italic" }}>
-                  * Chỉ được chọn các miếng cùng đơn vị (phân hoặc chỉ). Tổng số lượng phải chia hết cho 5.
+                  * Chọn từ 2 miếng trở lên cùng đơn vị (phân hoặc chỉ) và tổng số lượng phải chia hết cho 5.
                 </Text>
                 <ScrollView style={styles.selectionScroll} nestedScrollEnabled={true}>
                   {eligibleExchangeItems.map((item) => {

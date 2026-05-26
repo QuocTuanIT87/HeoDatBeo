@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
   Modal,
@@ -15,8 +14,6 @@ import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import {
   Wallet,
-  PiggyBank,
-  Layers,
   PlusCircle,
   X,
   ArrowDownCircle,

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   Modal,
   TextInput,
@@ -45,19 +44,12 @@ import {
   BookOpen,
   Settings as SettingsIcon,
   User,
-  Camera,
-  Calendar,
-  Briefcase,
-  GraduationCap,
-  Heart,
-  Link,
   Cloud,
   Database,
   PencilLine,
-  Coins,
   Bitcoin,
 } from "lucide-react-native";
-import { UserProfile, CategoryBudget, Transaction } from "../types";
+import { UserProfile } from "../types";
 import { scheduleTestNotification } from "../utils/notifications";
 import { styles } from "../styles/SettingsScreen";
 
@@ -109,7 +101,7 @@ export const getIncomeIconSource = (
 };
 
 const VERSION_HISTORY = [
-  { version: "26.05.2026", description: "\nChỉnh sửa giao diện trang lịch sử mua - bán - đổi vàng\nMặc định ẩn tiền lúc đầu", order: 12 },
+  { version: "26.05.2026", description: "\nChỉnh sửa giao diện trang lịch sử mua - bán - đổi vàng\nMặc định ẩn tiền lúc đầu\nSửa điều kiện đổi vàng", order: 12 },
   { version: "25.05.2026", description: "Sửa lỗi sao lưu tự động\nSửa giao diện hiển thị\nSửa lỗi ấn vào thông báo hằng ngày\nThêm chức năng sửa chú thích giao dịch\nThêm chức năng hiển thị gợi ý ghi chú\nHiển thị bản sao lưu mới nhất khi ấn khôi phục\nCập nhật xóa bản sao lưu cũ khi sao lưu đạt tối đa 20 bản\nSửa giao diện trang cài đặt\nThêm trang lưu lịch sử mua - bán - đổi vàng", order: 11 },
   { version: "23.05.2026", description: "Sửa phần hiển thị tên ở các trang khác\nSửa hiển thị báo cáo tài chính\nSửa trang hướng dẫn sinh động hơn\nThu nhỏ icon ẩn tiền\nHiển thị lọc theo điều kiện nào ở biểu đồ tròn", order: 10 },
   { version: "22.05.2026", description: "Cập nhật sao lưu dữ liệu ở trang bắt đầu\nThay đổi cơ chế linh vật\nBổ sung hướng dẫn chi tiết\nLời chào trang chủ chi tiết hơn\nSửa lỗi hiển thị tên người dùng\nTối ưu giao diện hiển thị tiền\nSửa lỗi sao lưu dữ liệu\nSửa lỗi hiển thị bản sao lưu mới nhất", order: 9 },

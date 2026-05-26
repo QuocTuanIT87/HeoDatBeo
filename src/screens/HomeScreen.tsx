@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
   Modal,
@@ -16,29 +15,17 @@ import {
   Dimensions,
 } from "react-native";
 import { Alert } from "../components/CustomAlert";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import {
-  Activity,
-  History,
-  LayoutGrid,
-  List,
-  Plus,
-  RefreshCcw,
   Settings,
   X,
-  Keyboard,
   Coins,
   ArrowUpCircle,
   ArrowDownCircle,
   Eye,
   EyeOff,
-  PencilLine,
-  PenOff,
   ChevronRight,
-  Bell,
   Copy,
-  Flame,
   RotateCcw,
   HelpCircle,
 } from "lucide-react-native";
@@ -59,7 +46,7 @@ import {
 import { getMascotImage, MASCOT_LIST } from "../utils/mascot";
 import { styles } from "../styles/HomeScreen";
 
-const HIDE_BALANCE_KEY = "@hideBalance";
+// const HIDE_BALANCE_KEY = "@hideBalance";
 
 const DEFAULT_INCOME_CATEGORIES = ["Lương", "Thưởng", "Bán hàng"];
 
@@ -386,13 +373,6 @@ const HomeScreen = () => {
       setTotalBalance(totalAllocated + unallocated + calcSaving + customFundsTotal);
     }
 
-    try {
-      const hidden = await AsyncStorage.getItem(HIDE_BALANCE_KEY);
-      if (hidden !== null) {
-        setShowBudgets(!JSON.parse(hidden));
-      }
-    } catch (_) {}
-
     // Tính số tài khoản từ giao dịch đầu tiên
     const txs = await storage.getTransactions();
     let firstTimestamp = p?.initialBalanceTimestamp || Date.now();
@@ -431,9 +411,9 @@ const HomeScreen = () => {
   const toggleShowBudgets = async () => {
     const next = !showBudgets;
     setShowBudgets(next);
-    try {
-      await AsyncStorage.setItem(HIDE_BALANCE_KEY, JSON.stringify(!next));
-    } catch (_) {}
+    // try {
+    //   await AsyncStorage.setItem(HIDE_BALANCE_KEY, JSON.stringify(!next));
+    // } catch (_) {}
   };
 
   const closeWelcomeModal = async (viewGuide: boolean) => {

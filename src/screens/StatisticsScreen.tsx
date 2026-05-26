@@ -28,18 +28,14 @@ import {
   useRoute,
 } from "@react-navigation/native";
 import {
-  Trash2,
   X,
-  PieChart as PieChartIcon,
-  BarChart2,
   MoreHorizontal,
   PencilLine,
   PenOff,
-  History,
 } from "lucide-react-native";
 import Keypad from "../components/Keypad";
 import { BarChart } from "react-native-gifted-charts";
-import { INCOME_ICONS, EXPENSE_ICONS, getIncomeIconSource } from "./HomeScreen";
+import { EXPENSE_ICONS, getIncomeIconSource } from "./HomeScreen";
 import CustomPieChart from "../components/CustomPieChart";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";

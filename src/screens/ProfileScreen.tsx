@@ -3,7 +3,6 @@ import QRCode from "react-native-qrcode-svg";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   TextInput,
   ScrollView,
@@ -31,7 +30,6 @@ import {
   GraduationCap,
   Heart,
   User,
-  MapPin,
   X,
   Lock,
 } from "lucide-react-native";
@@ -48,7 +46,6 @@ const SOCIAL_ICONS = {
   instagram: require("../../assets/common_icons/instagram.png"),
   thread: require("../../assets/common_icons/thread.png"),
 };
-
 
 const ProfileScreen = () => {
   const navigation = useNavigation();

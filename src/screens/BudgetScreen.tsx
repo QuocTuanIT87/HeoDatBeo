@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
   Modal,
@@ -19,10 +18,6 @@ import {
   Wallet,
   Eye,
   EyeOff,
-  PencilLine,
-  PenOff,
-  LayoutGrid,
-  Keyboard,
   ArrowRightLeft,
   RotateCcw,
   HelpCircle,
