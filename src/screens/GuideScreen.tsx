@@ -2,10 +2,8 @@ import React from "react";
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -15,8 +13,6 @@ import {
   PiggyBank,
   Plus,
   ArrowDown,
-  ArrowUp,
-  AlertCircle,
   Layers,
   PlusCircle,
   ArrowDownCircle,

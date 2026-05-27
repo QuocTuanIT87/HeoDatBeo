@@ -28,18 +28,14 @@ import {
   useRoute,
 } from "@react-navigation/native";
 import {
-  Trash2,
   X,
-  PieChart as PieChartIcon,
-  BarChart2,
   MoreHorizontal,
   PencilLine,
   PenOff,
-  History,
 } from "lucide-react-native";
 import Keypad from "../components/Keypad";
 import { BarChart } from "react-native-gifted-charts";
-import { INCOME_ICONS, EXPENSE_ICONS, getIncomeIconSource } from "./HomeScreen";
+import { EXPENSE_ICONS, getIncomeIconSource } from "./HomeScreen";
 import CustomPieChart from "../components/CustomPieChart";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
@@ -578,6 +574,7 @@ const StatisticsScreen = () => {
 
   useEffect(() => {
     if (route.params?.openHistory) {
+      loadNotificationHistory();
       setShowNotificationHistoryModal(true);
       // Clear the param so it doesn't reopen if screen re-renders
       navigation.setParams({ openHistory: undefined });
@@ -2137,7 +2134,7 @@ const StatisticsScreen = () => {
                         <TouchableOpacity
                           style={styles.pieDetailLoadMoreBtn}
                           onPress={() => setPieDetailLimit((prev) => prev + 10)}
-                          activeOpacity={0.7}
+                          activeOpacity={0.85}
                         >
                           <Text style={styles.pieDetailLoadMoreTxt}>Tải thêm</Text>
                         </TouchableOpacity>

@@ -19,7 +19,7 @@ export const styles = StyleSheet.create({
     },
     body: {
         padding: 24,
-        gap: 8,
+        gap: 6,
     },
     card: {
         backgroundColor: "#ffffff",
@@ -485,5 +485,54 @@ export const styles = StyleSheet.create({
         color: "#ffffff",
         fontSize: 15,
         fontWeight: "bold",
+    },
+    pdfYearGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 12,
+        marginVertical: 16,
+        justifyContent: "center",
+    },
+    pdfYearItem: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: "#cbd5e1",
+        backgroundColor: "#f8fafc",
+        minWidth: 80,
+        alignItems: "center",
+    },
+    pdfYearItemActive: {
+        borderColor: "#f43f5e",
+        backgroundColor: "#fff1f2",
+    },
+    pdfYearText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#475569",
+    },
+    pdfYearTextActive: {
+        color: "#f43f5e",
+    },
+    pdfExportBtn: {
+        backgroundColor: "#f43f5e",
+        paddingVertical: 14,
+        borderRadius: 12,
+        alignItems: "center",
+        marginTop: 10,
+    },
+    pdfExportBtnText: {
+        color: "#ffffff",
+        fontSize: 16,
+        fontWeight: "bold",
+    },
+    pdfLoadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: "rgba(255, 255, 255, 0.85)",
+        justifyContent: "center",
+        alignItems: "center",
+        borderRadius: 24,
+        zIndex: 10,
     },
 });

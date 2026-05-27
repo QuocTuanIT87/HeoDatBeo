@@ -3,7 +3,6 @@ import QRCode from "react-native-qrcode-svg";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   TextInput,
   ScrollView,
@@ -31,7 +30,6 @@ import {
   GraduationCap,
   Heart,
   User,
-  MapPin,
   X,
   Lock,
 } from "lucide-react-native";
@@ -48,7 +46,6 @@ const SOCIAL_ICONS = {
   instagram: require("../../assets/common_icons/instagram.png"),
   thread: require("../../assets/common_icons/thread.png"),
 };
-
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -749,7 +746,7 @@ const ProfileScreen = () => {
                             styles.historyItemWrap,
                             editAvatar === histUri && styles.historyItemActive,
                           ]}
-                          activeOpacity={0.7}
+                          activeOpacity={0.85}
                         >
                           <Image
                             source={{ uri: histUri }}
@@ -831,7 +828,7 @@ const ProfileScreen = () => {
                   <TouchableOpacity
                     style={styles.datePickerBtn}
                     onPress={() => setShowDatePicker(true)}
-                    activeOpacity={0.7}
+                    activeOpacity={0.85}
                   >
                     <Calendar color={NAVY} size={16} />
                     <Text

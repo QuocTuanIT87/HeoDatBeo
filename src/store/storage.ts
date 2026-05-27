@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Transaction, UserProfile, CategoryBudget, TransactionDateIndex, NotificationHistoryItem } from '../types';
+import { Transaction, UserProfile, CategoryBudget, TransactionDateIndex, NotificationHistoryItem, GoldItem, GoldSaleRecord } from '../types';
 import { Paths } from 'expo-file-system';
 import { readAsStringAsync, writeAsStringAsync } from 'expo-file-system/legacy';
 
@@ -8,11 +8,14 @@ const USER_PROFILE_KEY = '@userProfile';
 const CATEGORY_BUDGETS_KEY = '@categoryBudgets';
 const TRANSACTION_DATE_INDEX_KEY = '@transaction_date_index';
 const NOTIFICATION_HISTORY_KEY = '@notificationHistory';
+const GOLD_ITEMS_KEY = '@goldItems';
+const GOLD_SALES_KEY = '@goldSales';
 
 const ENCRYPTION_PREFIX = 'HDB_ENC_';
 const XOR_KEY = 87; // QuocTuanIT87 / SatsBoy87
 
 function encrypt(text: string): string {
+  if (text === null || text === undefined) return '';
   let result = '';
   for (let i = 0; i < text.length; i++) {
     const charCode = text.charCodeAt(i);
@@ -23,7 +26,8 @@ function encrypt(text: string): string {
 }
 
 function decrypt(cipherText: string): string {
-  if (!cipherText || !cipherText.startsWith(ENCRYPTION_PREFIX)) {
+  if (!cipherText) return '';
+  if (!cipherText.startsWith(ENCRYPTION_PREFIX)) {
     return cipherText; // Trả về dạng gốc nếu không có tiền tố mã hóa (tương thích ngược)
   }
   const hexPart = cipherText.substring(ENCRYPTION_PREFIX.length);
@@ -37,6 +41,28 @@ function decrypt(cipherText: string): string {
   return result;
 }
 
+async function getStorageItem(key: string): Promise<string | null> {
+  try {
+    const rawVal = await AsyncStorage.getItem(key);
+    if (!rawVal) return null;
+    return decrypt(rawVal);
+  } catch (e) {
+    console.error(`Error reading key ${key}`, e);
+    return null;
+  }
+}
+
+async function setStorageItem(key: string, value: string): Promise<boolean> {
+  try {
+    const encryptedVal = encrypt(value);
+    await AsyncStorage.setItem(key, encryptedVal);
+    return true;
+  } catch (e) {
+    console.error(`Error saving key ${key}`, e);
+    return false;
+  }
+}
+
 let onTransactionChangeCallback: (() => void) | null = null;
 
 export const storage = {
@@ -48,7 +74,7 @@ export const storage = {
   // User Profile
   async getUserProfile(): Promise<UserProfile | null> {
     try {
-      const data = await AsyncStorage.getItem(USER_PROFILE_KEY);
+      const data = await getStorageItem(USER_PROFILE_KEY);
       return data ? JSON.parse(data) : null;
     } catch (e) {
       console.error('Error fetching user profile', e);
@@ -58,8 +84,7 @@ export const storage = {
 
   async saveUserProfile(profile: UserProfile): Promise<boolean> {
     try {
-      await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
-      return true;
+      return await setStorageItem(USER_PROFILE_KEY, JSON.stringify(profile));
     } catch (e) {
       console.error('Error saving user profile', e);
       return false;
@@ -76,6 +101,8 @@ export const storage = {
       await AsyncStorage.removeItem('@googleDriveAutoBackupEnabled');
       await AsyncStorage.removeItem('@googleDriveLastBackupTimestamp');
       await AsyncStorage.removeItem('@googleDriveLastBackupStatus');
+      await AsyncStorage.removeItem(GOLD_ITEMS_KEY);
+      await AsyncStorage.removeItem(GOLD_SALES_KEY);
       return true;
     } catch (e) {
       console.error('Error clearing data', e);
@@ -86,7 +113,7 @@ export const storage = {
   // Transaction Date Index — lưu tháng/năm có giao dịch để lọc nhanh
   async getTransactionDateIndex(): Promise<TransactionDateIndex> {
     try {
-      const data = await AsyncStorage.getItem(TRANSACTION_DATE_INDEX_KEY);
+      const data = await getStorageItem(TRANSACTION_DATE_INDEX_KEY);
       if (data) return JSON.parse(data);
       // Nếu chưa có index (app cũ) → rebuild từ transactions hiện có
       return await this._rebuildTransactionDateIndex();
@@ -111,7 +138,7 @@ export const storage = {
         months: Array.from(monthSet).sort().reverse(),
         years: Array.from(yearSet).sort((a, b) => b - a),
       };
-      await AsyncStorage.setItem(TRANSACTION_DATE_INDEX_KEY, JSON.stringify(index));
+      await setStorageItem(TRANSACTION_DATE_INDEX_KEY, JSON.stringify(index));
       return index;
     } catch (e) {
       console.error('Error rebuilding transaction date index', e);
@@ -135,7 +162,7 @@ export const storage = {
         changed = true;
       }
       if (changed) {
-        await AsyncStorage.setItem(TRANSACTION_DATE_INDEX_KEY, JSON.stringify(index));
+        await setStorageItem(TRANSACTION_DATE_INDEX_KEY, JSON.stringify(index));
       }
     } catch (e) {
       console.error('Error adding to transaction date index', e);
@@ -154,7 +181,7 @@ export const storage = {
   // Category Budgets — stored separately for quick access
   async getCategoryBudgets(): Promise<CategoryBudget[]> {
     try {
-      const data = await AsyncStorage.getItem(CATEGORY_BUDGETS_KEY);
+      const data = await getStorageItem(CATEGORY_BUDGETS_KEY);
       return data ? JSON.parse(data) : [];
     } catch (e) {
       console.error('Error fetching category budgets', e);
@@ -164,8 +191,7 @@ export const storage = {
 
   async saveCategoryBudgets(budgets: CategoryBudget[]): Promise<boolean> {
     try {
-      await AsyncStorage.setItem(CATEGORY_BUDGETS_KEY, JSON.stringify(budgets));
-      return true;
+      return await setStorageItem(CATEGORY_BUDGETS_KEY, JSON.stringify(budgets));
     } catch (e) {
       console.error('Error saving category budgets', e);
       return false;
@@ -175,7 +201,7 @@ export const storage = {
   // Transactions
   async getTransactions(): Promise<Transaction[]> {
     try {
-      const data = await AsyncStorage.getItem(TRANSACTIONS_KEY);
+      const data = await getStorageItem(TRANSACTIONS_KEY);
       const parsed = data ? JSON.parse(data) : [];
       // sort descending by timestamp
       return parsed.sort((a: Transaction, b: Transaction) => b.timestamp - a.timestamp);
@@ -189,7 +215,7 @@ export const storage = {
     try {
       const current = await this.getTransactions();
       const updated = [...current, transaction];
-      await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updated));
+      await setStorageItem(TRANSACTIONS_KEY, JSON.stringify(updated));
       // Cập nhật index tháng/năm
       await this._addToTransactionDateIndex(transaction.timestamp);
       if (onTransactionChangeCallback) {
@@ -207,7 +233,7 @@ export const storage = {
       const current = await this.getTransactions();
       const deleted = current.find(t => t.id === id);
       const updated = current.filter(t => t.id !== id);
-      await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updated));
+      await setStorageItem(TRANSACTIONS_KEY, JSON.stringify(updated));
       // Rebuild index sau khi xóa (để loại bỏ tháng/năm không còn giao dịch)
       if (deleted) await this._removeFromTransactionDateIndex(deleted.timestamp);
       if (onTransactionChangeCallback) {
@@ -224,7 +250,7 @@ export const storage = {
     try {
       const current = await this.getTransactions();
       const updated = current.map(t => t.id === updatedTransaction.id ? updatedTransaction : t);
-      await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updated));
+      await setStorageItem(TRANSACTIONS_KEY, JSON.stringify(updated));
       if (onTransactionChangeCallback) {
         onTransactionChangeCallback();
       }
@@ -237,11 +263,7 @@ export const storage = {
 
   async updateTransactionsBulk(updatedTransactions: Transaction[]): Promise<boolean> {
     try {
-      await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(updatedTransactions));
-      if (onTransactionChangeCallback) {
-        onTransactionChangeCallback();
-      }
-      return true;
+      return await setStorageItem(TRANSACTIONS_KEY, JSON.stringify(updatedTransactions));
     } catch (e) {
       console.error('Error updating transactions in bulk', e);
       return false;
@@ -253,6 +275,8 @@ export const storage = {
     const profile = await this.getUserProfile();
     const transactions = await this.getTransactions();
     const categoryBudgets = await this.getCategoryBudgets();
+    const goldItems = await this.getGoldItems();
+    const goldSales = await this.getGoldSales();
 
     const avatarMap: Record<string, string> = {};
 
@@ -280,8 +304,8 @@ export const storage = {
       }
     }
 
-    const jsonStr = JSON.stringify({ profile, transactions, categoryBudgets, avatarMap });
-    return encrypt(jsonStr);
+    const jsonStr = JSON.stringify({ profile, transactions, categoryBudgets, goldItems, goldSales, avatarMap });
+    return encrypt(jsonStr); // Đây là dòng đúng
   },
 
   async importData(jsonData: string): Promise<boolean> {
@@ -327,10 +351,16 @@ export const storage = {
       }
 
       if (parsed.transactions) {
-        await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(parsed.transactions));
+        await setStorageItem(TRANSACTIONS_KEY, JSON.stringify(parsed.transactions));
       }
       if (parsed.categoryBudgets) {
-        await AsyncStorage.setItem(CATEGORY_BUDGETS_KEY, JSON.stringify(parsed.categoryBudgets));
+        await setStorageItem(CATEGORY_BUDGETS_KEY, JSON.stringify(parsed.categoryBudgets));
+      }
+      if (parsed.goldItems) {
+        await setStorageItem(GOLD_ITEMS_KEY, JSON.stringify(parsed.goldItems));
+      }
+      if (parsed.goldSales) {
+        await setStorageItem(GOLD_SALES_KEY, JSON.stringify(parsed.goldSales));
       }
       // Rebuild index sau khi import
       await this._rebuildTransactionDateIndex();
@@ -346,7 +376,7 @@ export const storage = {
 
   async getNotificationHistory(): Promise<NotificationHistoryItem[]> {
     try {
-      const data = await AsyncStorage.getItem(NOTIFICATION_HISTORY_KEY);
+      const data = await getStorageItem(NOTIFICATION_HISTORY_KEY);
       return data ? JSON.parse(data) : [];
     } catch (e) {
       console.error('Error fetching notification history', e);
@@ -356,8 +386,7 @@ export const storage = {
 
   async saveNotificationHistory(history: NotificationHistoryItem[]): Promise<boolean> {
     try {
-      await AsyncStorage.setItem(NOTIFICATION_HISTORY_KEY, JSON.stringify(history));
-      return true;
+      return await setStorageItem(NOTIFICATION_HISTORY_KEY, JSON.stringify(history));
     } catch (e) {
       console.error('Error saving notification history', e);
       return false;
@@ -367,7 +396,7 @@ export const storage = {
   // Google Drive Backup settings
   async isGoogleDriveAutoBackupEnabled(): Promise<boolean> {
     try {
-      const value = await AsyncStorage.getItem('@googleDriveAutoBackupEnabled');
+      const value = await getStorageItem('@googleDriveAutoBackupEnabled');
       return value === 'true';
     } catch (e) {
       return false;
@@ -376,8 +405,7 @@ export const storage = {
 
   async setGoogleDriveAutoBackupEnabled(enabled: boolean): Promise<boolean> {
     try {
-      await AsyncStorage.setItem('@googleDriveAutoBackupEnabled', enabled ? 'true' : 'false');
-      return true;
+      return await setStorageItem('@googleDriveAutoBackupEnabled', enabled ? 'true' : 'false');
     } catch (e) {
       return false;
     }
@@ -385,7 +413,7 @@ export const storage = {
 
   async getGoogleDriveLastBackupTimestamp(): Promise<number> {
     try {
-      const value = await AsyncStorage.getItem('@googleDriveLastBackupTimestamp');
+      const value = await getStorageItem('@googleDriveLastBackupTimestamp');
       return value ? parseInt(value, 10) : 0;
     } catch (e) {
       return 0;
@@ -394,8 +422,7 @@ export const storage = {
 
   async setGoogleDriveLastBackupTimestamp(timestamp: number): Promise<boolean> {
     try {
-      await AsyncStorage.setItem('@googleDriveLastBackupTimestamp', timestamp.toString());
-      return true;
+      return await setStorageItem('@googleDriveLastBackupTimestamp', timestamp.toString());
     } catch (e) {
       return false;
     }
@@ -403,7 +430,7 @@ export const storage = {
 
   async getGoogleDriveLastBackupStatus(): Promise<string> {
     try {
-      const value = await AsyncStorage.getItem('@googleDriveLastBackupStatus');
+      const value = await getStorageItem('@googleDriveLastBackupStatus');
       return value || 'none';
     } catch (e) {
       return 'none';
@@ -412,8 +439,7 @@ export const storage = {
 
   async setGoogleDriveLastBackupStatus(status: string): Promise<boolean> {
     try {
-      await AsyncStorage.setItem('@googleDriveLastBackupStatus', status);
-      return true;
+      return await setStorageItem('@googleDriveLastBackupStatus', status);
     } catch (e) {
       return false;
     }
@@ -422,7 +448,7 @@ export const storage = {
   async getSuggestedNotes(type: 'expense' | 'income'): Promise<string[]> {
     try {
       const key = `@suggestedNotes_${type}`;
-      const data = await AsyncStorage.getItem(key);
+      const data = await getStorageItem(key);
       return data ? JSON.parse(data) : [];
     } catch (e) {
       console.error('Error fetching suggested notes', e);
@@ -437,7 +463,7 @@ export const storage = {
       const key = `@suggestedNotes_${type}`;
       const existing = await this.getSuggestedNotes(type);
       const updated = [trimmed, ...existing.filter(n => n !== trimmed)].slice(0, 10);
-      await AsyncStorage.setItem(key, JSON.stringify(updated));
+      await setStorageItem(key, JSON.stringify(updated));
     } catch (e) {
       console.error('Error saving suggested note', e);
     }
@@ -448,9 +474,98 @@ export const storage = {
       const key = `@suggestedNotes_${type}`;
       const existing = await this.getSuggestedNotes(type);
       const updated = existing.filter(n => n !== note);
-      await AsyncStorage.setItem(key, JSON.stringify(updated));
+      await setStorageItem(key, JSON.stringify(updated));
     } catch (e) {
       console.error('Error deleting suggested note', e);
+    }
+  },
+
+  // Gold Items
+  async getGoldItems(): Promise<GoldItem[]> {
+    try {
+      const data = await getStorageItem(GOLD_ITEMS_KEY);
+      const parsed = data ? JSON.parse(data) : [];
+      return parsed.sort((a: GoldItem, b: GoldItem) => b.buyDate - a.buyDate);
+    } catch (e) {
+      console.error('Error fetching gold items', e);
+      return [];
+    }
+  },
+
+  async saveGoldItem(item: GoldItem): Promise<boolean> {
+    try {
+      const current = await this.getGoldItems();
+      const updated = [item, ...current];
+      await setStorageItem(GOLD_ITEMS_KEY, JSON.stringify(updated));
+      return true;
+    } catch (e) {
+      console.error('Error saving gold item', e);
+      return false;
+    }
+  },
+
+  async updateGoldItemsBulk(updatedItems: GoldItem[]): Promise<boolean> {
+    try {
+      const current = await this.getGoldItems();
+      const updated = current.map(item => {
+        const match = updatedItems.find(u => u.id === item.id);
+        return match ? match : item;
+      });
+      const newItems = updatedItems.filter(u => !current.some(item => item.id === u.id));
+      const finalItems = [...updated, ...newItems];
+      await setStorageItem(GOLD_ITEMS_KEY, JSON.stringify(finalItems));
+      return true;
+    } catch (e) {
+      console.error('Error updating gold items in bulk', e);
+      return false;
+    }
+  },
+
+  // Gold Sales
+  async getGoldSales(): Promise<GoldSaleRecord[]> {
+    try {
+      const data = await getStorageItem(GOLD_SALES_KEY);
+      const parsed = data ? JSON.parse(data) : [];
+      return parsed.sort((a: GoldSaleRecord, b: GoldSaleRecord) => b.sellDate - a.sellDate);
+    } catch (e) {
+      console.error('Error fetching gold sales', e);
+      return [];
+    }
+  },
+
+  async saveGoldSale(sale: GoldSaleRecord): Promise<boolean> {
+    try {
+      const current = await this.getGoldSales();
+      const updated = [sale, ...current];
+      await setStorageItem(GOLD_SALES_KEY, JSON.stringify(updated));
+      return true;
+    } catch (e) {
+      console.error('Error saving gold sale', e);
+      return false;
+    }
+  },
+
+  async deleteGoldItemsBulk(ids: string[]): Promise<boolean> {
+    try {
+      const current = await this.getGoldItems();
+      const updated = current.filter((item) => !ids.includes(item.id));
+      await setStorageItem(GOLD_ITEMS_KEY, JSON.stringify(updated));
+      return true;
+    } catch (e) {
+      console.error('Error deleting gold items in bulk', e);
+      return false;
+    }
+  },
+
+  async deleteGoldSale(id: string): Promise<boolean> {
+    try {
+      const current = await this.getGoldSales();
+      const updated = current.filter((sale) => sale.id !== id);
+      await setStorageItem(GOLD_SALES_KEY, JSON.stringify(updated));
+      return true;
+    } catch (e) {
+      console.error('Error deleting gold sale', e);
+      return false;
     }
   }
 };

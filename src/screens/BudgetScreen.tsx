@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
   Modal,
@@ -19,10 +18,6 @@ import {
   Wallet,
   Eye,
   EyeOff,
-  PencilLine,
-  PenOff,
-  LayoutGrid,
-  Keyboard,
   ArrowRightLeft,
   RotateCcw,
   HelpCircle,
@@ -182,7 +177,7 @@ const BudgetScreen = () => {
   const [catToDelete, setCatToDelete] = useState<CategoryBudget | null>(null);
   const [deleteInput, setDeleteInput] = useState("");
   const [hasTxToDelete, setHasTxToDelete] = useState(false);
-  const [showAmount, setShowAmount] = useState(true);
+  const [showAmount, setShowAmount] = useState(false);
   const [activeTab, setActiveTab] = useState<"recharge" | "direct">("recharge");
 
   const now = new Date();

@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
   Modal,
@@ -16,29 +15,17 @@ import {
   Dimensions,
 } from "react-native";
 import { Alert } from "../components/CustomAlert";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import {
-  Activity,
-  History,
-  LayoutGrid,
-  List,
-  Plus,
-  RefreshCcw,
   Settings,
   X,
-  Keyboard,
   Coins,
   ArrowUpCircle,
   ArrowDownCircle,
   Eye,
   EyeOff,
-  PencilLine,
-  PenOff,
   ChevronRight,
-  Bell,
   Copy,
-  Flame,
   RotateCcw,
   HelpCircle,
 } from "lucide-react-native";
@@ -57,9 +44,10 @@ import {
   getStreakLevelInfo,
 } from "../utils/streak";
 import { getMascotImage, MASCOT_LIST } from "../utils/mascot";
+import { updateHomeScreenWidget } from "../utils/widget";
 import { styles } from "../styles/HomeScreen";
 
-const HIDE_BALANCE_KEY = "@hideBalance";
+// const HIDE_BALANCE_KEY = "@hideBalance";
 
 const DEFAULT_INCOME_CATEGORIES = ["Lương", "Thưởng", "Bán hàng"];
 
@@ -283,6 +271,7 @@ const HomeScreen = () => {
   const [budgets, setBudgets] = useState<CategoryBudget[]>([]);
   const [showBudgets, setShowBudgets] = useState(false);
   const [totalBalance, setTotalBalance] = useState<number>(0);
+  const [recordedToday, setRecordedToday] = useState(false);
   const [streakModalVisible, setStreakModalVisible] = useState(false);
   const [streakModalData, setStreakModalData] = useState<{
     count: number;
@@ -386,15 +375,17 @@ const HomeScreen = () => {
       setTotalBalance(totalAllocated + unallocated + calcSaving + customFundsTotal);
     }
 
-    try {
-      const hidden = await AsyncStorage.getItem(HIDE_BALANCE_KEY);
-      if (hidden !== null) {
-        setShowBudgets(!JSON.parse(hidden));
-      }
-    } catch (_) {}
-
     // Tính số tài khoản từ giao dịch đầu tiên
     const txs = await storage.getTransactions();
+
+    // Kiểm tra xem đã ghi giao dịch hôm nay chưa
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+    const hasRecorded = txs.some((tx) => tx.timestamp >= startOfToday && tx.timestamp <= endOfToday);
+    setRecordedToday(hasRecorded);
+    updateHomeScreenWidget(p?.streakCount || 0, hasRecorded);
+
     let firstTimestamp = p?.initialBalanceTimestamp || Date.now();
     if (txs.length > 0) {
       let minTs = txs[0].timestamp;
@@ -431,9 +422,9 @@ const HomeScreen = () => {
   const toggleShowBudgets = async () => {
     const next = !showBudgets;
     setShowBudgets(next);
-    try {
-      await AsyncStorage.setItem(HIDE_BALANCE_KEY, JSON.stringify(!next));
-    } catch (_) {}
+    // try {
+    //   await AsyncStorage.setItem(HIDE_BALANCE_KEY, JSON.stringify(!next));
+    // } catch (_) {}
   };
 
   const closeWelcomeModal = async (viewGuide: boolean) => {
@@ -641,7 +632,7 @@ const HomeScreen = () => {
     } else {
       Alert.alert(
         "Thành công",
-        'Đã lưu khoản thu. Vào tab "Chia Tiền" để phân bổ.',
+        'Đã lưu khoản thu. Vào màn hình "Chia Tiền" để phân bổ.',
       );
     }
 
@@ -710,7 +701,7 @@ const HomeScreen = () => {
             <TouchableOpacity
               onPress={() => navigation.navigate("Guide" as never)}
               style={styles.actionBtn}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
               <Sparkles color="#ffffff" size={20} />
               <View style={styles.actionBadge} />
@@ -720,7 +711,7 @@ const HomeScreen = () => {
                 navigation.navigate("Settings" as never);
               }}
               style={styles.actionBtn}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
               <Settings color="#ffffff" size={20} />
             </TouchableOpacity>
@@ -778,7 +769,7 @@ const HomeScreen = () => {
             <TouchableOpacity
               onPress={toggleShowBudgets}
               style={styles.cardEyeBtn}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
               {showBudgets ? (
                 <Eye color="#ffffff" size={20} />
@@ -956,7 +947,7 @@ const HomeScreen = () => {
             {pickerCategories.length === 0 ? (
               <View style={styles.emptyCatContainer}>
                 <Text style={styles.emptyCatText}>
-                  Chưa có danh mục. Vào tab "Chia Tiền" để tạo danh mục.
+                  Chưa có danh mục. Vào màn hình "Chia Tiền" để tạo danh mục.
                 </Text>
               </View>
             ) : (
