@@ -22,6 +22,7 @@ import {
   NotificationHistoryItem,
 } from "../types";
 import { formatCurrency } from "../utils/format";
+import { resolveCategoryName, isCategoryIdMatch } from "../utils/category";
 import {
   useIsFocused,
   useNavigation,
@@ -65,12 +66,18 @@ const getTransactionIconSource = (
     return require("../../assets/income_icon/default.png");
   }
 
-  if (tx.category === "Tiết kiệm" || tx.category === "Rút tiết kiệm") {
+  if (
+    tx.categoryId === "system_tiet_kiem" ||
+    tx.categoryId === "system_rut_tiet_kiem" ||
+    tx.category === "Tiết kiệm" ||
+    tx.category === "Rút tiết kiệm"
+  ) {
     return require("../../assets/fund_icon/save.png");
   }
 
   if (
-    tx.category.startsWith("Xóa quỹ") ||
+    tx.categoryId === "system_xoa_quy" ||
+    (tx.category && tx.category.startsWith("Xóa quỹ")) ||
     (tx.name &&
       (tx.name.startsWith("Nạp vào ") || tx.name.startsWith("Rút từ ")))
   ) {
@@ -78,10 +85,10 @@ const getTransactionIconSource = (
   }
 
   if (tx.type === "income") {
-    return getIncomeIconSource(tx.category, profile);
+    return getIncomeIconSource(tx.categoryId || tx.category || "income_khac", profile);
   }
 
-  const match = categoryBudgets.find((c) => c.name === tx.category);
+  const match = categoryBudgets.find((c) => (tx.categoryId && c.id && isCategoryIdMatch(c.id, tx.categoryId)) || c.name === tx.category);
   const iconKey = match?.icon || "default";
   return EXPENSE_ICONS[iconKey] || EXPENSE_ICONS["default"];
 };
@@ -107,7 +114,7 @@ const TransactionCard = React.memo(
     const displayCategory =
       item.name === "Số dư đầu tiên"
         ? item.name
-        : item.categorySnapshot || item.category;
+        : resolveCategoryName(item, profile, categoryBudgets);
     const displayName = item.name === "Số dư đầu tiên" ? undefined : item.name;
     const canAction = Date.now() - item.timestamp <= 3 * 24 * 60 * 60 * 1000;
 
@@ -619,10 +626,14 @@ const StatisticsScreen = () => {
     // Bỏ qua giao dịch tiết kiệm và quỹ tùy chỉnh khỏi Thống kê
     filtered = filtered.filter(
       (tx) =>
+        tx.categoryId !== "system_tiet_kiem" &&
+        tx.categoryId !== "system_rut_tiet_kiem" &&
+        tx.categoryId !== "system_xoa_quy" &&
+        !tx.categoryId?.startsWith("fund_") &&
         tx.category !== "Tiết kiệm" &&
         tx.category !== "Rút tiết kiệm" &&
         tx.category !== "Xóa Quỹ" &&
-        !(profile?.customFunds || []).some((f) => f.name === tx.category),
+        !(tx.category && (profile?.customFunds || []).some((f) => f.name === tx.category)),
     );
 
     // Filter by Period
@@ -657,7 +668,10 @@ const StatisticsScreen = () => {
 
     // Filter by Category
     if (c === "Khác") {
-      filtered = filtered.filter((tx) => tx.category === "Khác");
+      filtered = filtered.filter((tx) => {
+        const resolvedName = resolveCategoryName(tx, profile, categoryBudgets);
+        return resolvedName === "Khác" || tx.categoryId === "expense_khac" || tx.categoryId === "income_khac";
+      });
       if (deletedCategoryFilter !== "all") {
         filtered = filtered.filter(
           (tx) =>
@@ -668,7 +682,7 @@ const StatisticsScreen = () => {
       }
     } else if (c !== "all") {
       filtered = filtered.filter(
-        (tx) => (tx.categorySnapshot || tx.category) === c,
+        (tx) => resolveCategoryName(tx, profile, categoryBudgets) === c,
       );
     }
 
@@ -730,7 +744,7 @@ const StatisticsScreen = () => {
               return;
             }
 
-            const catName = tx.categorySnapshot || tx.category;
+            const catName = resolveCategoryName(tx, p, cats);
 
             if (tx.type === "expense") {
               if (catName === "Tiết kiệm") {
@@ -766,11 +780,11 @@ const StatisticsScreen = () => {
                 await storage.saveUserProfile(updatedProfile);
 
                 // Nếu danh mục vẫn còn tồn tại
-                const existingCat = cats.find((b) => b.name === catName);
+                const existingCat = cats.find((b) => b.id === tx.categoryId || b.name === catName);
                 if (existingCat) {
                   const isDirect = existingCat.type === "direct";
                   const updatedCats = cats.map((b) =>
-                    b.name === catName
+                    b.id === existingCat.id
                       ? {
                           ...b,
                           // Nếu là danh mục nạp tiền thì cộng lại budget, nếu là chi trực tiếp thì giữ nguyên budget (0)
@@ -868,7 +882,7 @@ const StatisticsScreen = () => {
     const cats = await storage.getCategoryBudgets();
     if (!p) return;
 
-    const catName = tx.categorySnapshot || tx.category;
+    const catName = resolveCategoryName(tx, p, cats);
 
     if (tx.type === "expense") {
       // Logic sửa khoản chi
@@ -1109,7 +1123,7 @@ const StatisticsScreen = () => {
     if (type !== "all") filtered = filtered.filter((tx) => tx.type === type);
     const deleted = new Set<string>();
     filtered
-      .filter((tx) => tx.category === "Khác")
+      .filter((tx) => tx.categoryId === "expense_khac" || tx.categoryId === "income_khac" || tx.category === "Khác")
       .forEach((tx) => {
         if (tx.categorySnapshot && tx.categorySnapshot !== "Khác") {
           deleted.add(tx.categorySnapshot);
@@ -1202,15 +1216,18 @@ const StatisticsScreen = () => {
         : DEFAULT_EXPENSE_CATEGORIES;
 
     let cats: string[];
+    const rawIncomeCats = (profile?.incomeCategories || DEFAULT_INCOME_CATEGORIES).map(
+      (c: any) => (typeof c === "string" ? c : c.name)
+    );
     if (type === "all") {
       cats = Array.from(
         new Set([
-          ...(profile?.incomeCategories || DEFAULT_INCOME_CATEGORIES),
+          ...rawIncomeCats,
           ...expenseCats,
         ]),
       );
     } else if (type === "income") {
-      cats = profile?.incomeCategories || DEFAULT_INCOME_CATEGORIES;
+      cats = rawIncomeCats;
     } else {
       cats = expenseCats;
     }
@@ -1221,7 +1238,7 @@ const StatisticsScreen = () => {
     // Thêm 'Khác' vào cuối cùng nếu nó có trong danh mục hoặc có giao dịch
     const hasKhacTx = transactions.some((tx) => {
       if (type !== "all" && tx.type !== type) return false;
-      return tx.category === "Khác";
+      return tx.categoryId === "expense_khac" || tx.categoryId === "income_khac" || tx.category === "Khác";
     });
     if (includesKhac || hasKhacTx) {
       cats.push("Khác");
@@ -1250,9 +1267,9 @@ const StatisticsScreen = () => {
     const categoryTotals: Record<string, { total: number; baseCat: string }> =
       {};
     expenses.forEach((tx) => {
-      const catName = tx.categorySnapshot || tx.category;
+      const catName = resolveCategoryName(tx, profile, categoryBudgets);
       if (!categoryTotals[catName]) {
-        categoryTotals[catName] = { total: 0, baseCat: tx.category };
+        categoryTotals[catName] = { total: 0, baseCat: tx.category || "" };
       }
       categoryTotals[catName].total += tx.amount;
     });
@@ -1291,8 +1308,10 @@ const StatisticsScreen = () => {
     const expenses = filteredTransactions.filter((tx) => tx.type === "expense");
     return expenses
       .filter((tx) => {
-        const txCat = tx.categorySnapshot || tx.category;
-        return catName === "Khác" ? tx.category === "Khác" : txCat === catName;
+        const txCat = resolveCategoryName(tx, profile, categoryBudgets);
+        return catName === "Khác"
+          ? (txCat === "Khác" || tx.categoryId === "expense_khac" || tx.categoryId === "income_khac")
+          : txCat === catName;
       })
       .sort((a, b) => b.timestamp - a.timestamp);
   };
@@ -2108,7 +2127,7 @@ const StatisticsScreen = () => {
                                   style={styles.pieDetailName}
                                   numberOfLines={1}
                                 >
-                                  {tx.name || tx.categorySnapshot || tx.category}
+                                   {tx.name || resolveCategoryName(tx, profile, categoryBudgets)}
                                 </Text>
                                 {tx.note ? (
                                   <Text

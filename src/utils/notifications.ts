@@ -1,7 +1,8 @@
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import { storage } from "../store/storage";
-import { NotificationHistoryItem, Transaction } from "../types";
+import { NotificationHistoryItem, Transaction, UserProfile, CategoryBudget } from "../types";
+import { resolveCategoryName } from "./category";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -44,9 +45,17 @@ export function formatCurrency(amount: number): string {
 }
 
 export function isFundTransaction(tx: Transaction): boolean {
+  if (
+    tx.categoryId === "system_tiet_kiem" ||
+    tx.categoryId === "system_rut_tiet_kiem" ||
+    tx.categoryId === "system_xoa_quy" ||
+    tx.categoryId?.startsWith("fund_")
+  ) {
+    return true;
+  }
   const cat = tx.categorySnapshot || tx.category;
   if (cat === "Tiết kiệm" || cat === "Rút tiết kiệm") return true;
-  if (cat.startsWith("Xóa quỹ")) return true;
+  if (cat && cat.startsWith("Xóa quỹ")) return true;
   if (tx.name && (tx.name.startsWith("Nạp vào ") || tx.name.startsWith("Rút từ "))) return true;
   return false;
 }
@@ -56,7 +65,9 @@ export function isFundTransaction(tx: Transaction): boolean {
  */
 export function generateDailyReport(
   transactions: Transaction[],
-  targetDate: Date
+  targetDate: Date,
+  profile: UserProfile | null,
+  categoryBudgets: CategoryBudget[]
 ): { title: string; body: string } {
   const targetStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0).getTime();
   const targetEnd = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999).getTime();
@@ -81,7 +92,7 @@ export function generateDailyReport(
     // Loại trừ các giao dịch liên quan đến Quỹ (nạp, rút, xóa quỹ, tiết kiệm)
     if (isFundTransaction(tx)) return;
 
-    const cat = tx.categorySnapshot || tx.category;
+    const cat = resolveCategoryName(tx, profile, categoryBudgets);
     if (tx.type === "expense") {
       expenses[cat] = (expenses[cat] || 0) + tx.amount;
       totalExpense += tx.amount;
@@ -151,7 +162,9 @@ export function generateDailyReport(
  */
 export function generateMonthlyReport(
   transactions: Transaction[],
-  targetMonthDate: Date
+  targetMonthDate: Date,
+  profile: UserProfile | null,
+  categoryBudgets: CategoryBudget[]
 ): { title: string; body: string } {
   const yyyy = targetMonthDate.getFullYear();
   const monthIdx = targetMonthDate.getMonth(); // 0-11
@@ -178,7 +191,7 @@ export function generateMonthlyReport(
   targetTxs.forEach(tx => {
     if (isFundTransaction(tx)) return;
 
-    const cat = tx.categorySnapshot || tx.category;
+    const cat = resolveCategoryName(tx, profile, categoryBudgets);
     if (tx.type === "expense") {
       expenses[cat] = (expenses[cat] || 0) + tx.amount;
       totalExpense += tx.amount;
@@ -248,7 +261,9 @@ export function generateMonthlyReport(
  */
 export function generateYearlyReport(
   transactions: Transaction[],
-  targetYear: number
+  targetYear: number,
+  profile: UserProfile | null,
+  categoryBudgets: CategoryBudget[]
 ): { title: string; body: string } {
   const targetStart = new Date(targetYear, 0, 1, 0, 0, 0, 0).getTime();
   const targetEnd = new Date(targetYear + 1, 0, 1, 0, 0, 0, 0).getTime() - 1;
@@ -272,7 +287,7 @@ export function generateYearlyReport(
   targetTxs.forEach(tx => {
     if (isFundTransaction(tx)) return;
 
-    const cat = tx.categorySnapshot || tx.category;
+    const cat = resolveCategoryName(tx, profile, categoryBudgets);
     if (tx.type === "expense") {
       expenses[cat] = (expenses[cat] || 0) + tx.amount;
       totalExpense += tx.amount;
@@ -341,6 +356,8 @@ export function generateYearlyReport(
  */
 export async function syncNotificationHistory(transactions: Transaction[]) {
   if (transactions.length === 0) return;
+  const profile = await storage.getUserProfile();
+  const categoryBudgets = await storage.getCategoryBudgets();
 
   // Sắp xếp transactions tăng dần theo thời gian để tìm ngày đầu tiên
   const sortedTxs = [...transactions].sort((a, b) => a.timestamp - b.timestamp);
@@ -355,7 +372,7 @@ export async function syncNotificationHistory(transactions: Transaction[]) {
 
   for (let d = new Date(startDate.getTime()); d <= yesterday; d.setDate(d.getDate() + 1)) {
     const dateStr = formatDateString(d);
-    const { title, body } = generateDailyReport(transactions, d);
+    const { title, body } = generateDailyReport(transactions, d, profile, categoryBudgets);
     const triggerTime = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 2, 0, 0, 0).getTime();
 
     newHistory.push({
@@ -376,7 +393,7 @@ export async function syncNotificationHistory(transactions: Transaction[]) {
     const mm = String(m.getMonth() + 1).padStart(2, "0");
     const yyyy = m.getFullYear();
     const monthStr = `${mm}/${yyyy}`;
-    const { title, body } = generateMonthlyReport(transactions, m);
+    const { title, body } = generateMonthlyReport(transactions, m, profile, categoryBudgets);
     const triggerTime = new Date(m.getFullYear(), m.getMonth() + 1, 1, 2, 0, 0, 0).getTime();
 
     newHistory.push({
@@ -395,7 +412,7 @@ export async function syncNotificationHistory(transactions: Transaction[]) {
 
   for (let y = startYearVal; y <= prevYearVal; y++) {
     const yearStr = `${y}`;
-    const { title, body } = generateYearlyReport(transactions, y);
+    const { title, body } = generateYearlyReport(transactions, y, profile, categoryBudgets);
     const triggerTime = new Date(y + 1, 0, 1, 2, 0, 0, 0).getTime();
 
     newHistory.push({
@@ -429,6 +446,8 @@ export async function scheduleDailyReminder() {
 
   // Lấy danh sách giao dịch từ bộ nhớ để kiểm tra
   const transactions = await storage.getTransactions();
+  const profile = await storage.getUserProfile();
+  const categoryBudgets = await storage.getCategoryBudgets();
 
   // Đồng bộ lịch sử báo cáo ngày hôm qua vào bộ nhớ
   await syncNotificationHistory(transactions);
@@ -502,7 +521,7 @@ export async function scheduleDailyReminder() {
     // Ngày được thống kê (ngày hôm trước của triggerDate)
     const reportDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i - 1, 0, 0, 0, 0);
 
-    const { title, body } = generateDailyReport(transactions, reportDate);
+    const { title, body } = generateDailyReport(transactions, reportDate, profile, categoryBudgets);
 
     await scheduleSpecificNotification(triggerDate, title, body, { type: 'daily_report' });
   }
@@ -510,13 +529,13 @@ export async function scheduleDailyReminder() {
   // 3. LẬP LỊCH THÔNG BÁO BÁO CÁO THÁNG (2H SÁNG ngày đầu tiên của tháng tiếp theo)
   const nextMonthTrigger = new Date(now.getFullYear(), now.getMonth() + 1, 1, 2, 0, 0, 0);
   const currentMonthDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-  const monthReport = generateMonthlyReport(transactions, currentMonthDate);
+  const monthReport = generateMonthlyReport(transactions, currentMonthDate, profile, categoryBudgets);
   await scheduleSpecificNotification(nextMonthTrigger, monthReport.title, monthReport.body, { type: 'monthly_report' });
 
   // 4. LẬP LỊCH THÔNG BÁO BÁO CÁO NĂM (2H SÁNG ngày 01/01 của năm tiếp theo)
   const nextYearTrigger = new Date(now.getFullYear() + 1, 0, 1, 2, 0, 0, 0);
   const currentYearVal = now.getFullYear();
-  const yearReport = generateYearlyReport(transactions, currentYearVal);
+  const yearReport = generateYearlyReport(transactions, currentYearVal, profile, categoryBudgets);
   await scheduleSpecificNotification(nextYearTrigger, yearReport.title, yearReport.body, { type: 'yearly_report' });
 
   console.log("Rescheduled smart daily reminders, 2 AM daily reports, month and year reports successfully!");

@@ -138,10 +138,21 @@ const FundScreen = () => {
       // Calculate savings balance (Quỹ Tiết Kiệm)
       let calcSaving = 0;
       transactions.forEach((t) => {
-        if (t.category === "Tiết kiệm" || t.category === "Rút tiết kiệm") {
-          if (t.type === "expense" && t.category === "Tiết kiệm") {
+        if (
+          t.categoryId === "system_tiet_kiem" ||
+          t.categoryId === "system_rut_tiet_kiem" ||
+          t.category === "Tiết kiệm" ||
+          t.category === "Rút tiết kiệm"
+        ) {
+          if (
+            t.type === "expense" &&
+            (t.categoryId === "system_tiet_kiem" || t.category === "Tiết kiệm")
+          ) {
             calcSaving += t.amount;
-          } else if (t.type === "income" && t.category === "Rút tiết kiệm") {
+          } else if (
+            t.type === "income" &&
+            (t.categoryId === "system_rut_tiet_kiem" || t.category === "Rút tiết kiệm")
+          ) {
             calcSaving -= t.amount;
           }
         }
@@ -317,12 +328,26 @@ const FundScreen = () => {
         id: Date.now().toString(),
         type: "income",
         amount: fundBalance,
-        category: `Xóa quỹ ${fundToDelete.name}`,
+        categoryId: "system_xoa_quy",
+        name: `Xóa quỹ ${fundToDelete.name}`,
         note: `Thu hồi từ ${fundToDelete.name}`,
         timestamp: Date.now(),
       };
       await storage.saveTransaction(tx);
     }
+
+    const txs = await storage.getTransactions();
+    const updatedTxs = txs.map((t) => {
+      if (t.categoryId === `fund_${fundToDelete.id}`) {
+        return {
+          ...t,
+          categoryId: t.type === "expense" ? "expense_khac" : "income_khac",
+          categorySnapshot: fundToDelete.name,
+        };
+      }
+      return t;
+    });
+    await storage.updateTransactionsBulk(updatedTxs);
 
     await storage.saveUserProfile(updatedProfile);
     setDeleteFundModalVisible(false);
@@ -387,7 +412,7 @@ const FundScreen = () => {
       id: Date.now().toString(),
       type: txType === "deposit" ? "expense" : "income",
       amount: amount,
-      category: selectedFund.name,
+      categoryId: `fund_${selectedFund.id}`,
       name:
         txType === "deposit"
           ? `Nạp vào ${selectedFund.name}`

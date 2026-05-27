@@ -3,10 +3,12 @@ import * as Sharing from 'expo-sharing';
 import { storage } from '../store/storage';
 import { Transaction } from '../types';
 import { formatCurrency } from './format';
+import { resolveCategoryName } from './category';
 
 export const exportYearlyPdfReport = async (year: number): Promise<void> => {
   const transactions = await storage.getTransactions();
   const profile = await storage.getUserProfile();
+  const categoryBudgets = await storage.getCategoryBudgets();
   
   // Filter transactions for this year
   let yearTxs = transactions.filter(tx => {
@@ -17,10 +19,14 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
   // Exclude transfer/savings target like in Statistics Screen to match official stats
   yearTxs = yearTxs.filter(
     (tx) =>
+      tx.categoryId !== "system_tiet_kiem" &&
+      tx.categoryId !== "system_rut_tiet_kiem" &&
+      tx.categoryId !== "system_xoa_quy" &&
+      !tx.categoryId?.startsWith("fund_") &&
       tx.category !== "Tiết kiệm" &&
       tx.category !== "Rút tiết kiệm" &&
       tx.category !== "Xóa Quỹ" &&
-      !(profile?.customFunds || []).some((f) => f.name === tx.category)
+      !(tx.category && (profile?.customFunds || []).some((f) => f.name === tx.category))
   );
 
   // Group transactions by month
@@ -47,7 +53,7 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
       yearlyIncome += tx.amount;
     }
 
-    const catName = tx.categorySnapshot || tx.category;
+    const catName = resolveCategoryName(tx, profile, categoryBudgets);
     if (!yearlyCategoryTotals[catName]) {
       yearlyCategoryTotals[catName] = { amount: 0, type: tx.type };
     }
@@ -302,7 +308,7 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
         mIncome += tx.amount;
       }
 
-      const catName = tx.categorySnapshot || tx.category;
+      const catName = resolveCategoryName(tx, profile, categoryBudgets);
       if (!mCategoryTotals[catName]) {
         mCategoryTotals[catName] = { amount: 0, type: tx.type };
       }

@@ -91,7 +91,7 @@ const SetupScreen = () => {
         id: Date.now().toString(),
         type: "income" as const,
         amount: balance,
-        category: "Khác",
+        categoryId: "income_khac",
         name: "Số dư đầu tiên",
         timestamp: Date.now(),
       };

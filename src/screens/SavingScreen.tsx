@@ -78,11 +78,11 @@ const SavingScreen = () => {
     // Tính tiết kiệm từ transactions (Tổng số tiền đang có trong Heo)
     let calcSaving = 0;
     validTransactions.forEach((t) => {
-      if (t.type === "expense" && t.category === "Tiết kiệm")
+      if (t.type === "expense" && (t.categoryId === "system_tiet_kiem" || t.category === "Tiết kiệm"))
         calcSaving += t.amount;
       else if (
         t.type === "income" &&
-        (t.category === "Tiết kiệm" || t.category === "Rút tiết kiệm")
+        (t.categoryId === "system_tiet_kiem" || t.categoryId === "system_rut_tiet_kiem" || t.category === "Tiết kiệm" || t.category === "Rút tiết kiệm")
       )
         calcSaving -= t.amount;
     });
@@ -129,7 +129,7 @@ const SavingScreen = () => {
 
     // Tính ngày chờ rút tiền
     const withdrawals = transactions.filter(
-      (t) => t.category === "Rút tiết kiệm",
+      (t) => t.categoryId === "system_rut_tiet_kiem" || t.category === "Rút tiết kiệm",
     );
     if (withdrawals.length > 0) {
       let lastWithdrawal = withdrawals[0].timestamp;
@@ -275,13 +275,11 @@ const SavingScreen = () => {
       await storage.saveUserProfile(updatedProfile);
     }
 
-    const txCategory = type === "deposit" ? "Tiết kiệm" : "Rút tiết kiệm";
     const newTx: Transaction = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       type: type === "deposit" ? "expense" : "income",
       amount,
-      category: txCategory,
-      categorySnapshot: txCategory,
+      categoryId: type === "deposit" ? "system_tiet_kiem" : "system_rut_tiet_kiem",
       name: type === "deposit" ? "Nuôi heo béo" : "Rút tiền từ Heo Đất",
       timestamp: Date.now(),
     };

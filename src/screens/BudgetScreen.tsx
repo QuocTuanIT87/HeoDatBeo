@@ -21,10 +21,13 @@ import {
   ArrowRightLeft,
   RotateCcw,
   HelpCircle,
+  PencilLine,
+  Settings,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { CategoryBudget, UserProfile } from "../types";
 import { formatCurrency } from "../utils/format";
+import { isCategoryIdMatch } from "../utils/category";
 import Keypad from "../components/Keypad";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { styles } from "../styles/BudgetScreen";
@@ -180,6 +183,11 @@ const BudgetScreen = () => {
   const [showAmount, setShowAmount] = useState(false);
   const [activeTab, setActiveTab] = useState<"recharge" | "direct">("recharge");
 
+  // Rename state for expense category
+  const [isRenameModalVisible, setRenameModalVisible] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<CategoryBudget | null>(null);
+  const [renameInputText, setRenameInputText] = useState("");
+
   const now = new Date();
   const currentMonthStr = `Tháng ${now.getMonth() + 1}`;
 
@@ -202,16 +210,27 @@ const BudgetScreen = () => {
       if (tx.type === "expense") {
         const d = new Date(tx.timestamp);
         if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-          const catName = tx.categorySnapshot || tx.category;
-          spentMap[catName] = (spentMap[catName] || 0) + tx.amount;
+          const match = cats.find((c) =>
+            (tx.categoryId && c.id && isCategoryIdMatch(c.id, tx.categoryId)) ||
+            (c.name === (tx.categorySnapshot || tx.category))
+          );
+          if (match && match.id) {
+            spentMap[match.id] = (spentMap[match.id] || 0) + tx.amount;
+          } else {
+            const catId = tx.categoryId || "expense_khac";
+            spentMap[catId] = (spentMap[catId] || 0) + tx.amount;
+          }
         }
       }
     });
 
-    cats = cats.map((c) => ({
-      ...c,
-      spent: spentMap[c.name] || 0,
-    }));
+    cats = cats.map((c) => {
+      const key = c.id || c.name;
+      return {
+        ...c,
+        spent: spentMap[key] || 0,
+      };
+    });
 
     setProfile(p);
     setBudgets(cats);
@@ -260,8 +279,9 @@ const BudgetScreen = () => {
       return;
     }
 
-    const updated = budgets.map((b) =>
-      b.name === selectedCat.name
+    const updated = budgets.map((b) => {
+      const isMatch = b.id && selectedCat.id ? isCategoryIdMatch(b.id, selectedCat.id) : b.name === selectedCat.name;
+      return isMatch
         ? {
             ...b,
             budget:
@@ -270,8 +290,8 @@ const BudgetScreen = () => {
                 : b.budget - allocAmount,
             spent: b.spent || 0,
           }
-        : b,
-    );
+        : b;
+    });
     const success = await storage.saveCategoryBudgets(updated);
     if (success) {
       setBudgets(updated);
@@ -316,7 +336,8 @@ const BudgetScreen = () => {
   const handleSelectIcon = async (iconKey: string) => {
     if (editingCategory) {
       const updated = budgets.map((b) => {
-        if (b.name === editingCategory.name) {
+        const isMatch = b.id && editingCategory.id ? isCategoryIdMatch(b.id, editingCategory.id) : b.name === editingCategory.name;
+        if (isMatch) {
           return { ...b, icon: iconKey };
         }
         return b;
@@ -332,15 +353,16 @@ const BudgetScreen = () => {
 
     if (!pendingCategory) return;
     const { name, type } = pendingCategory;
+    const newId = 'expense_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Math.random().toString(36).substr(2, 5);
 
     const txs = await storage.getTransactions();
     let hasUpdatedTx = false;
     const updatedTxs = txs.map((tx) => {
-      if (tx.category === "Khác" && tx.categorySnapshot === name) {
+      if (tx.categoryId === "expense_khac" && tx.categorySnapshot === name) {
         hasUpdatedTx = true;
         return {
           ...tx,
-          category: name,
+          categoryId: newId,
         };
       }
       return tx;
@@ -352,7 +374,7 @@ const BudgetScreen = () => {
 
     const updated = [
       ...budgets,
-      { name, budget: 0, spent: 0, type, icon: iconKey },
+      { id: newId, name, budget: 0, spent: 0, type, icon: iconKey },
     ];
     const success = await storage.saveCategoryBudgets(updated);
     if (success) {
@@ -368,7 +390,7 @@ const BudgetScreen = () => {
     const isDirect = cat.type === "direct";
     const txs = await storage.getTransactions();
     const hasTx = txs.some(
-      (t) => (t.categorySnapshot || t.category) === cat.name,
+      (t) => (t.categoryId && cat.id && isCategoryIdMatch(t.categoryId, cat.id)) || (t.categorySnapshot || t.category) === cat.name,
     );
 
     if (isDirect) {
@@ -396,7 +418,7 @@ const BudgetScreen = () => {
   };
 
   const executeDeletion = async (cat: CategoryBudget, hasTx: boolean) => {
-    const updated = budgets.filter((b) => b.name !== cat.name);
+    const updated = budgets.filter((b) => b.id && cat.id ? !isCategoryIdMatch(b.id, cat.id) : b.name !== cat.name);
     const success = await storage.saveCategoryBudgets(updated);
     if (success) {
       setBudgets(updated);
@@ -405,11 +427,13 @@ const BudgetScreen = () => {
       if (hasTx) {
         const txs = await storage.getTransactions();
         const updatedTxs = txs.map((t) => {
-          if ((t.categorySnapshot || t.category) === cat.name) {
+          const isMatch = (t.categoryId && cat.id && isCategoryIdMatch(t.categoryId, cat.id)) || (!t.categoryId && (t.categorySnapshot || t.category) === cat.name);
+          if (isMatch) {
             return {
               ...t,
+              categoryId: 'expense_khac',
               category: "Khác",
-              categorySnapshot: cat.name,
+              categorySnapshot: t.categorySnapshot || t.category || cat.name,
             };
           }
           return t;
@@ -433,6 +457,64 @@ const BudgetScreen = () => {
     await executeDeletion(catToDelete, hasTxToDelete);
   };
 
+  const handleOpenRenameModal = (cat: CategoryBudget) => {
+    if (
+      cat.name === "Tiết kiệm" ||
+      cat.name === "Rút tiết kiệm" ||
+      cat.name === "Số dư đầu tiên" ||
+      cat.name === "Khác"
+    ) {
+      Alert.alert("Lỗi", "Không thể đổi tên danh mục hệ thống.");
+      return;
+    }
+    setRenameTarget(cat);
+    setRenameInputText(cat.name);
+    setRenameModalVisible(true);
+  };
+
+  const handleRenameConfirm = async () => {
+    const trimmedNewName = renameInputText.trim();
+    if (!trimmedNewName || !renameTarget) return;
+
+    if (
+      trimmedNewName === "Tiết kiệm" ||
+      trimmedNewName === "Rút tiết kiệm" ||
+      trimmedNewName === "Số dư đầu tiên" ||
+      trimmedNewName === "Khác"
+    ) {
+      Alert.alert("Lỗi", "Tên danh mục này trùng với tên danh mục hệ thống.");
+      return;
+    }
+
+    const isConflicting = budgets.some(
+      (b) => b.id && renameTarget.id && !isCategoryIdMatch(b.id, renameTarget.id) && b.name === trimmedNewName
+    );
+    if (isConflicting) {
+      Alert.alert("Lỗi", "Tên danh mục này đã tồn tại.");
+      return;
+    }
+
+    // Ensure target has an ID just in case
+    const targetId = renameTarget.id || 'expense_' + renameTarget.name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Math.random().toString(36).substr(2, 5);
+
+    const updatedBudgets = budgets.map((b) => {
+      const isMatch = b.id && renameTarget.id ? isCategoryIdMatch(b.id, renameTarget.id) : b.name === renameTarget.name;
+      return isMatch ? { ...b, id: targetId, name: trimmedNewName } : b;
+    });
+
+    const success = await storage.saveCategoryBudgets(updatedBudgets);
+    if (success) {
+      setBudgets(updatedBudgets);
+
+      setRenameModalVisible(false);
+      setRenameTarget(null);
+      setRenameInputText("");
+      Alert.alert("Thành công", "Đã đổi tên danh mục.");
+    } else {
+      Alert.alert("Lỗi", "Không thể lưu thay đổi.");
+    }
+  };
+
   const handleSwitchCategoryType = (cat: CategoryBudget) => {
     const isDirect = cat.type === "direct";
 
@@ -445,9 +527,10 @@ const BudgetScreen = () => {
           {
             text: "Đồng ý",
             onPress: async () => {
-              const updated = budgets.map((b) =>
-                b.name === cat.name ? { ...b, type: "recharge" as const } : b,
-              );
+              const updated = budgets.map((b) => {
+                const isMatch = b.id && cat.id ? isCategoryIdMatch(b.id, cat.id) : b.name === cat.name;
+                return isMatch ? { ...b, type: "recharge" as const } : b;
+              });
               const success = await storage.saveCategoryBudgets(updated);
               if (success) {
                 setBudgets(updated);
@@ -470,11 +553,10 @@ const BudgetScreen = () => {
             text: "Đồng ý",
             onPress: async () => {
               const returnedAmount = cat.budget;
-              const updated = budgets.map((b) =>
-                b.name === cat.name
-                  ? { ...b, budget: 0, type: "direct" as const }
-                  : b,
-              );
+              const updated = budgets.map((b) => {
+                const isMatch = b.id && cat.id ? isCategoryIdMatch(b.id, cat.id) : b.name === cat.name;
+                return isMatch ? { ...b, budget: 0, type: "direct" as const } : b;
+              });
               const success = await storage.saveCategoryBudgets(updated);
               if (success) {
                 setBudgets(updated);
@@ -512,10 +594,16 @@ const BudgetScreen = () => {
     return (
       <TouchableOpacity
         key={cat.name}
-        style={styles.catCard}
+        style={[styles.catCard, {padding: isDirect ? 22 : 18}]}
         onPress={() => (isDirect ? null : openAllocModal(cat))}
         activeOpacity={isDirect ? 1 : 0.7}
       >
+        <TouchableOpacity
+          style={{ position: "absolute", top: 6, left: 6, zIndex: 10, padding: 4 }}
+          onPress={() => handleOpenRenameModal(cat)}
+        >
+          <Settings color="#cbd5e1" size={14} />
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.catIconContainer}
           onPress={() => openEditIconModal(cat)}
@@ -555,11 +643,10 @@ const BudgetScreen = () => {
               </View>
               <View style={styles.progressLabelRow}>
                 <Text style={styles.progressText}>
-                  Đã dùng:{" "}
-                  {showAmount ? `${formatCurrency(spent)} đ` : "******"}
+                  Đã dùng {Math.round(percentSpent)}%:{" "} 
                 </Text>
                 <Text style={styles.progressPercent}>
-                  {Math.round(percentSpent)}%
+                  {showAmount ? `${formatCurrency(spent)} đ` : "******"}
                 </Text>
               </View>
             </View>
@@ -570,7 +657,7 @@ const BudgetScreen = () => {
             style={{ padding: 10 }}
             onPress={() => handleSwitchCategoryType(cat)}
           >
-            <ArrowRightLeft color="#94a3b8" size={18} />
+            <ArrowRightLeft color="#cbd5e1" size={18} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.deleteBtn}
@@ -1079,6 +1166,53 @@ const BudgetScreen = () => {
                 {editingCategory ? "Hủy" : "Dùng biểu tượng mặc định"}
               </Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal: Đổi tên danh mục */}
+      <Modal
+        visible={isRenameModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setRenameModalVisible(false)}
+      >
+        <View style={styles.modalOverlayCenter}>
+          <View style={styles.inputModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Đổi tên danh mục chi tiêu</Text>
+              <TouchableOpacity onPress={() => setRenameModalVisible(false)}>
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 14, color: "#64748b", marginBottom: 12 }}>
+              Nhập tên mới cho danh mục "{renameTarget?.name}":
+            </Text>
+
+            <TextInput
+              style={styles.textInput}
+              placeholder="Nhập tên mới..."
+              value={renameInputText}
+              onChangeText={setRenameInputText}
+              onSubmitEditing={handleRenameConfirm}
+              autoFocus={true}
+            />
+
+            <View style={{ flexDirection: "row", gap: 12, marginTop: 10 }}>
+              <TouchableOpacity
+                style={[styles.confirmBtn, { flex: 1, backgroundColor: "#64748b", marginTop: 0 }]}
+                onPress={() => setRenameModalVisible(false)}
+              >
+                <Text style={styles.confirmBtnText}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmBtn, { flex: 1, marginTop: 0 }]}
+                onPress={handleRenameConfirm}
+              >
+                <Text style={styles.confirmBtnText}>Lưu</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

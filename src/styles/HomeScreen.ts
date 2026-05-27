@@ -179,9 +179,12 @@ export const styles = StyleSheet.create({
         alignItems: "center",
     },
     cardEyeBtn: {
-        padding: 8,
-        backgroundColor: "rgba(255, 255, 255, 0.1)",
-        borderRadius: 10,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: "rgba(255,255,255,0.1)",
+        justifyContent: "center",
+        alignItems: "center",
     },
     budgetChips: { gap: 10, paddingBottom: 4 },
     budgetChip: {

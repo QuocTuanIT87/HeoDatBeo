@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, Image } from 'react-native';
 import { storage } from '../store/storage';
 import { Transaction, UserProfile } from '../types';
 import { formatCurrency } from '../utils/format';
+import { resolveCategoryName } from '../utils/category';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { ArrowLeft, Wallet } from 'lucide-react-native';
 import { styles } from '../styles/FundHistoryScreen';
@@ -49,8 +50,10 @@ const FundHistoryScreen = () => {
     const fundTxs = data.filter(t => 
       t.timestamp >= p.initialBalanceTimestamp &&
       (
-        t.category.startsWith("Xóa quỹ") ||
+        t.categoryId === "system_xoa_quy" ||
+        t.category?.startsWith("Xóa quỹ") ||
         (t.name && (t.name.startsWith("Nạp vào ") || t.name.startsWith("Rút từ "))) ||
+        t.categoryId?.startsWith("fund_") ||
         (p.customFunds && p.customFunds.some(f => f.name === t.category))
       )
     ).sort((a, b) => b.timestamp - a.timestamp);
@@ -68,7 +71,19 @@ const FundHistoryScreen = () => {
   const getFundIconSource = (item: Transaction) => {
     if (!profile) return FUND_ICONS['default'];
 
-    let fundName = item.category;
+    if (item.categoryId === "system_xoa_quy" || item.category?.startsWith("Xóa quỹ")) {
+      return FUND_ICONS['default'];
+    }
+
+    if (item.categoryId?.startsWith("fund_")) {
+      const fundId = item.categoryId.substring(5);
+      const customFund = profile.customFunds?.find(f => f.id === fundId);
+      if (customFund) {
+        return FUND_ICONS[customFund.icon || 'default'] || FUND_ICONS['default'];
+      }
+    }
+
+    let fundName = item.category || "";
     if (fundName.startsWith("Xóa quỹ ")) {
       fundName = fundName.replace("Xóa quỹ ", "");
     }
@@ -104,7 +119,7 @@ const FundHistoryScreen = () => {
             <Image source={iconSource} style={styles.iconImage} />
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={styles.cardCategory}>{item.category}</Text>
+            <Text style={styles.cardCategory}>{item.categoryId === "system_xoa_quy" ? (item.category || "Xóa quỹ") : resolveCategoryName(item, profile, [])}</Text>
             {item.name ? (
               <Text style={styles.cardName}>{item.name}</Text>
             ) : null}

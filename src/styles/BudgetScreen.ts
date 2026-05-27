@@ -233,7 +233,6 @@ export const styles = StyleSheet.create({
     catCard: {
         backgroundColor: "#ffffff",
         borderRadius: 20,
-        padding: 18,
         marginBottom: 14,
         flexDirection: "row",
         alignItems: "center",
