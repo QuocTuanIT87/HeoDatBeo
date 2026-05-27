@@ -48,10 +48,12 @@ import {
   Database,
   PencilLine,
   Bitcoin,
+  FileText,
 } from "lucide-react-native";
 import { UserProfile } from "../types";
 import { scheduleTestNotification } from "../utils/notifications";
 import { styles } from "../styles/SettingsScreen";
+import { exportYearlyPdfReport } from "../utils/pdfReport";
 
 const DEFAULT_INCOME_CATEGORIES = ["Lương", "Thưởng", "Bán hàng"];
 
@@ -100,20 +102,8 @@ export const getIncomeIconSource = (
   return INCOME_ICONS["default"];
 };
 
-const VERSION_HISTORY = [
-  { version: "26.05.2026", description: "Chỉnh sửa giao diện trang lịch sử mua - bán - đổi vàng\nMặc định ẩn tiền lúc đầu\nSửa điều kiện đổi vàng\nThay đổi cơ chế mã hóa dữ liệu", order: 12 },
-  { version: "25.05.2026", description: "Sửa lỗi sao lưu tự động\nSửa giao diện hiển thị\nSửa lỗi ấn vào thông báo hằng ngày\nThêm chức năng sửa chú thích giao dịch\nThêm chức năng hiển thị gợi ý ghi chú\nHiển thị bản sao lưu mới nhất khi ấn khôi phục\nCập nhật xóa bản sao lưu cũ khi sao lưu đạt tối đa 20 bản\nSửa giao diện trang cài đặt\nThêm trang lưu lịch sử mua - bán - đổi vàng", order: 11 },
-  { version: "23.05.2026", description: "Sửa phần hiển thị tên ở các trang khác\nSửa hiển thị báo cáo tài chính\nSửa trang hướng dẫn sinh động hơn\nThu nhỏ icon ẩn tiền\nHiển thị lọc theo điều kiện nào ở biểu đồ tròn", order: 10 },
-  { version: "22.05.2026", description: "Cập nhật sao lưu dữ liệu ở trang bắt đầu\nThay đổi cơ chế linh vật\nBổ sung hướng dẫn chi tiết\nLời chào trang chủ chi tiết hơn\nSửa lỗi hiển thị tên người dùng\nTối ưu giao diện hiển thị tiền\nSửa lỗi sao lưu dữ liệu\nSửa lỗi hiển thị bản sao lưu mới nhất", order: 9 },
-  { version: "21.05.2026", description: "Sửa giao diện profile\nMã hóa dữ liệu\nThêm linh vật", order: 8 },
-  { version: "20.05.2026", description: "Thêm linh vật giữ chuỗi\nBackup dữ liệu tự động\nThông báo thu chi theo ngày, tháng, năm", order: 7 },
-  { version: "14.05.2026", description: "Thêm icon sinh động cho danh mục, Quỹ", order: 6 },
-  { version: "10.05.2026", description: "Thêm Quỹ lưu trữ", order: 5 },
-  { version: "01.05.2026", description: "Sửa lỗi logic xóa giao dịch", order: 4 },
-  { version: "21.04.2026", description: "Sửa, xóa giao dịch trong vòng 3 ngày", order: 3 },
-  { version: "15.04.2026", description: "Chia 2 loại danh mục chi tiền\n1. Cần nạp tiền\n2. Chi trực tiếp", order: 2 },
-  { version: "15.03.2026", description: "Ra mắt ứng dụng lúc 23:36", order: 1 },
-];
+import VERSION_HISTORY from "../../version_history.json";
+
 
 const SettingsScreen = () => {
   const navigation = useNavigation();
@@ -131,6 +121,12 @@ const SettingsScreen = () => {
 
   // Settings Modal State
   const [isSettingsModalVisible, setSettingsModalVisible] = useState(false);
+
+  // PDF Report States
+  const [isPdfModalVisible, setPdfModalVisible] = useState(false);
+  const [selectedPdfYear, setSelectedPdfYear] = useState<number>(new Date().getFullYear());
+  const [pdfAvailableYears, setPdfAvailableYears] = useState<number[]>([]);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // Google Drive Backup States
   const [isDriveModalVisible, setDriveModalVisible] = useState(false);
@@ -426,6 +422,55 @@ const SettingsScreen = () => {
   const loadProfile = async () => {
     const p = await storage.getUserProfile();
     setProfile(p);
+  };
+
+  const handleOpenPdfModal = async () => {
+    try {
+      const txs = await storage.getTransactions();
+      const yearsSet = new Set<number>();
+      txs.forEach(tx => {
+        if (tx.timestamp) {
+          const y = new Date(tx.timestamp).getFullYear();
+          if (!isNaN(y)) {
+            yearsSet.add(y);
+          }
+        }
+      });
+      
+      // Default to current year if empty
+      const currentYear = new Date().getFullYear();
+      if (yearsSet.size === 0) {
+        yearsSet.add(currentYear);
+      }
+      
+      const sortedYears = Array.from(yearsSet).sort((a, b) => b - a);
+      setPdfAvailableYears(sortedYears);
+      
+      // Default selection to current year if available, otherwise the latest year
+      if (yearsSet.has(currentYear)) {
+        setSelectedPdfYear(currentYear);
+      } else {
+        setSelectedPdfYear(sortedYears[0]);
+      }
+      
+      setPdfModalVisible(true);
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Lỗi", "Không thể tải danh sách năm giao dịch.");
+    }
+  };
+
+  const handleExportPdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      await exportYearlyPdfReport(selectedPdfYear);
+      setPdfModalVisible(false);
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert("Lỗi", e.message || "Không thể xuất file PDF báo cáo năm.");
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleExport = async () => {
@@ -823,7 +868,19 @@ const SettingsScreen = () => {
             <PencilLine color="#16a34a" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Quản lý gợi ý ghi chú</Text>
+            <Text style={styles.cardTitle}>Gợi ý ghi chú</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.card}
+          onPress={handleOpenPdfModal}
+        >
+          <View style={[styles.iconContainer, { backgroundColor: "#ffe4e6" }]}>
+            <FileText color="#f43f5e" size={18} />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Xuất báo cáo PDF năm</Text>
           </View>
         </TouchableOpacity>
 
@@ -840,7 +897,7 @@ const SettingsScreen = () => {
       {/* Footer cố định phía dưới */}
       <View style={styles.footerInfo}>
         <View style={styles.versionRow}>
-          <Text style={styles.versionText}>Phiên bản hiện tại : 22.05.2026</Text>
+          <Text style={styles.versionText}>Phiên bản hiện tại : {VERSION_HISTORY[0]?.version}</Text>
           <Text style={styles.versionSeparator}>|</Text>
           <TouchableOpacity onPress={() => setHistoryModalVisible(true)}>
             <Text style={styles.versionHistoryBtn}>Lịch sử phiên bản ({VERSION_HISTORY.length})</Text>
@@ -1383,6 +1440,73 @@ const SettingsScreen = () => {
                   ? "Hủy"
                   : "Dùng biểu tượng mặc định"}
               </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal: Chọn năm xuất PDF */}
+      <Modal
+        visible={isPdfModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => !isGeneratingPdf && setPdfModalVisible(false)}
+      >
+        <View style={styles.modalOverlayCenter}>
+          <View style={styles.settingsModalBox}>
+            {/* Loading Overlay */}
+            {isGeneratingPdf && (
+              <View style={styles.pdfLoadingOverlay}>
+                <ActivityIndicator size="large" color="#f43f5e" />
+                <Text style={{ marginTop: 12, color: "#e11d48", fontWeight: "600", fontSize: 14 }}>
+                  Đang tạo PDF báo cáo...
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Xuất báo cáo PDF</Text>
+              <TouchableOpacity 
+                onPress={() => setPdfModalVisible(false)}
+                disabled={isGeneratingPdf}
+              >
+                <X color="#0f172a" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 14, color: "#475569", marginBottom: 10 }}>
+              Chọn năm tài chính cần xuất báo cáo dữ liệu thu chi:
+            </Text>
+
+            <View style={styles.pdfYearGrid}>
+              {pdfAvailableYears.map((year) => (
+                <TouchableOpacity
+                  key={year}
+                  style={[
+                    styles.pdfYearItem,
+                    selectedPdfYear === year && styles.pdfYearItemActive,
+                  ]}
+                  onPress={() => setSelectedPdfYear(year)}
+                  disabled={isGeneratingPdf}
+                >
+                  <Text
+                    style={[
+                      styles.pdfYearText,
+                      selectedPdfYear === year && styles.pdfYearTextActive,
+                    ]}
+                  >
+                    {year}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={styles.pdfExportBtn}
+              onPress={handleExportPdf}
+              disabled={isGeneratingPdf}
+            >
+              <Text style={styles.pdfExportBtnText}>Xuất báo cáo</Text>
             </TouchableOpacity>
           </View>
         </View>

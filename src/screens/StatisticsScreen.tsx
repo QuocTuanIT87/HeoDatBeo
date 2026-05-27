@@ -574,6 +574,7 @@ const StatisticsScreen = () => {
 
   useEffect(() => {
     if (route.params?.openHistory) {
+      loadNotificationHistory();
       setShowNotificationHistoryModal(true);
       // Clear the param so it doesn't reopen if screen re-renders
       navigation.setParams({ openHistory: undefined });

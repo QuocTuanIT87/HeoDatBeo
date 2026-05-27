@@ -44,6 +44,7 @@ import {
   getStreakLevelInfo,
 } from "../utils/streak";
 import { getMascotImage, MASCOT_LIST } from "../utils/mascot";
+import { updateHomeScreenWidget } from "../utils/widget";
 import { styles } from "../styles/HomeScreen";
 
 // const HIDE_BALANCE_KEY = "@hideBalance";
@@ -270,6 +271,7 @@ const HomeScreen = () => {
   const [budgets, setBudgets] = useState<CategoryBudget[]>([]);
   const [showBudgets, setShowBudgets] = useState(false);
   const [totalBalance, setTotalBalance] = useState<number>(0);
+  const [recordedToday, setRecordedToday] = useState(false);
   const [streakModalVisible, setStreakModalVisible] = useState(false);
   const [streakModalData, setStreakModalData] = useState<{
     count: number;
@@ -375,6 +377,15 @@ const HomeScreen = () => {
 
     // Tính số tài khoản từ giao dịch đầu tiên
     const txs = await storage.getTransactions();
+
+    // Kiểm tra xem đã ghi giao dịch hôm nay chưa
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+    const hasRecorded = txs.some((tx) => tx.timestamp >= startOfToday && tx.timestamp <= endOfToday);
+    setRecordedToday(hasRecorded);
+    updateHomeScreenWidget(p?.streakCount || 0, hasRecorded);
+
     let firstTimestamp = p?.initialBalanceTimestamp || Date.now();
     if (txs.length > 0) {
       let minTs = txs[0].timestamp;

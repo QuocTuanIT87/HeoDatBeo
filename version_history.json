@@ -1,0 +1,67 @@
+[
+  {
+    "version": "27.05.2026",
+    "description": "Đồng bộ phiên bản trên các giao diện khác nhau\nSửa giao diện trang cài đặt\nSửa giao diện Widget\nSửa lỗi hiển thị lịch sử báo cáo khi ấn vào thông báo",
+    "order": 13
+  },
+  {
+    "version": "26.05.2026",
+    "description": "Chỉnh sửa giao diện trang lịch sử mua - bán - đổi vàng\nMặc định ẩn tiền lúc đầu\nSửa điều kiện đổi vàng\nThay đổi cơ chế mã hóa dữ liệu\nThêm Widget",
+    "order": 12
+  },
+  {
+    "version": "25.05.2026",
+    "description": "Sửa lỗi sao lưu tự động\nSửa giao diện hiển thị\nSửa lỗi ấn vào thông báo hằng ngày\nThêm chức năng sửa chú thích giao dịch\nThêm chức năng hiển thị gợi ý ghi chú\nHiển thị bản sao lưu mới nhất khi ấn khôi phục\nCập nhật xóa bản sao lưu cũ khi sao lưu đạt tối đa 20 bản\nSửa giao diện trang cài đặt\nThêm trang lưu lịch sử mua - bán - đổi vàng",
+    "order": 11
+  },
+  {
+    "version": "23.05.2026",
+    "description": "Sửa phần hiển thị tên ở các trang khác\nSửa hiển thị báo cáo tài chính\nSửa trang hướng dẫn sinh động hơn\nThu nhỏ icon ẩn tiền\nHiển thị lọc theo điều kiện nào ở biểu đồ tròn",
+    "order": 10
+  },
+  {
+    "version": "22.05.2026",
+    "description": "Cập nhật sao lưu dữ liệu ở trang bắt đầu\nThay đổi cơ chế linh vật\nBổ sung hướng dẫn chi tiết\nLời chào trang chủ chi tiết hơn\nSửa lỗi hiển thị tên người dùng\nTối ưu giao diện hiển thị tiền\nSửa lỗi sao lưu dữ liệu\nSửa lỗi hiển thị bản sao lưu mới nhất",
+    "order": 9
+  },
+  {
+    "version": "21.05.2026",
+    "description": "Sửa giao diện profile\nMã hóa dữ liệu\nThêm linh vật giữ chuỗi",
+    "order": 8
+  },
+  {
+    "version": "20.05.2026",
+    "description": "Thêm chức năng giữ chuỗi\nBackup dữ liệu tự động\nThông báo thu chi theo ngày, tháng, năm",
+    "order": 7
+  },
+  {
+    "version": "14.05.2026",
+    "description": "Thêm icon sinh động cho danh mục, Quỹ",
+    "order": 6
+  },
+  {
+    "version": "10.05.2026",
+    "description": "Thêm Quỹ lưu trữ",
+    "order": 5
+  },
+  {
+    "version": "01.05.2026",
+    "description": "Sửa lỗi logic xóa giao dịch",
+    "order": 4
+  },
+  {
+    "version": "21.04.2026",
+    "description": "Sửa, xóa giao dịch trong vòng 3 ngày",
+    "order": 3
+  },
+  {
+    "version": "15.04.2026",
+    "description": "Chia 2 loại danh mục chi tiền\n1. Cần nạp tiền\n2. Chi trực tiếp",
+    "order": 2
+  },
+  {
+    "version": "15.03.2026",
+    "description": "Ra mắt ứng dụng lúc 23:36",
+    "order": 1
+  }
+]
