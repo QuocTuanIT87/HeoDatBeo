@@ -78,11 +78,12 @@ const SavingScreen = () => {
     // Tính tiết kiệm từ transactions (Tổng số tiền đang có trong Heo)
     let calcSaving = 0;
     validTransactions.forEach((t) => {
-      if (t.type === "expense" && (t.categoryId === "system_tiet_kiem" || t.category === "Tiết kiệm"))
+      if (t.type === "expense" && t.categoryId === "system_tiet_kiem")
         calcSaving += t.amount;
       else if (
         t.type === "income" &&
-        (t.categoryId === "system_tiet_kiem" || t.categoryId === "system_rut_tiet_kiem" || t.category === "Tiết kiệm" || t.category === "Rút tiết kiệm")
+        (t.categoryId === "system_tiet_kiem" ||
+          t.categoryId === "system_rut_tiet_kiem")
       )
         calcSaving -= t.amount;
     });
@@ -129,7 +130,7 @@ const SavingScreen = () => {
 
     // Tính ngày chờ rút tiền
     const withdrawals = transactions.filter(
-      (t) => t.categoryId === "system_rut_tiet_kiem" || t.category === "Rút tiết kiệm",
+      (t) => t.categoryId === "system_rut_tiet_kiem",
     );
     if (withdrawals.length > 0) {
       let lastWithdrawal = withdrawals[0].timestamp;
@@ -279,8 +280,9 @@ const SavingScreen = () => {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       type: type === "deposit" ? "expense" : "income",
       amount,
-      categoryId: type === "deposit" ? "system_tiet_kiem" : "system_rut_tiet_kiem",
-      name: type === "deposit" ? "Nuôi heo béo" : "Rút tiền từ Heo Đất",
+      categoryId:
+        type === "deposit" ? "system_tiet_kiem" : "system_rut_tiet_kiem",
+      note: "",
       timestamp: Date.now(),
     };
 
@@ -300,12 +302,11 @@ const SavingScreen = () => {
       <View style={styles.header}>
         {/* Top bar: Avatar + năm + actions */}
         <View style={styles.headerTopBar}>
-          <View style={styles.profileSection}>
-          </View>
+          <View style={styles.profileSection}></View>
 
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          
-          </View>
+          <View
+            style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+          ></View>
         </View>
 
         {/* Bank Card: Mục tiêu năm + Số tiền */}
@@ -313,9 +314,11 @@ const SavingScreen = () => {
           <View style={styles.cardHeader}>
             <View style={styles.cardBrandWrapper}>
               <PiggyBank color="#f59e0b" size={16} />
-              <Text style={styles.cardBrandText}>HEO ĐẤT BÉO {currentYear}</Text>
+              <Text style={styles.cardBrandText}>
+                HEO ĐẤT BÉO {currentYear}
+              </Text>
             </View>
-             
+
             <View style={styles.row}>
               <TouchableOpacity
                 onPress={() => navigation.navigate("SavingHistory")}
@@ -343,34 +346,63 @@ const SavingScreen = () => {
                     style={styles.inlineInput}
                     keyboardType="numeric"
                     value={targetInput}
-                    onChangeText={(text) => setTargetInput(formatMoneyInput(text))}
+                    onChangeText={(text) =>
+                      setTargetInput(formatMoneyInput(text))
+                    }
                     placeholder="Nhập số tiền..."
                     placeholderTextColor="rgba(255,255,255,0.5)"
                   />
-                  <TouchableOpacity style={styles.inlineSaveBtn} onPress={handleSaveTarget}>
+                  <TouchableOpacity
+                    style={styles.inlineSaveBtn}
+                    onPress={handleSaveTarget}
+                  >
                     <Text style={styles.inlineSaveBtnText}>Lưu</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.inlineCancelBtn} onPress={() => setIsEditingTarget(false)}>
+                  <TouchableOpacity
+                    style={styles.inlineCancelBtn}
+                    onPress={() => setIsEditingTarget(false)}
+                  >
                     <X color="rgba(255,255,255,0.7)" size={18} />
                   </TouchableOpacity>
                 </View>
               ) : (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
                   <Text style={styles.cardGoalAmount}>
-                    {showAmount ? `${formatCurrency(profile.savingTarget)} đ` : "•••••• đ"}
+                    {showAmount
+                      ? `${formatCurrency(profile.savingTarget)} đ`
+                      : "•••••• đ"}
                   </Text>
                   <TouchableOpacity
-                    style={[styles.goalEditBtn, !canEditTarget() && styles.goalEditBtnDisabled]}
+                    style={[
+                      styles.goalEditBtn,
+                      !canEditTarget() && styles.goalEditBtnDisabled,
+                    ]}
                     onPress={() => {
                       if (canEditTarget()) {
-                        setTargetInput(formatMoneyInput(profile.savingTarget!.toString()));
+                        setTargetInput(
+                          formatMoneyInput(profile.savingTarget!.toString()),
+                        );
                         setIsEditingTarget(true);
                       } else {
-                        Alert.alert("Thông báo", `Bạn chỉ có thể sửa mục tiêu sau ${getDaysUntilEdit()} ngày nữa.`);
+                        Alert.alert(
+                          "Thông báo",
+                          `Bạn chỉ có thể sửa mục tiêu sau ${getDaysUntilEdit()} ngày nữa.`,
+                        );
                       }
                     }}
                   >
-                    <Edit2 color={canEditTarget() ? "#fbbf24" : "rgba(255,255,255,0.3)"} size={16} />
+                    <Edit2
+                      color={
+                        canEditTarget() ? "#fbbf24" : "rgba(255,255,255,0.3)"
+                      }
+                      size={16}
+                    />
                   </TouchableOpacity>
                 </View>
               )
@@ -380,23 +412,30 @@ const SavingScreen = () => {
                   style={styles.inlineInput}
                   keyboardType="numeric"
                   value={targetInput}
-                  onChangeText={(text) => setTargetInput(formatMoneyInput(text))}
+                  onChangeText={(text) =>
+                    setTargetInput(formatMoneyInput(text))
+                  }
                   placeholder="Đặt mục tiêu năm..."
                   placeholderTextColor="rgba(255,255,255,0.5)"
                 />
-                <TouchableOpacity style={styles.inlineSaveBtn} onPress={handleSaveTarget}>
+                <TouchableOpacity
+                  style={styles.inlineSaveBtn}
+                  onPress={handleSaveTarget}
+                >
                   <Text style={styles.inlineSaveBtnText}>Đặt</Text>
                 </TouchableOpacity>
               </View>
             )}
-            {profile?.savingHistory && profile.savingHistory.length > 0 && !isEditingTarget && (
-              <TouchableOpacity
-                onPress={() => navigation.navigate("SavingHistory")}
-                style={styles.viewHistoryBtn}
-              >
-                <Text style={styles.viewHistoryText}>Lịch sử</Text>
-              </TouchableOpacity>
-            )}
+            {profile?.savingHistory &&
+              profile.savingHistory.length > 0 &&
+              !isEditingTarget && (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate("SavingHistory")}
+                  style={styles.viewHistoryBtn}
+                >
+                  <Text style={styles.viewHistoryText}>Lịch sử</Text>
+                </TouchableOpacity>
+              )}
           </View>
 
           {/* Tiến trình */}
@@ -406,12 +445,15 @@ const SavingScreen = () => {
                 <View
                   style={[
                     styles.progressFill,
-                    { width: `${Math.min(100, (savingBalance / profile.savingTarget) * 100)}%` },
+                    {
+                      width: `${Math.min(100, (savingBalance / profile.savingTarget) * 100)}%`,
+                    },
                   ]}
                 />
               </View>
               <Text style={styles.progressHint}>
-                {formatPercent((savingBalance / profile.savingTarget) * 100)}% mục tiêu
+                {formatPercent((savingBalance / profile.savingTarget) * 100)}%
+                mục tiêu
               </Text>
             </View>
           )}
@@ -424,7 +466,7 @@ const SavingScreen = () => {
                 {showAmount ? `${formatCurrency(savingBalance)} đ` : "••••••"}
               </Text>
             </View>
-             <TouchableOpacity
+            <TouchableOpacity
               onPress={() => setShowAmount(!showAmount)}
               style={styles.eyeBtn}
             >
@@ -438,11 +480,7 @@ const SavingScreen = () => {
         </View>
       </View>
 
-      <ScrollView
-        style={styles.body}
-        contentContainerStyle={styles.bodyContent}
-      >
-
+      <View style={{ paddingHorizontal: 20, zIndex: 10 }}>
         <View style={styles.tabs}>
           <TouchableOpacity
             style={[styles.tab, type === "deposit" && styles.tabActiveDeposit]}
@@ -482,7 +520,12 @@ const SavingScreen = () => {
             </Text>
           </TouchableOpacity>
         </View>
+      </View>
 
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={[styles.bodyContent, { paddingTop: 8 }]}
+      >
         {type === "withdraw" && cooldownRemainingDays > 0 ? (
           <View style={styles.cooldownContainer}>
             <View style={styles.cooldownCircle}>
@@ -541,12 +584,23 @@ const SavingScreen = () => {
                 </TouchableOpacity>
               </View>
             ) : (
-              <Keypad
-                amount={amount}
-                onAddAmount={(v) => setAmount((p) => p + v)}
-                onClear={() => setAmount(0)}
-                hideClearButton={true}
-              />
+              <>
+                {amount > 0 && (
+                  <TouchableOpacity
+                    style={styles.actionCancelBtn}
+                    onPress={() => setAmount(0)}
+                    activeOpacity={0.8}
+                  >
+                    <RotateCcw color="gray" size={24} />
+                  </TouchableOpacity>
+                )}
+                <Keypad
+                  amount={amount}
+                  onAddAmount={(v) => setAmount((p) => p + v)}
+                  onClear={() => setAmount(0)}
+                  hideClearButton={true}
+                />
+              </>
             )}
             {profile?.inputMethod !== "manual" && (
               <View style={styles.actionButtonRow}>
@@ -569,13 +623,13 @@ const SavingScreen = () => {
                   </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
+                {/* <TouchableOpacity
                   style={[styles.cancelButton, styles.actionCancelBtn]}
                   onPress={() => setAmount(0)}
                   activeOpacity={0.8}
                 >
                   <RotateCcw color="#ef4444" size={22} />
-                </TouchableOpacity>
+                </TouchableOpacity> */}
               </View>
             )}
           </>

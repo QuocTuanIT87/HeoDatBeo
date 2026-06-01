@@ -22,11 +22,7 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
       tx.categoryId !== "system_tiet_kiem" &&
       tx.categoryId !== "system_rut_tiet_kiem" &&
       tx.categoryId !== "system_xoa_quy" &&
-      !tx.categoryId?.startsWith("fund_") &&
-      tx.category !== "Tiết kiệm" &&
-      tx.category !== "Rút tiết kiệm" &&
-      tx.category !== "Xóa Quỹ" &&
-      !(tx.category && (profile?.customFunds || []).some((f) => f.name === tx.category))
+      !tx.categoryId?.startsWith("fund_")
   );
 
   // Group transactions by month
@@ -40,10 +36,20 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
     monthlyData[month].push(tx);
   });
 
+  // Helper to sort category totals with "Khác" at the very bottom
+  const prepareCategoryEntries = (totals: Record<string, number>): [string, number][] => {
+    const entries = Object.entries(totals);
+    const nonKhacEntries = entries.filter(([cat]) => cat !== "Khác");
+    nonKhacEntries.sort((a, b) => b[1] - a[1]);
+    const khacAmount = totals["Khác"] || 0;
+    return [...nonKhacEntries, ["Khác", khacAmount]];
+  };
+
   // Calculate Yearly stats
   let yearlyIncome = 0;
   let yearlyExpense = 0;
-  const yearlyCategoryTotals: Record<string, { amount: number; type: 'income' | 'expense' }> = {};
+  const yearlyIncomeCategoryTotals: Record<string, number> = {};
+  const yearlyExpenseCategoryTotals: Record<string, number> = {};
 
   yearTxs.forEach(tx => {
     const isExpense = tx.type === 'expense';
@@ -54,15 +60,48 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
     }
 
     const catName = resolveCategoryName(tx, profile, categoryBudgets);
-    if (!yearlyCategoryTotals[catName]) {
-      yearlyCategoryTotals[catName] = { amount: 0, type: tx.type };
+    if (isExpense) {
+      yearlyExpenseCategoryTotals[catName] = (yearlyExpenseCategoryTotals[catName] || 0) + tx.amount;
+    } else {
+      yearlyIncomeCategoryTotals[catName] = (yearlyIncomeCategoryTotals[catName] || 0) + tx.amount;
     }
-    yearlyCategoryTotals[catName].amount += tx.amount;
   });
 
   const yearlyNet = yearlyIncome - yearlyExpense;
   const netSign = yearlyNet >= 0 ? '+' : '';
   const netColor = yearlyNet >= 0 ? '#16a34a' : '#dc2626'; // Green 600 or Red 600
+
+  // Helper to render Khác details
+  const renderKhacDetails = (txs: Transaction[], type: 'income' | 'expense') => {
+    const khacTxs = txs.filter(tx => tx.type === type && resolveCategoryName(tx, profile, categoryBudgets) === 'Khác');
+    if (khacTxs.length === 0) return '';
+    
+    let detailsHtml = `
+      <tr>
+        <td colspan="2" style="padding: 6px 12px 10px 24px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+          <div style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Chi tiết danh mục Khác:</div>
+          <ul style="margin: 0; padding-left: 15px; font-size: 12px; color: #475569; list-style-type: disc;">
+    `;
+    
+    khacTxs.forEach(tx => {
+      const noteText = tx.note ? tx.note.trim() : 'Không có ghi chú';
+      const amountText = type === 'income' ? `+${formatCurrency(tx.amount)} đ` : `-${formatCurrency(tx.amount)} đ`;
+      const amountColor = type === 'income' ? '#16a34a' : '#dc2626';
+      detailsHtml += `
+            <li style="margin-bottom: 4px;">
+              <span>${noteText}</span>: 
+              <span style="font-weight: 600; color: ${amountColor};">${amountText}</span>
+            </li>
+      `;
+    });
+    
+    detailsHtml += `
+          </ul>
+        </td>
+      </tr>
+    `;
+    return detailsHtml;
+  };
 
   // Generate HTML
   let html = `
@@ -235,17 +274,20 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
   `;
 
   // Render yearly income categories
-  const yearlyIncomes = Object.entries(yearlyCategoryTotals).filter(([_, val]) => val.type === 'income');
-  if (yearlyIncomes.length === 0) {
+  if (Object.keys(yearlyIncomeCategoryTotals).length === 0) {
     html += `<tr><td colspan="2" style="color: #94a3b8; font-style: italic;">Không có dữ liệu thu nhập</td></tr>`;
   } else {
-    yearlyIncomes.forEach(([cat, val]) => {
+    const sortedIncomes = prepareCategoryEntries(yearlyIncomeCategoryTotals);
+    sortedIncomes.forEach(([cat, amount]) => {
       html += `
         <tr>
           <td>${cat}</td>
-          <td class="text-right value-income">+${formatCurrency(val.amount)} đ</td>
+          <td class="text-right value-income">+${formatCurrency(amount)} đ</td>
         </tr>
       `;
+      if (cat === "Khác" && amount > 0) {
+        html += renderKhacDetails(yearTxs, 'income');
+      }
     });
   }
 
@@ -267,17 +309,20 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
   `;
 
   // Render yearly expense categories
-  const yearlyExpenses = Object.entries(yearlyCategoryTotals).filter(([_, val]) => val.type === 'expense');
-  if (yearlyExpenses.length === 0) {
+  if (Object.keys(yearlyExpenseCategoryTotals).length === 0) {
     html += `<tr><td colspan="2" style="color: #94a3b8; font-style: italic;">Không có dữ liệu chi tiêu</td></tr>`;
   } else {
-    yearlyExpenses.forEach(([cat, val]) => {
+    const sortedExpenses = prepareCategoryEntries(yearlyExpenseCategoryTotals);
+    sortedExpenses.forEach(([cat, amount]) => {
       html += `
         <tr>
           <td>${cat}</td>
-          <td class="text-right value-expense">-${formatCurrency(val.amount)} đ</td>
+          <td class="text-right value-expense">-${formatCurrency(amount)} đ</td>
         </tr>
       `;
+      if (cat === "Khác" && amount > 0) {
+        html += renderKhacDetails(yearTxs, 'expense');
+      }
     });
   }
 
@@ -298,7 +343,8 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
 
     let mIncome = 0;
     let mExpense = 0;
-    const mCategoryTotals: Record<string, { amount: number; type: 'income' | 'expense' }> = {};
+    const mIncomeCategoryTotals: Record<string, number> = {};
+    const mExpenseCategoryTotals: Record<string, number> = {};
 
     monthTxs.forEach(tx => {
       const isExpense = tx.type === 'expense';
@@ -309,10 +355,11 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
       }
 
       const catName = resolveCategoryName(tx, profile, categoryBudgets);
-      if (!mCategoryTotals[catName]) {
-        mCategoryTotals[catName] = { amount: 0, type: tx.type };
+      if (isExpense) {
+        mExpenseCategoryTotals[catName] = (mExpenseCategoryTotals[catName] || 0) + tx.amount;
+      } else {
+        mIncomeCategoryTotals[catName] = (mIncomeCategoryTotals[catName] || 0) + tx.amount;
       }
-      mCategoryTotals[catName].amount += tx.amount;
     });
 
     const mNet = mIncome - mExpense;
@@ -351,17 +398,20 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
               <tbody>
     `;
 
-    const mIncomes = Object.entries(mCategoryTotals).filter(([_, val]) => val.type === 'income');
-    if (mIncomes.length === 0) {
+    if (Object.keys(mIncomeCategoryTotals).length === 0) {
       html += `<tr><td colspan="2" style="color: #94a3b8; font-style: italic;">Không có thu nhập</td></tr>`;
     } else {
-      mIncomes.forEach(([cat, val]) => {
+      const sortedMIncomes = prepareCategoryEntries(mIncomeCategoryTotals);
+      sortedMIncomes.forEach(([cat, amount]) => {
         html += `
           <tr>
             <td>${cat}</td>
-            <td class="text-right value-income">+${formatCurrency(val.amount)} đ</td>
+            <td class="text-right value-income">+${formatCurrency(amount)} đ</td>
           </tr>
         `;
+        if (cat === "Khác" && amount > 0) {
+          html += renderKhacDetails(monthTxs, 'income');
+        }
       });
     }
 
@@ -382,17 +432,20 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
               <tbody>
     `;
 
-    const mExpenses = Object.entries(mCategoryTotals).filter(([_, val]) => val.type === 'expense');
-    if (mExpenses.length === 0) {
+    if (Object.keys(mExpenseCategoryTotals).length === 0) {
       html += `<tr><td colspan="2" style="color: #94a3b8; font-style: italic;">Không có chi tiêu</td></tr>`;
     } else {
-      mExpenses.forEach(([cat, val]) => {
+      const sortedMExpenses = prepareCategoryEntries(mExpenseCategoryTotals);
+      sortedMExpenses.forEach(([cat, amount]) => {
         html += `
           <tr>
             <td>${cat}</td>
-            <td class="text-right value-expense">-${formatCurrency(val.amount)} đ</td>
+            <td class="text-right value-expense">-${formatCurrency(amount)} đ</td>
           </tr>
         `;
+        if (cat === "Khác" && amount > 0) {
+          html += renderKhacDetails(monthTxs, 'expense');
+        }
       });
     }
 

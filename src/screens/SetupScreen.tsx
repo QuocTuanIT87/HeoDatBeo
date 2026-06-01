@@ -92,7 +92,7 @@ const SetupScreen = () => {
         type: "income" as const,
         amount: balance,
         categoryId: "income_khac",
-        name: "Số dư đầu tiên",
+        note: "Số dư đầu tiên",
         timestamp: Date.now(),
       };
       await storage.saveTransaction(initialTransaction);

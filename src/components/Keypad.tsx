@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "flex-start",
     gap: 8,
-    marginTop: 16,
+    marginTop: 8,
   },
   button: {
     backgroundColor: "#f1f5f9",

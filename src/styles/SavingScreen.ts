@@ -223,12 +223,13 @@ export const styles = StyleSheet.create({
         backgroundColor: "#ffffff",
         borderRadius: 16,
         padding: 6,
-        marginBottom: 20,
+        marginBottom: 14,
         elevation: 2,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
+        marginTop: -14,
     },
     tab: {
         flex: 1,
@@ -295,11 +296,8 @@ export const styles = StyleSheet.create({
         justifyContent: "center",
     },
     actionCancelBtn: {
-        width: 54,
-        height: 54,
-        borderRadius: 16,
-        alignItems: "center",
-        justifyContent: "center",
+        marginTop: 10,
+        alignSelf: "flex-end",
     },
     saveButton: {
         elevation: 4,

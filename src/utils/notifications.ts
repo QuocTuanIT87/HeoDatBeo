@@ -53,10 +53,6 @@ export function isFundTransaction(tx: Transaction): boolean {
   ) {
     return true;
   }
-  const cat = tx.categorySnapshot || tx.category;
-  if (cat === "Tiết kiệm" || cat === "Rút tiết kiệm") return true;
-  if (cat && cat.startsWith("Xóa quỹ")) return true;
-  if (tx.name && (tx.name.startsWith("Nạp vào ") || tx.name.startsWith("Rút từ "))) return true;
   return false;
 }
 
@@ -368,9 +364,9 @@ export async function syncNotificationHistory(transactions: Transaction[]) {
 
   // 1. DUYỆT BÁO CÁO NGÀY (từ ngày đầu tiên có giao dịch cho đến ngày hôm qua)
   const startDate = new Date(firstTxDate.getFullYear(), firstTxDate.getMonth(), firstTxDate.getDate(), 0, 0, 0, 0);
-  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0);
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
 
-  for (let d = new Date(startDate.getTime()); d <= yesterday; d.setDate(d.getDate() + 1)) {
+  for (let d = new Date(startDate.getTime()); d.getTime() <= yesterday.getTime(); d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0, 0)) {
     const dateStr = formatDateString(d);
     const { title, body } = generateDailyReport(transactions, d, profile, categoryBudgets);
     const triggerTime = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 2, 0, 0, 0).getTime();
@@ -387,9 +383,9 @@ export async function syncNotificationHistory(transactions: Transaction[]) {
 
   // 2. DUYỆT BÁO CÁO THÁNG (từ tháng đầu tiên có giao dịch cho đến tháng trước tháng hiện tại)
   const startMonthDate = new Date(firstTxDate.getFullYear(), firstTxDate.getMonth(), 1, 0, 0, 0, 0);
-  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 23, 59, 59, 999);
 
-  for (let m = new Date(startMonthDate.getTime()); m <= prevMonthDate; m.setMonth(m.getMonth() + 1)) {
+  for (let m = new Date(startMonthDate.getTime()); m.getTime() <= prevMonthDate.getTime(); m = new Date(m.getFullYear(), m.getMonth() + 1, 1, 0, 0, 0, 0)) {
     const mm = String(m.getMonth() + 1).padStart(2, "0");
     const yyyy = m.getFullYear();
     const monthStr = `${mm}/${yyyy}`;
@@ -514,8 +510,8 @@ export async function scheduleDailyReminder() {
   }
 
   // 2. LẬP LỊCH THÔNG BÁO BÁO CÁO TÀI CHÍNH HÀNG NGÀY (2H SÁNG) cho 7 ngày cuốn chiếu
-  for (let i = 1; i <= 7; i++) {
-    // Thời điểm kích hoạt lúc 2:00 AM ngày thứ i trong tương lai
+  for (let i = 0; i <= 7; i++) {
+    // Thời điểm kích hoạt lúc 2:00 AM ngày thứ i trong tương lai (hoặc hôm nay)
     const triggerDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, 2, 0, 0, 0);
 
     // Ngày được thống kê (ngày hôm trước của triggerDate)

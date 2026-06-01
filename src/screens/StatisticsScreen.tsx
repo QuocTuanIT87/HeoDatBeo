@@ -23,6 +23,7 @@ import {
 } from "../types";
 import { formatCurrency } from "../utils/format";
 import { resolveCategoryName, isCategoryIdMatch } from "../utils/category";
+import { syncNotificationHistory } from "../utils/notifications";
 import {
   useIsFocused,
   useNavigation,
@@ -62,33 +63,29 @@ const getTransactionIconSource = (
   profile: UserProfile | null,
   categoryBudgets: CategoryBudget[],
 ) => {
-  if (tx.name === "Số dư đầu tiên") {
+  if (tx.note === "Số dư đầu tiên") {
     return require("../../assets/income_icon/default.png");
   }
 
   if (
     tx.categoryId === "system_tiet_kiem" ||
-    tx.categoryId === "system_rut_tiet_kiem" ||
-    tx.category === "Tiết kiệm" ||
-    tx.category === "Rút tiết kiệm"
+    tx.categoryId === "system_rut_tiet_kiem"
   ) {
     return require("../../assets/fund_icon/save.png");
   }
 
   if (
     tx.categoryId === "system_xoa_quy" ||
-    (tx.category && tx.category.startsWith("Xóa quỹ")) ||
-    (tx.name &&
-      (tx.name.startsWith("Nạp vào ") || tx.name.startsWith("Rút từ ")))
+    tx.categoryId?.startsWith("fund_")
   ) {
     return require("../../assets/fund_icon/default.png");
   }
 
   if (tx.type === "income") {
-    return getIncomeIconSource(tx.categoryId || tx.category || "income_khac", profile);
+    return getIncomeIconSource(tx.categoryId || "income_khac", profile);
   }
 
-  const match = categoryBudgets.find((c) => (tx.categoryId && c.id && isCategoryIdMatch(c.id, tx.categoryId)) || c.name === tx.category);
+  const match = categoryBudgets.find((c) => tx.categoryId && c.id && isCategoryIdMatch(c.id, tx.categoryId));
   const iconKey = match?.icon || "default";
   return EXPENSE_ICONS[iconKey] || EXPENSE_ICONS["default"];
 };
@@ -111,11 +108,7 @@ const TransactionCard = React.memo(
       minute: "2-digit",
     });
     const isExpense = item.type === "expense";
-    const displayCategory =
-      item.name === "Số dư đầu tiên"
-        ? item.name
-        : resolveCategoryName(item, profile, categoryBudgets);
-    const displayName = item.name === "Số dư đầu tiên" ? undefined : item.name;
+    const displayCategory = resolveCategoryName(item, profile, categoryBudgets);
     const canAction = Date.now() - item.timestamp <= 3 * 24 * 60 * 60 * 1000;
 
     return (
@@ -139,9 +132,6 @@ const TransactionCard = React.memo(
             </View>
             <View style={{ flex: 1 }}>
               <Text style={cardStyles.cardCategory}>{displayCategory}</Text>
-              {displayName ? (
-                <Text style={cardStyles.cardName}>{displayName}</Text>
-              ) : null}
               {item.note ? (
                 <Text style={cardStyles.cardNote}>{item.note}</Text>
               ) : null}
@@ -160,14 +150,12 @@ const TransactionCard = React.memo(
         <View style={cardStyles.cardFooter}>
           <Text style={cardStyles.cardDate}>{dateStr}</Text>
           <View style={cardStyles.actionRow}>
-            {canAction && (
-              <TouchableOpacity
-                onPress={() => onOpenOptions(item)}
-                style={cardStyles.actionButton}
-              >
-                <MoreHorizontal color="#cccccc" size={20} />
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              onPress={() => onOpenOptions(item)}
+              style={cardStyles.actionButton}
+            >
+              <MoreHorizontal color="#cccccc" size={20} />
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -482,6 +470,12 @@ const StatisticsScreen = () => {
   const [historyTab, setHistoryTab] = useState<'day' | 'month' | 'year'>('day');
 
   const loadNotificationHistory = async () => {
+    try {
+      const txs = await storage.getTransactions();
+      await syncNotificationHistory(txs);
+    } catch (e) {
+      console.error("Failed to sync notification history in loadNotificationHistory:", e);
+    }
     const data = await storage.getNotificationHistory();
     setNotificationHistory(data);
     setHistoryDisplayLimit(10);
@@ -494,8 +488,6 @@ const StatisticsScreen = () => {
   const [period, setPeriod] = useState<FilterPeriod>("day");
   const [type, setType] = useState<FilterType>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [deletedCategoryFilter, setDeletedCategoryFilter] =
-    useState<string>("all");
   const [displayLimit, setDisplayLimit] = useState<number>(10);
 
   // Tháng/năm đang chọn (độc lập với nhau)
@@ -568,16 +560,11 @@ const StatisticsScreen = () => {
     transactions,
     customStartDate,
     customEndDate,
-    deletedCategoryFilter,
     categoryBudgets,
     profile,
     selectedMonth,
     selectedYear,
   ]);
-
-  useEffect(() => {
-    if (categoryFilter !== "Khác") setDeletedCategoryFilter("all");
-  }, [categoryFilter]);
 
   useEffect(() => {
     if (route.params?.openHistory) {
@@ -629,11 +616,7 @@ const StatisticsScreen = () => {
         tx.categoryId !== "system_tiet_kiem" &&
         tx.categoryId !== "system_rut_tiet_kiem" &&
         tx.categoryId !== "system_xoa_quy" &&
-        !tx.categoryId?.startsWith("fund_") &&
-        tx.category !== "Tiết kiệm" &&
-        tx.category !== "Rút tiết kiệm" &&
-        tx.category !== "Xóa Quỹ" &&
-        !(tx.category && (profile?.customFunds || []).some((f) => f.name === tx.category)),
+        !tx.categoryId?.startsWith("fund_"),
     );
 
     // Filter by Period
@@ -672,14 +655,6 @@ const StatisticsScreen = () => {
         const resolvedName = resolveCategoryName(tx, profile, categoryBudgets);
         return resolvedName === "Khác" || tx.categoryId === "expense_khac" || tx.categoryId === "income_khac";
       });
-      if (deletedCategoryFilter !== "all") {
-        filtered = filtered.filter(
-          (tx) =>
-            tx.categorySnapshot === deletedCategoryFilter ||
-            (deletedCategoryFilter === "Số dư đầu tiên" &&
-              tx.name === "Số dư đầu tiên"),
-        );
-      }
     } else if (c !== "all") {
       filtered = filtered.filter(
         (tx) => resolveCategoryName(tx, profile, categoryBudgets) === c,
@@ -698,7 +673,7 @@ const StatisticsScreen = () => {
     if (elapsed > THREE_DAYS_MS) {
       Alert.alert(
         "Không thể xóa",
-        "Giao dịch đã quá 3 ngày, không thể xóa hoặc sửa.",
+        "Giao dịch đã quá 3 ngày, không thể xóa.",
       );
       return;
     }
@@ -747,7 +722,7 @@ const StatisticsScreen = () => {
             const catName = resolveCategoryName(tx, p, cats);
 
             if (tx.type === "expense") {
-              if (catName === "Tiết kiệm") {
+              if (catName === "Nuôi heo béo") {
                 // YC 3: Xóa giao dịch nạp tiết kiệm → hoàn tiền vào tổng và unallocated
                 const updatedProfile = {
                   ...p,
@@ -798,7 +773,7 @@ const StatisticsScreen = () => {
                 // Nếu danh mục đã bị xóa/đổi tên: tiền về unallocated (initialBalance đã được +)
               }
             } else if (tx.type === "income") {
-              if (catName === "Rút tiết kiệm") {
+              if (catName === "Heo giảm cân") {
                 // YC 3: Xóa giao dịch rút tiết kiệm → trừ lại khỏi tổng
                 const updatedProfile = {
                   ...p,
@@ -845,6 +820,15 @@ const StatisticsScreen = () => {
 
   const handleEditPress = () => {
     if (!selectedTxForAction) return;
+    const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+    const elapsed = Date.now() - selectedTxForAction.timestamp;
+    if (elapsed > THREE_DAYS_MS) {
+      Alert.alert(
+        "Không thể sửa",
+        "Giao dịch đã quá 3 ngày, không thể sửa số tiền.",
+      );
+      return;
+    }
     setEditAmount(selectedTxForAction.amount);
     setShowOptionsModal(false);
     setShowEditModal(true);
@@ -886,7 +870,7 @@ const StatisticsScreen = () => {
 
     if (tx.type === "expense") {
       // Logic sửa khoản chi
-      if (catName === "Tiết kiệm") {
+      if (catName === "Nuôi heo béo") {
         // Tăng chi tiêu tiết kiệm -> giảm initialBalance
         await storage.saveUserProfile({
           ...p,
@@ -988,7 +972,7 @@ const StatisticsScreen = () => {
       }
     } else {
       // Logic sửa khoản thu
-      if (catName === "Rút tiết kiệm") {
+      if (catName === "Heo giảm cân") {
         // Thu từ tiết kiệm: chỉ thay đổi initialBalance
         if (diff < 0) {
           const loss = Math.abs(diff);
@@ -1092,47 +1076,6 @@ const StatisticsScreen = () => {
     Alert.alert("Thành công", "Đã cập nhật ghi chú giao dịch.");
   };
 
-  // Lấy danh sách các tên danh mục đã xóa có trong giao dịch (theo period + type hiện tại)
-  const getDeletedCategoryOptions = (): string[] => {
-    const now = new Date();
-    let filtered = transactions;
-    if (period !== "all") {
-      filtered = filtered.filter((tx) => {
-        const txDate = new Date(tx.timestamp);
-        if (period === "day")
-          return txDate.toDateString() === now.toDateString();
-        if (period === "month") {
-          const targetMonth =
-            selectedMonth ||
-            `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-          const txMonth = `${txDate.getFullYear()}-${String(txDate.getMonth() + 1).padStart(2, "0")}`;
-          return txMonth === targetMonth;
-        }
-        if (period === "year") {
-          const targetYear = selectedYear ?? now.getFullYear();
-          return txDate.getFullYear() === targetYear;
-        }
-        if (period === "custom") {
-          const startTime = new Date(customStartDate).setHours(0, 0, 0, 0);
-          const endTime = new Date(customEndDate).setHours(23, 59, 59, 999);
-          return tx.timestamp >= startTime && tx.timestamp <= endTime;
-        }
-        return true;
-      });
-    }
-    if (type !== "all") filtered = filtered.filter((tx) => tx.type === type);
-    const deleted = new Set<string>();
-    filtered
-      .filter((tx) => tx.categoryId === "expense_khac" || tx.categoryId === "income_khac" || tx.category === "Khác")
-      .forEach((tx) => {
-        if (tx.categorySnapshot && tx.categorySnapshot !== "Khác") {
-          deleted.add(tx.categorySnapshot);
-        } else if (tx.name === "Số dư đầu tiên") {
-          deleted.add("Số dư đầu tiên");
-        }
-      });
-    return Array.from(deleted);
-  };
 
   const renderItem = useCallback(
     ({ item }: { item: Transaction }) => (
@@ -1209,14 +1152,18 @@ const StatisticsScreen = () => {
   };
 
   const getFilterCategories = () => {
-    // Danh mục chi tiền lấy từ CategoryBudgets (tab Chia Tiền)
+    // Filter active expense categories
+    const activeExpenseBudgets = categoryBudgets.filter(b => b.deleteAt === null || b.deleteAt === undefined);
     const expenseCats =
-      categoryBudgets.length > 0
-        ? categoryBudgets.map((b) => b.name)
-        : DEFAULT_EXPENSE_CATEGORIES;
+      activeExpenseBudgets.length > 0
+        ? activeExpenseBudgets.map((b) => b.name)
+        : DEFAULT_EXPENSE_CATEGORIES.filter(c => c !== "Khác");
 
     let cats: string[];
-    const rawIncomeCats = (profile?.incomeCategories || DEFAULT_INCOME_CATEGORIES).map(
+    const activeIncomeCategories = (profile?.incomeCategories || DEFAULT_INCOME_CATEGORIES).filter(
+      (c: any) => typeof c === "string" || c.deleteAt === null || c.deleteAt === undefined
+    );
+    const rawIncomeCats = activeIncomeCategories.map(
       (c: any) => (typeof c === "string" ? c : c.name)
     );
     if (type === "all") {
@@ -1238,7 +1185,7 @@ const StatisticsScreen = () => {
     // Thêm 'Khác' vào cuối cùng nếu nó có trong danh mục hoặc có giao dịch
     const hasKhacTx = transactions.some((tx) => {
       if (type !== "all" && tx.type !== type) return false;
-      return tx.categoryId === "expense_khac" || tx.categoryId === "income_khac" || tx.category === "Khác";
+      return tx.categoryId === "expense_khac" || tx.categoryId === "income_khac";
     });
     if (includesKhac || hasKhacTx) {
       cats.push("Khác");
@@ -1250,7 +1197,6 @@ const StatisticsScreen = () => {
   const handleTypeChange = (newType: FilterType) => {
     setType(newType);
     setCategoryFilter("all");
-    setDeletedCategoryFilter("all");
   };
 
   const totalIncome = filteredTransactions
@@ -1264,18 +1210,14 @@ const StatisticsScreen = () => {
 
   const getPieChartData = () => {
     const expenses = filteredTransactions.filter((tx) => tx.type === "expense");
-    const categoryTotals: Record<string, { total: number; baseCat: string }> =
-      {};
+    const categoryTotals: Record<string, number> = {};
     expenses.forEach((tx) => {
       const catName = resolveCategoryName(tx, profile, categoryBudgets);
-      if (!categoryTotals[catName]) {
-        categoryTotals[catName] = { total: 0, baseCat: tx.category || "" };
-      }
-      categoryTotals[catName].total += tx.amount;
+      categoryTotals[catName] = (categoryTotals[catName] || 0) + tx.amount;
     });
 
     const total = Object.values(categoryTotals).reduce(
-      (sum, v) => sum + v.total,
+      (sum, v) => sum + v,
       0,
     );
     if (total === 0) return [];
@@ -1297,9 +1239,8 @@ const StatisticsScreen = () => {
     return Object.keys(categoryTotals)
       .map((catName, index) => ({
         name: catName,
-        population: categoryTotals[catName].total,
+        population: categoryTotals[catName],
         color: colors[index % colors.length],
-        baseCategory: categoryTotals[catName].baseCat,
       }))
       .sort((a, b) => b.population - a.population);
   };
@@ -1624,59 +1565,6 @@ const StatisticsScreen = () => {
           ))}
         </ScrollView>
 
-        {/* Sub-filter khi chọn "Khác" — hiển thị danh mục đã bị xóa */}
-        {categoryFilter === "Khác" && (
-          <View style={styles.deletedSubFilter}>
-            <Text style={styles.deletedSubFilterLabel}>
-              📂 Lọc theo danh mục đã xóa:
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryFilters}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.deletedCatBadge,
-                  deletedCategoryFilter === "all" &&
-                    styles.deletedCatBadgeActive,
-                ]}
-                onPress={() => setDeletedCategoryFilter("all")}
-              >
-                <Text
-                  style={[
-                    styles.deletedCatText,
-                    deletedCategoryFilter === "all" &&
-                      styles.deletedCatTextActive,
-                  ]}
-                >
-                  Tất cả
-                </Text>
-              </TouchableOpacity>
-              {getDeletedCategoryOptions().map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.deletedCatBadge,
-                    deletedCategoryFilter === cat &&
-                      styles.deletedCatBadgeActive,
-                  ]}
-                  onPress={() => setDeletedCategoryFilter(cat)}
-                >
-                  <Text
-                    style={[
-                      styles.deletedCatText,
-                      deletedCategoryFilter === cat &&
-                        styles.deletedCatTextActive,
-                    ]}
-                  >
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
       </View>
 
       <FlatList
@@ -1739,6 +1627,7 @@ const StatisticsScreen = () => {
           mode="date"
           display="default"
           onChange={handleDateChange}
+          accentColor="#5596e0ff"
         />
       )}
 
@@ -2127,7 +2016,7 @@ const StatisticsScreen = () => {
                                   style={styles.pieDetailName}
                                   numberOfLines={1}
                                 >
-                                   {tx.name || resolveCategoryName(tx, profile, categoryBudgets)}
+                                   {resolveCategoryName(tx, profile, categoryBudgets)}
                                 </Text>
                                 {tx.note ? (
                                   <Text
@@ -2188,51 +2077,57 @@ const StatisticsScreen = () => {
       </Modal>
 
       {/* Modal Tùy chọn giao dịch (Sửa/Xóa) */}
-      <Modal
-        visible={showOptionsModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowOptionsModal(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowOptionsModal(false)}
-        >
-          <View style={styles.optionsBox}>
-            <Text style={styles.optionsTitle}>Tùy chọn giao dịch</Text>
+      {(() => {
+        const isOldTx = selectedTxForAction ? (Date.now() - selectedTxForAction.timestamp > 3 * 24 * 60 * 60 * 1000) : false;
+        return (
+          <Modal
+            visible={showOptionsModal}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowOptionsModal(false)}
+          >
             <TouchableOpacity
-              style={styles.optionBtn}
-              onPress={handleEditPress}
-            >
-              <Text style={styles.optionTextEdit}>Sửa số tiền</Text>
-            </TouchableOpacity>
-            <View style={styles.optionDivider} />
-            <TouchableOpacity
-              style={styles.optionBtn}
-              onPress={handleEditNotePress}
-            >
-              <Text style={styles.optionTextEdit}>Sửa ghi chú</Text>
-            </TouchableOpacity>
-            <View style={styles.optionDivider} />
-            <TouchableOpacity
-              style={styles.optionBtn}
-              onPress={() => {
-                setShowOptionsModal(false);
-                if (selectedTxForAction) handleDelete(selectedTxForAction);
-              }}
-            >
-              <Text style={styles.optionTextDelete}>Xóa giao dịch</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.optionCancelBtn}
+              style={styles.modalOverlay}
+              activeOpacity={1}
               onPress={() => setShowOptionsModal(false)}
             >
-              <Text style={styles.optionCancelText}>Hủy</Text>
+              <View style={styles.optionsBox}>
+                <TouchableOpacity
+                  style={styles.optionBtn}
+                  onPress={handleEditPress}
+                  disabled={isOldTx}
+                >
+                  <Text style={[styles.optionTextEdit, isOldTx && { color: "#dddddd" }]}>Sửa số tiền</Text>
+                </TouchableOpacity>
+                <View style={styles.optionDivider} />
+                <TouchableOpacity
+                  style={styles.optionBtn}
+                  onPress={handleEditNotePress}
+                >
+                  <Text style={styles.optionTextEdit}>Sửa ghi chú</Text>
+                </TouchableOpacity>
+                <View style={styles.optionDivider} />
+                <TouchableOpacity
+                  style={styles.optionBtn}
+                  onPress={() => {
+                    setShowOptionsModal(false);
+                    if (selectedTxForAction) handleDelete(selectedTxForAction);
+                  }}
+                  disabled={isOldTx}
+                >
+                  <Text style={[styles.optionTextDelete, isOldTx && { color: "#dddddd" }]}>Xóa giao dịch</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.optionCancelBtn}
+                  onPress={() => setShowOptionsModal(false)}
+                >
+                  <Text style={styles.optionCancelText}>Hủy</Text>
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+          </Modal>
+        );
+      })()}
 
       <Modal
         visible={showEditModal}

@@ -1,22 +1,37 @@
 [
   {
+    "version": "31.05.2026",
+    "description": "- Cập nhật giao diện nhập tiền\n- Sửa lỗi hiển thị lịch sử báo cáo\n- Sửa lỗi giao diện khi xóa Quỹ\n- Bổ sung thêm hướng dẫn\n- Cập nhật giao diện khi chọn danh mục\n- Cập nhật giao diện trang mua vàng\n- Cập nhật cơ chế lưu danh mục khác\n- Cập nhật báo cáo năm pdf",
+    "order": 16
+  },
+  {
+    "version": "29.05.2026",
+    "description": "- Thêm chức năng đổi tên Quỹ\n- Đổi logic xóa Quỹ\n - Cập nhật giao diện trang phân chia Quỹ\n - Thêm chức năng chỉnh sửa ghi chú giao dịch vô thời hạn\n- Cập nhật giao diện trang tiết kiệm",
+    "order": 15
+  },
+  {
+    "version": "28.05.2026",
+    "description": "- Sửa định dạng file báo cáo năm pdf\n- Chỉnh sửa màu icon danh mục\n- Sửa lỗi hiển thị lịch sử báo cáo khi ấn vào thông báo\n- Đổi màu mặc định của lịch chọn thời gian\n- Khôi phục danh mục đã xóa\n- Thay đổi cơ chế lưu giao dịch \n- Thay đổi cơ chế xóa danh mục",
+    "order": 14
+  },
+  {
     "version": "27.05.2026",
-    "description": "- Đồng bộ phiên bản trên các giao diện khác nhau\n- Sửa giao diện trang cài đặt\n- Sửa giao diện Widget\n- Sửa lỗi hiển thị lịch sử báo cáo khi ấn vào thông báo\n- Thêm chức năng sửa tên danh mục (Thu - Chi)\n- Pdf báo cáo theo năm đẹp mắt",
+    "description": "- Đồng bộ phiên bản trên các giao diện khác nhau\n- Cập nhật giao diện trang cài đặt\n- Cập nhật giao diện Widget\n- Sửa lỗi hiển thị lịch sử báo cáo khi ấn vào thông báo\n- Thêm chức năng sửa tên danh mục (Thu - Chi)\n- Pdf báo cáo theo năm đẹp mắt",
     "order": 13
   },
   {
     "version": "26.05.2026",
-    "description": "- Chỉnh sửa giao diện trang lịch sử mua - bán - đổi vàng\n- Mặc định ẩn tiền lúc đầu\n- Sửa điều kiện đổi vàng\n- Thay đổi cơ chế mã hóa dữ liệu\n- Thêm Widget",
+    "description": "- Cập nhật giao diện trang lịch sử mua - bán - đổi vàng\n- Mặc định ẩn tiền lúc đầu\n- Sửa điều kiện đổi vàng\n- Thay đổi cơ chế mã hóa dữ liệu\n- Thêm Widget",
     "order": 12
   },
   {
     "version": "25.05.2026",
-    "description": "- Sửa lỗi sao lưu tự động\n- Sửa giao diện hiển thị\n- Sửa lỗi ấn vào thông báo hằng ngày\n- Thêm chức năng sửa chú thích giao dịch\n- Thêm chức năng hiển thị gợi ý ghi chú\n- Hiển thị bản sao lưu mới nhất khi ấn khôi phục\n- Cập nhật xóa bản sao lưu cũ khi sao lưu đạt tối đa 20 bản\n- Sửa giao diện trang cài đặt\n- Thêm trang lưu lịch sử mua - bán - đổi vàng",
+    "description": "- Sửa lỗi sao lưu tự động\n- Cập nhật giao diện hiển thị\n- Sửa lỗi ấn vào thông báo hằng ngày\n- Thêm chức năng sửa chú thích giao dịch\n- Thêm chức năng hiển thị gợi ý ghi chú\n- Hiển thị bản sao lưu mới nhất khi ấn khôi phục\n- Cập nhật xóa bản sao lưu cũ khi sao lưu đạt tối đa 20 bản\n- Cập nhật giao diện trang cài đặt\n- Thêm trang lưu lịch sử mua - bán - đổi vàng",
     "order": 11
   },
   {
     "version": "23.05.2026",
-    "description": "- Sửa phần hiển thị tên ở các trang khác\n- Sửa hiển thị báo cáo tài chính\n- Sửa trang hướng dẫn sinh động hơn\n- Thu nhỏ icon ẩn tiền\n- Hiển thị lọc theo điều kiện nào ở biểu đồ tròn",
+    "description": "- Cập nhật phần hiển thị tên ở các trang khác\n- Cập nhật hiển thị báo cáo tài chính\n- Cập nhật trang hướng dẫn sinh động hơn\n- Thu nhỏ icon ẩn tiền\n- Hiển thị lọc theo điều kiện nào ở biểu đồ tròn",
     "order": 10
   },
   {
@@ -26,7 +41,7 @@
   },
   {
     "version": "21.05.2026",
-    "description": "- Sửa giao diện profile\n- Mã hóa dữ liệu\n- Thêm linh vật giữ chuỗi",
+    "description": "- Cập nhật giao diện profile\n- Mã hóa dữ liệu\n- Thêm linh vật giữ chuỗi",
     "order": 8
   },
   {

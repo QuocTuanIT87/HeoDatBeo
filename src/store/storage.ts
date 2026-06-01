@@ -243,10 +243,12 @@ export const storage = {
     }
   },
 
+
   async saveTransaction(transaction: Transaction): Promise<boolean> {
     try {
+      const { category, categorySnapshot, name, ...cleanedTx } = transaction as any;
       const current = await this.getTransactions();
-      const updated = [...current, transaction];
+      const updated = [...current, cleanedTx];
       await setStorageItem(TRANSACTIONS_KEY, JSON.stringify(updated));
       // Cập nhật index tháng/năm
       await this._addToTransactionDateIndex(transaction.timestamp);
@@ -280,8 +282,9 @@ export const storage = {
 
   async updateTransaction(updatedTransaction: Transaction): Promise<boolean> {
     try {
+      const { category, categorySnapshot, name, ...cleanedTx } = updatedTransaction as any;
       const current = await this.getTransactions();
-      const updated = current.map(t => t.id === updatedTransaction.id ? updatedTransaction : t);
+      const updated = current.map(t => t.id === cleanedTx.id ? cleanedTx : t);
       await setStorageItem(TRANSACTIONS_KEY, JSON.stringify(updated));
       if (onTransactionChangeCallback) {
         onTransactionChangeCallback();
@@ -295,7 +298,11 @@ export const storage = {
 
   async updateTransactionsBulk(updatedTransactions: Transaction[]): Promise<boolean> {
     try {
-      return await setStorageItem(TRANSACTIONS_KEY, JSON.stringify(updatedTransactions));
+      const cleaned = updatedTransactions.map(t => {
+        const { category, categorySnapshot, name, ...rest } = t as any;
+        return rest;
+      });
+      return await setStorageItem(TRANSACTIONS_KEY, JSON.stringify(cleaned));
     } catch (e) {
       console.error('Error updating transactions in bulk', e);
       return false;

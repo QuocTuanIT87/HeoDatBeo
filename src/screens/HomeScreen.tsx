@@ -82,7 +82,7 @@ export const EXPENSE_ICONS: Record<string, any> = {
   http: require("../../assets/expense_icon/http.png"),
   "ice-cream": require("../../assets/expense_icon/ice-cream.png"),
   "interior-design": require("../../assets/expense_icon/interior-design.png"),
-  "maintenance": require("../../assets/expense_icon/maintenance.png"),
+  maintenance: require("../../assets/expense_icon/maintenance.png"),
   internet: require("../../assets/expense_icon/internet.png"),
   internet_2: require("../../assets/expense_icon/internet_2.png"),
   invoice: require("../../assets/expense_icon/invoice.png"),
@@ -167,11 +167,14 @@ export const getIncomeIconSource = (
     return INCOME_ICONS[key];
   }
   // Try looking up in incomeCategories if name was passed but icon is mapped to ID, or vice versa
-  const match = (profile?.incomeCategories || []).find((c: any) => 
-    typeof c === 'object' && (c.id === catNameOrId || c.name === catNameOrId)
+  const match = (profile?.incomeCategories || []).find(
+    (c: any) =>
+      typeof c === "object" && (c.id === catNameOrId || c.name === catNameOrId),
   ) as any;
   if (match) {
-    const keyByMatch = profile?.incomeCategoryIcons?.[match.id] || profile?.incomeCategoryIcons?.[match.name];
+    const keyByMatch =
+      profile?.incomeCategoryIcons?.[match.id] ||
+      profile?.incomeCategoryIcons?.[match.name];
     if (keyByMatch && INCOME_ICONS[keyByMatch]) {
       return INCOME_ICONS[keyByMatch];
     }
@@ -181,9 +184,12 @@ export const getIncomeIconSource = (
     if (catName === "Bán hàng") return INCOME_ICONS["sell"];
   }
 
-  if (catNameOrId === "Lương" || catNameOrId === "income_luong") return INCOME_ICONS["salary"];
-  if (catNameOrId === "Thưởng" || catNameOrId === "income_thuong") return INCOME_ICONS["gift-box"];
-  if (catNameOrId === "Bán hàng" || catNameOrId === "income_ban_hang") return INCOME_ICONS["sell"];
+  if (catNameOrId === "Lương" || catNameOrId === "income_luong")
+    return INCOME_ICONS["salary"];
+  if (catNameOrId === "Thưởng" || catNameOrId === "income_thuong")
+    return INCOME_ICONS["gift-box"];
+  if (catNameOrId === "Bán hàng" || catNameOrId === "income_ban_hang")
+    return INCOME_ICONS["sell"];
   return INCOME_ICONS["default"];
 };
 
@@ -217,11 +223,12 @@ const HomeScreen = () => {
           text: "Đóng",
           style: "cancel",
         },
-      ]
+      ],
     );
   };
 
-  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } =
+    Dimensions.get("window");
   const pan = useRef(new Animated.ValueXY()).current;
   const lastPosition = useRef({ x: 0, y: 0 });
 
@@ -255,8 +262,10 @@ const HomeScreen = () => {
         const newX = lastPosition.current.x + gestureState.dx;
         const newY = lastPosition.current.y + gestureState.dy;
 
-        const safeMaxX = MASCOT_MAX_X > MASCOT_MIN_X ? MASCOT_MAX_X : MASCOT_MIN_X;
-        const safeMaxY = MASCOT_MAX_Y > MASCOT_MIN_Y ? MASCOT_MAX_Y : MASCOT_MIN_Y;
+        const safeMaxX =
+          MASCOT_MAX_X > MASCOT_MIN_X ? MASCOT_MAX_X : MASCOT_MIN_X;
+        const safeMaxY =
+          MASCOT_MAX_Y > MASCOT_MIN_Y ? MASCOT_MAX_Y : MASCOT_MIN_Y;
 
         const clampedX = Math.min(Math.max(newX, MASCOT_MIN_X), safeMaxX);
         const clampedY = Math.min(Math.max(newY, MASCOT_MIN_Y), safeMaxY);
@@ -270,8 +279,10 @@ const HomeScreen = () => {
         const newX = lastPosition.current.x + gestureState.dx;
         const newY = lastPosition.current.y + gestureState.dy;
 
-        const safeMaxX = MASCOT_MAX_X > MASCOT_MIN_X ? MASCOT_MAX_X : MASCOT_MIN_X;
-        const safeMaxY = MASCOT_MAX_Y > MASCOT_MIN_Y ? MASCOT_MAX_Y : MASCOT_MIN_Y;
+        const safeMaxX =
+          MASCOT_MAX_X > MASCOT_MIN_X ? MASCOT_MAX_X : MASCOT_MIN_X;
+        const safeMaxY =
+          MASCOT_MAX_Y > MASCOT_MIN_Y ? MASCOT_MAX_Y : MASCOT_MIN_Y;
 
         const clampedX = Math.min(Math.max(newX, MASCOT_MIN_X), safeMaxX);
         const clampedY = Math.min(Math.max(newY, MASCOT_MIN_Y), safeMaxY);
@@ -280,7 +291,7 @@ const HomeScreen = () => {
         pan.flattenOffset();
         pan.setValue({ x: clampedX, y: clampedY });
       },
-    })
+    }),
   ).current;
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -306,7 +317,6 @@ const HomeScreen = () => {
   const [selectedCategoryNameForSave, setSelectedCategoryNameForSave] =
     useState<string>("");
   const [modalNoteInput, setModalNoteInput] = useState("");
-  const [modalCustomCatName, setModalCustomCatName] = useState("");
   const [suggestedNotes, setSuggestedNotes] = useState<string[]>([]);
   const [txDate, setTxDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -347,9 +357,12 @@ const HomeScreen = () => {
     initGoogleDrive();
     checkAndRunAutoBackup();
 
-    const intervalId = setInterval(() => {
-      checkAndRunAutoBackup();
-    }, 5 * 60 * 1000); // 5 phút một lần
+    const intervalId = setInterval(
+      () => {
+        checkAndRunAutoBackup();
+      },
+      5 * 60 * 1000,
+    ); // 5 phút một lần
 
     return () => clearInterval(intervalId);
   }, []);
@@ -364,11 +377,14 @@ const HomeScreen = () => {
   const loadData = async () => {
     const p = await storage.getUserProfile();
     const cats = await storage.getCategoryBudgets();
+    const activeCats = cats.filter(
+      (b) => b.deleteAt === null || b.deleteAt === undefined,
+    );
     setProfile(p);
-    setBudgets(cats);
+    setBudgets(activeCats);
 
     if (p) {
-      const totalAllocated = cats.reduce((sum, c) => sum + c.budget, 0);
+      const totalAllocated = activeCats.reduce((sum, c) => sum + c.budget, 0);
       const unallocated = Math.max(0, p.initialBalance - totalAllocated);
 
       // Calculate savings balance (Quỹ Tiết Kiệm)
@@ -377,18 +393,13 @@ const HomeScreen = () => {
       txs.forEach((t) => {
         if (
           t.categoryId === "system_tiet_kiem" ||
-          t.categoryId === "system_rut_tiet_kiem" ||
-          t.category === "Tiết kiệm" ||
-          t.category === "Rút tiết kiệm"
+          t.categoryId === "system_rut_tiet_kiem"
         ) {
-          if (
-            t.type === "expense" &&
-            (t.categoryId === "system_tiet_kiem" || t.category === "Tiết kiệm")
-          ) {
+          if (t.type === "expense" && t.categoryId === "system_tiet_kiem") {
             calcSaving += t.amount;
           } else if (
             t.type === "income" &&
-            (t.categoryId === "system_rut_tiet_kiem" || t.category === "Rút tiết kiệm")
+            t.categoryId === "system_rut_tiet_kiem"
           ) {
             calcSaving -= t.amount;
           }
@@ -401,7 +412,9 @@ const HomeScreen = () => {
         customFundsTotal = p.customFunds.reduce((sum, f) => sum + f.balance, 0);
       }
 
-      setTotalBalance(totalAllocated + unallocated + calcSaving + customFundsTotal);
+      setTotalBalance(
+        totalAllocated + unallocated + calcSaving + customFundsTotal,
+      );
     }
 
     // Tính số tài khoản từ giao dịch đầu tiên
@@ -409,9 +422,27 @@ const HomeScreen = () => {
 
     // Kiểm tra xem đã ghi giao dịch hôm nay chưa
     const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
-    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
-    const hasRecorded = txs.some((tx) => tx.timestamp >= startOfToday && tx.timestamp <= endOfToday);
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      0,
+      0,
+      0,
+      0,
+    ).getTime();
+    const endOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      23,
+      59,
+      59,
+      999,
+    ).getTime();
+    const hasRecorded = txs.some(
+      (tx) => tx.timestamp >= startOfToday && tx.timestamp <= endOfToday,
+    );
     setRecordedToday(hasRecorded);
     updateHomeScreenWidget(p?.streakCount || 0, hasRecorded);
 
@@ -483,7 +514,9 @@ const HomeScreen = () => {
     const { id, name } = cat;
     // Kiểm tra ngân sách sơ bộ
     if (type === "expense") {
-      const catBudget = budgets.find((b) => (id && b.id && isCategoryIdMatch(b.id, id)) || b.name === name);
+      const catBudget = budgets.find(
+        (b) => (id && b.id && isCategoryIdMatch(b.id, id)) || b.name === name,
+      );
       // Danh mục "Khác" luôn chi từ tiền chưa phân bổ
       if (name === "Khác" || (catBudget && catBudget.type === "direct")) {
         if (!profile) return;
@@ -511,7 +544,6 @@ const HomeScreen = () => {
     }
     setSelectedCategoryIdForSave(id);
     setSelectedCategoryNameForSave(name);
-    setModalCustomCatName("");
     setTxDate(new Date());
     setCategoryPickerVisible(false);
 
@@ -524,17 +556,17 @@ const HomeScreen = () => {
 
   // Xác nhận lưu sau khi nhập ghi chú
   const handleConfirmNote = async () => {
+    if (selectedCategoryNameForSave === "Khác" && !modalNoteInput.trim()) {
+      Alert.alert("Yêu cầu nhập ghi chú", "Bạn phải nhập ghi chú khi chọn danh mục Khác.");
+      return;
+    }
     setNoteModalVisible(false);
-    const customLabel =
-      selectedCategoryNameForSave === "Khác" && modalCustomCatName.trim()
-        ? modalCustomCatName.trim()
-        : undefined;
     await performSave(
       selectedCategoryIdForSave,
       selectedCategoryNameForSave,
       modalNoteInput,
       txDate,
-      customLabel,
+      undefined,
     );
   };
 
@@ -546,13 +578,23 @@ const HomeScreen = () => {
     customLabel?: string,
   ) => {
     const amountToSave = amount;
-    const finalNote = note.trim() || undefined;
+    let finalNote = note.trim() || undefined;
+    if (customLabel) {
+      finalNote = finalNote ? `${customLabel}: ${finalNote}` : customLabel;
+    }
 
     let nextProfile = profile ? { ...profile } : null;
     if (!nextProfile) return;
 
     if (type === "expense") {
-      const catBudget = budgets.find((b) => (chosenCategoryId && b.id && isCategoryIdMatch(b.id, chosenCategoryId)) || b.name === chosenCategoryName);
+      const allBudgets = await storage.getCategoryBudgets();
+      const catBudget = allBudgets.find(
+        (b) =>
+          (chosenCategoryId &&
+            b.id &&
+            isCategoryIdMatch(b.id, chosenCategoryId)) ||
+          b.name === chosenCategoryName,
+      );
 
       if (catBudget) {
         if ((catBudget.type || "recharge") === "recharge") {
@@ -563,8 +605,11 @@ const HomeScreen = () => {
             );
             return;
           }
-          const updatedBudgets = budgets.map((b) =>
-            (b.id && chosenCategoryId && isCategoryIdMatch(b.id, chosenCategoryId)) || (!b.id && b.name === chosenCategoryName)
+          const updatedBudgets = allBudgets.map((b) =>
+            (b.id &&
+              chosenCategoryId &&
+              isCategoryIdMatch(b.id, chosenCategoryId)) ||
+            (!b.id && b.name === chosenCategoryName)
               ? {
                   ...b,
                   budget: b.budget - amountToSave,
@@ -577,7 +622,13 @@ const HomeScreen = () => {
             nextProfile.initialBalance - amountToSave;
         } else {
           // Loại "direct": chi từ tiền chưa phân bổ
-          const totalAllocated = budgets.reduce((sum, b) => sum + b.budget, 0);
+          const activeBudgets = allBudgets.filter(
+            (b) => b.deleteAt === null || b.deleteAt === undefined,
+          );
+          const totalAllocated = activeBudgets.reduce(
+            (sum, b) => sum + b.budget,
+            0,
+          );
           const unallocated = Math.max(
             0,
             nextProfile.initialBalance - totalAllocated,
@@ -589,8 +640,11 @@ const HomeScreen = () => {
             );
             return;
           }
-          const updatedBudgets = budgets.map((b) =>
-            (b.id && chosenCategoryId && isCategoryIdMatch(b.id, chosenCategoryId)) || (!b.id && b.name === chosenCategoryName)
+          const updatedBudgets = allBudgets.map((b) =>
+            (b.id &&
+              chosenCategoryId &&
+              isCategoryIdMatch(b.id, chosenCategoryId)) ||
+            (!b.id && b.name === chosenCategoryName)
               ? { ...b, spent: (b.spent || 0) + amountToSave }
               : b,
           );
@@ -600,7 +654,13 @@ const HomeScreen = () => {
         }
       } else {
         // Danh mục không có trong budgets (bao gồm "Khác") - chi từ tiền chưa phân bổ
-        const totalAllocated = budgets.reduce((sum, b) => sum + b.budget, 0);
+        const activeBudgets = allBudgets.filter(
+          (b) => b.deleteAt === null || b.deleteAt === undefined,
+        );
+        const totalAllocated = activeBudgets.reduce(
+          (sum, b) => sum + b.budget,
+          0,
+        );
         const unallocated = Math.max(
           0,
           nextProfile.initialBalance - totalAllocated,
@@ -652,8 +712,11 @@ const HomeScreen = () => {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       type: type,
       amount: amountToSave,
-      categoryId: customLabel ? (type === 'income' ? 'income_khac' : 'expense_khac') : chosenCategoryId,
-      ...(customLabel ? { categorySnapshot: customLabel } : {}),
+      categoryId: customLabel
+        ? type === "income"
+          ? "income_khac"
+          : "expense_khac"
+        : chosenCategoryId,
       note: finalNote,
       timestamp: transactionDate.getTime(),
     };
@@ -672,28 +735,37 @@ const HomeScreen = () => {
     loadData();
   };
 
-  const rawIncomeCategories = profile?.incomeCategories || DEFAULT_INCOME_CATEGORIES;
+  const rawIncomeCategories = (
+    profile?.incomeCategories || DEFAULT_INCOME_CATEGORIES
+  ).filter(
+    (c: any) =>
+      typeof c === "string" || c.deleteAt === null || c.deleteAt === undefined,
+  );
   const incomeCategories = rawIncomeCategories.map((cat: any) => {
-    if (typeof cat === 'string') {
-      const id = 'income_' + cat.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    if (typeof cat === "string") {
+      const id = "income_" + cat.toLowerCase().replace(/[^a-z0-9]/g, "_");
       return {
         id,
         name: cat,
-        icon: profile?.incomeCategoryIcons?.[cat] || 'default'
+        icon: profile?.incomeCategoryIcons?.[cat] || "default",
       };
     }
-    const iconKey = profile?.incomeCategoryIcons?.[cat.id] || profile?.incomeCategoryIcons?.[cat.name] || 'default';
+    const iconKey =
+      profile?.incomeCategoryIcons?.[cat.id] ||
+      profile?.incomeCategoryIcons?.[cat.name] ||
+      "default";
     return {
       id: cat.id,
       name: cat.name,
-      icon: iconKey
+      icon: iconKey,
     };
   });
 
   const expenseCategories = budgets.map((b) => ({
-    id: b.id || 'expense_' + b.name.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+    id: b.id || "expense_" + b.name.toLowerCase().replace(/[^a-z0-9]/g, "_"),
     name: b.name,
-    icon: b.icon || 'default'
+    icon: b.icon || "default",
+    type: b.type,
   }));
 
   const pickerCategories =
@@ -882,20 +954,6 @@ const HomeScreen = () => {
           style={styles.body}
           contentContainerStyle={styles.bodyContent}
         >
-          {profile?.inputMethod !== "manual" && (
-            <View style={styles.amountDisplay}>
-              <Text
-                style={[
-                  styles.amountText,
-                  type === "expense" ? styles.expenseText : styles.incomeText,
-                ]}
-              >
-                {formatCurrency(amount)}
-              </Text>
-              <Text style={styles.currencyLabel}>VNĐ</Text>
-            </View>
-          )}
-
           {/* <View style={styles.inputMethodToggleRow}>
             <TouchableOpacity
               style={styles.quickToggleBtnCircle}
@@ -908,7 +966,6 @@ const HomeScreen = () => {
               )}
             </TouchableOpacity>
           </View> */}
-
           {profile?.inputMethod === "manual" ? (
             <View style={styles.manualInputSection}>
               <TouchableOpacity
@@ -923,14 +980,36 @@ const HomeScreen = () => {
               </TouchableOpacity>
             </View>
           ) : (
-            <View>
-              <Keypad
-                amount={amount}
-                onAddAmount={(val) => setAmount((prev) => prev + val)}
-                onClear={() => setAmount(0)}
-                hideClearButton={true}
-              />
-            </View>
+            <>
+              <View style={styles.amountDisplay}>
+                <Text
+                  style={[
+                    styles.amountText,
+                    type === "expense" ? styles.expenseText : styles.incomeText,
+                  ]}
+                >
+                  {formatCurrency(amount)}
+                </Text>
+                <Text style={styles.currencyLabel}>VNĐ</Text>
+              </View>
+              {amount > 0 && (
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setAmount(0)}
+                  activeOpacity={0.8}
+                >
+                  <RotateCcw color="gray" size={24} />
+                </TouchableOpacity>
+              )}
+              <View>
+                <Keypad
+                  amount={amount}
+                  onAddAmount={(val) => setAmount((prev) => prev + val)}
+                  onClear={() => setAmount(0)}
+                  hideClearButton={true}
+                />
+              </View>
+            </>
           )}
 
           {profile?.inputMethod !== "manual" && (
@@ -957,13 +1036,13 @@ const HomeScreen = () => {
                 <Text style={styles.saveButtonText}>Tiếp Theo →</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 style={[styles.cancelButton, styles.actionCancelBtn]}
                 onPress={() => setAmount(0)}
                 activeOpacity={0.8}
               >
                 <RotateCcw color="#ef4444" size={22} />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           )}
         </ScrollView>
@@ -1000,158 +1079,116 @@ const HomeScreen = () => {
                   Chưa có danh mục. Vào màn hình "Chia Tiền" để tạo danh mục.
                 </Text>
               </View>
-            ) : (
-              <FlatList
-                data={pickerCategories}
-                keyExtractor={(item) => item.id}
-                style={styles.catPickerList}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => {
-                  const catBudget =
-                    type === "expense"
-                      ? budgets.find((b) => b.id === item.id || b.name === item.name)
-                      : null;
-                  const remaining = (() => {
-                    if (!catBudget) return null;
-                    if (catBudget.type === "direct") {
-                      if (!profile) return 0;
-                      const totalAllocated = budgets.reduce(
-                        (s, b) => s + b.budget,
-                        0,
-                      );
-                      return Math.max(
-                        0,
-                        profile.initialBalance - totalAllocated,
-                      );
-                    }
-                    return catBudget.budget;
-                  })();
-                  const iconSource =
-                    type === "expense"
-                      ? catBudget && catBudget.icon
-                        ? EXPENSE_ICONS[catBudget.icon]
-                        : EXPENSE_ICONS["default"]
-                      : getIncomeIconSource(item.id, profile);
-                  return (
-                    <TouchableOpacity
-                      style={styles.catPickerItem}
-                      onPress={() => handlePickCategory(item)}
-                    >
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 10,
-                          flex: 1,
-                        }}
-                      >
-                        <Image
-                          source={iconSource}
-                          style={{
-                            width: 24,
-                            height: 24,
-                            resizeMode: "contain",
-                          }}
-                        />
-                        <Text
-                          style={styles.catPickerItemName}
-                          numberOfLines={1}
-                        >
-                          {item.name}
-                        </Text>
-                      </View>
-                      <View style={styles.catPickerItemRight}>
-                        {remaining !== null && (
-                          <Text
-                            style={[
-                              styles.catPickerItemBudget,
-                              remaining <= 0 && { color: "#ef4444" },
-                            ]}
-                          >
-                            {formatCurrency(remaining)} đ
-                          </Text>
-                        )}
-                        <ChevronRight color="#94a3b8" size={18} />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                }}
-                ItemSeparatorComponent={() => (
-                  <View style={styles.catPickerSeparator} />
-                )}
-                ListFooterComponent={() => {
-                  const totalAllocated = budgets.reduce(
-                    (s, b) => s + b.budget,
-                    0,
-                  );
-                  const unallocated = profile
-                    ? Math.max(0, profile.initialBalance - totalAllocated)
-                    : 0;
-                  return (
+            ) : (() => {
+              const totalAllocated = budgets.reduce((s, b) => s + b.budget, 0);
+              const unallocated = profile ? Math.max(0, profile.initialBalance - totalAllocated) : 0;
+              return (
+                <ScrollView showsVerticalScrollIndicator={false} style={styles.catPickerList}>
+                  {type === "expense" ? (
                     <>
-                      <View style={styles.catPickerSeparator} />
-                      <TouchableOpacity
-                        style={[styles.catPickerItem, styles.catPickerItemKhac]}
-                        onPress={() => handlePickCategory({ id: type === 'income' ? 'income_khac' : 'expense_khac', name: 'Khác' })}
-                      >
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 10,
-                            flex: 1,
-                          }}
+                      {/* SECTION 1: Cần nạp tiền */}
+                      <Text style={styles.sectionHeader}>📂 Danh mục Cần nạp tiền</Text>
+                      <View style={styles.gridContainer}>
+                        {expenseCategories.filter(c => c.type !== "direct").map((item) => {
+                          const catBudget = budgets.find(b => b.id === item.id || b.name === item.name);
+                          const remaining = catBudget ? catBudget.budget : 0;
+                          const iconSource = catBudget && catBudget.icon ? EXPENSE_ICONS[catBudget.icon] : EXPENSE_ICONS["default"];
+                          return (
+                            <TouchableOpacity
+                              key={item.id}
+                              style={styles.gridItemSquare}
+                              onPress={() => handlePickCategory(item)}
+                            >
+                              <Image source={iconSource} style={styles.gridItemIcon} />
+                              <Text style={styles.gridItemName} numberOfLines={1}>{item.name}</Text>
+                              <Text style={[styles.gridItemBudget, remaining <= 0 && { color: "#ef4444" }]} numberOfLines={1}>
+                                {formatCurrency(remaining)} đ
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+
+                      {/* SECTION 2: Chi trực tiếp */}
+                      <Text style={styles.sectionHeader}>⚡ Chi trực tiếp (Chưa phân bổ: {formatCurrency(unallocated)} đ)</Text>
+                      <View style={styles.gridContainer}>
+                        {expenseCategories.filter(c => c.type === "direct").map((item) => {
+                          const catBudget = budgets.find(b => b.id === item.id || b.name === item.name);
+                          const iconSource = catBudget && catBudget.icon ? EXPENSE_ICONS[catBudget.icon] : EXPENSE_ICONS["default"];
+                          return (
+                            <TouchableOpacity
+                              key={item.id}
+                              style={styles.gridItemSquare}
+                              onPress={() => handlePickCategory(item)}
+                            >
+                              <Image source={iconSource} style={styles.gridItemIcon} />
+                              <Text style={styles.gridItemName} numberOfLines={1}>{item.name}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+
+                      {/* SECTION 3: Khác */}
+                      <Text style={styles.sectionHeader}>⚙️ Khác</Text>
+                      <View style={styles.gridContainer}>
+                        <TouchableOpacity
+                          style={styles.gridItemSquare}
+                          onPress={() =>
+                            handlePickCategory({
+                              id: "expense_khac",
+                              name: "Khác",
+                            })
+                          }
                         >
-                          <Image
-                            source={
-                              type === "expense"
-                                ? EXPENSE_ICONS["other"]
-                                : INCOME_ICONS["other"]
-                            }
-                            style={{
-                              width: 24,
-                              height: 24,
-                              resizeMode: "contain",
-                            }}
-                          />
-                          <View style={styles.catPickerKhacLabel}>
-                            <Text
-                              style={[
-                                styles.catPickerItemName,
-                                { color: "#7c3aed" },
-                              ]}
-                            >
-                              Khác
-                            </Text>
-                            <Text style={styles.catPickerKhacHint}>
-                              {type === "expense"
-                                ? "Chi từ tiền chưa phân bổ"
-                                : "Nguồn thu khác"}
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={styles.catPickerItemRight}>
-                          {type === "expense" && (
-                            <Text
-                              style={[
-                                styles.catPickerItemBudget,
-                                {
-                                  color:
-                                    unallocated <= 0 ? "#ef4444" : "#7c3aed",
-                                },
-                              ]}
-                            >
-                              {formatCurrency(unallocated)} đ
-                            </Text>
-                          )}
-                          <ChevronRight color="#7c3aed" size={18} />
-                        </View>
-                      </TouchableOpacity>
+                          <Image source={EXPENSE_ICONS["other"]} style={styles.gridItemIcon} />
+                          <Text style={[styles.gridItemName, { color: "#7c3aed" }]} numberOfLines={1}>Khác</Text>
+                          <Text style={[styles.gridItemBudget, { color: unallocated <= 0 ? "#ef4444" : "#7c3aed" }]} numberOfLines={1}>
+                            {formatCurrency(unallocated)} đ
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     </>
-                  );
-                }}
-              />
-            )}
+                  ) : (
+                    <>
+                      {/* INCOME: Nguồn thu */}
+                      <Text style={styles.sectionHeader}>💰 Danh mục nguồn thu</Text>
+                      <View style={styles.gridContainer}>
+                        {incomeCategories.map((item) => {
+                          const iconSource = getIncomeIconSource(item.id, profile);
+                          return (
+                            <TouchableOpacity
+                              key={item.id}
+                              style={styles.gridItemSquare}
+                              onPress={() => handlePickCategory(item)}
+                            >
+                              <Image source={iconSource} style={styles.gridItemIcon} />
+                              <Text style={styles.gridItemName} numberOfLines={1}>{item.name}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+
+                      {/* INCOME: Khác */}
+                      <Text style={styles.sectionHeader}>⚙️ Khác</Text>
+                      <View style={styles.gridContainer}>
+                        <TouchableOpacity
+                          style={styles.gridItemSquare}
+                          onPress={() =>
+                            handlePickCategory({
+                              id: "income_khac",
+                              name: "Khác",
+                            })
+                          }
+                        >
+                          <Image source={INCOME_ICONS["other"]} style={styles.gridItemIcon} />
+                          <Text style={[styles.gridItemName, { color: "#7c3aed" }]} numberOfLines={1}>Khác</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  )}
+                </ScrollView>
+              );
+            })()}
           </View>
         </View>
       </Modal>
@@ -1187,28 +1224,8 @@ const HomeScreen = () => {
                 : "💰 Hoàn tất thu tiền"}
             </Text>
             <Text style={styles.catPickerSubtitle}>
-              Danh mục:{" "}
-              {selectedCategoryNameForSave === "Khác" && modalCustomCatName.trim()
-                ? modalCustomCatName.trim()
-                : selectedCategoryNameForSave}{" "}
-              — {formatCurrency(amount)} đ
+              Danh mục: {selectedCategoryNameForSave} — {formatCurrency(amount)} đ
             </Text>
-
-            {selectedCategoryNameForSave === "Khác" && (
-              <>
-                <Text style={styles.modalFieldLabel}>
-                  Tên danh mục (không bắt buộc)
-                </Text>
-                <TextInput
-                  style={styles.modalNoteInput}
-                  placeholder={'Để trống sẽ lưu là "Khác"...'}
-                  placeholderTextColor="#94a3b8"
-                  value={modalCustomCatName}
-                  onChangeText={setModalCustomCatName}
-                  returnKeyType="done"
-                />
-              </>
-            )}
 
             <Text style={styles.modalFieldLabel}>Ngày giờ giao dịch</Text>
             <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
@@ -1237,13 +1254,16 @@ const HomeScreen = () => {
                 is24Hour={true}
                 display="default"
                 onChange={handleDateChange}
+                accentColor="#5596e0ff"
               />
             )}
 
-            <Text style={styles.modalFieldLabel}>Ghi chú (không bắt buộc)</Text>
+            <Text style={styles.modalFieldLabel}>
+              Ghi chú {selectedCategoryNameForSave === "Khác" ? "(bắt buộc)" : "(không bắt buộc)"}
+            </Text>
             <TextInput
               style={styles.modalNoteInput}
-              placeholder="Nhập ghi chú nếu có..."
+              placeholder={selectedCategoryNameForSave === "Khác" ? "Nhập ghi chú (bắt buộc)..." : "Nhập ghi chú nếu có..."}
               placeholderTextColor="#94a3b8"
               value={modalNoteInput}
               onChangeText={setModalNoteInput}
@@ -1384,11 +1404,27 @@ const HomeScreen = () => {
             {/* Level label */}
             <View style={styles.streakModalLevelBadge}>
               <Text style={styles.streakModalLevelTxt}>
-                Cấp độ: {getStreakLevelInfo(getStreakLevel(streakModalData?.count || 1)).name}
+                Cấp độ:{" "}
+                {
+                  getStreakLevelInfo(
+                    getStreakLevel(streakModalData?.count || 1),
+                  ).name
+                }
               </Text>
             </View>
-            <Text style={{ fontSize: 10, color: "#94a3b8", textAlign: 'center', marginTop: -4, marginBottom: 12 }}>
-              {getStreakLevelInfo(getStreakLevel(streakModalData?.count || 1)).description}
+            <Text
+              style={{
+                fontSize: 10,
+                color: "#94a3b8",
+                textAlign: "center",
+                marginTop: -4,
+                marginBottom: 12,
+              }}
+            >
+              {
+                getStreakLevelInfo(getStreakLevel(streakModalData?.count || 1))
+                  .description
+              }
             </Text>
 
             <Text style={styles.streakModalHint}>
@@ -1483,7 +1519,8 @@ const HomeScreen = () => {
                   textShadowRadius: 4,
                 }}
               >
-                {MASCOT_LIST.find(m => m.key === profile.mascot)?.name ?? MASCOT_LIST[0].name}
+                {MASCOT_LIST.find((m) => m.key === profile.mascot)?.name ??
+                  MASCOT_LIST[0].name}
               </Text>
             </View>
           </TouchableOpacity>
@@ -1537,7 +1574,9 @@ const HomeScreen = () => {
             }}
           >
             <Image
-              source={getStreakLevelImage(getStreakLevel(profile.streakCount || 0))}
+              source={getStreakLevelImage(
+                getStreakLevel(profile.streakCount || 0),
+              )}
               style={{ width: 26, height: 26, resizeMode: "contain" }}
             />
           </View>

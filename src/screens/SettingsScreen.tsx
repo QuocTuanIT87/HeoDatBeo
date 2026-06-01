@@ -126,7 +126,7 @@ export const getIncomeIconSource = (
 };
 
 import VERSION_HISTORY from "../../version_history.json";
-import { BanknoteArrowUp, FileX, ShieldUser } from "lucide-react-native/icons";
+import { BanknoteArrowUp, CopyMinus, FileX, FolderMinus, ShieldUser } from "lucide-react-native/icons";
 
 
 const SettingsScreen = () => {
@@ -455,7 +455,8 @@ const SettingsScreen = () => {
     const p = await storage.getUserProfile();
     setProfile(p);
     const budgets = await storage.getCategoryBudgets();
-    setCategoryBudgets(budgets);
+    const activeBudgets = budgets.filter(b => b.deleteAt === null || b.deleteAt === undefined);
+    setCategoryBudgets(activeBudgets);
   };
 
   const handleOpenPdfModal = async () => {
@@ -608,6 +609,8 @@ const SettingsScreen = () => {
     if (
       trimmedName === "Tiết kiệm" ||
       trimmedName === "Rút tiết kiệm" ||
+      trimmedName === "Nuôi heo béo" ||
+      trimmedName === "Heo giảm cân" ||
       trimmedName === "Số dư đầu tiên" ||
       trimmedName === "Khác"
     ) {
@@ -620,11 +623,38 @@ const SettingsScreen = () => {
 
     if (activeCategoryTab === 'income') {
       const current = profile.incomeCategories || [];
-      const isExisting = current.some((c: any) => 
-        typeof c === 'string' ? c === trimmedName : c.name === trimmedName
-      );
-      if (isExisting) {
+      const isActiveExisting = current.some((c: any) => {
+        if (typeof c === 'string') return c === trimmedName;
+        return c.name === trimmedName && (c.deleteAt === null || c.deleteAt === undefined);
+      });
+      if (isActiveExisting) {
         Alert.alert("Lỗi", "Danh mục này đã tồn tại.");
+        return;
+      }
+
+      const softDeletedCat = current.find((c: any) => {
+        if (typeof c === 'string') return false;
+        return c.name === trimmedName && c.deleteAt !== null && c.deleteAt !== undefined;
+      });
+
+      if (softDeletedCat) {
+        const restoredCats = current.map((c: any) => {
+          if (typeof c === 'object' && c.name === trimmedName) {
+            return { ...c, deleteAt: null };
+          }
+          return c;
+        });
+        const updatedProfile = {
+          ...profile,
+          incomeCategories: restoredCats,
+        };
+        const success = await storage.saveUserProfile(updatedProfile);
+        if (success) {
+          setProfile(updatedProfile);
+          setNewCategoryName("");
+          setCategoryModalVisible(true);
+          Alert.alert("Thành công", `Đã khôi phục danh mục thu nhập "${trimmedName}".`);
+        }
         return;
       }
 
@@ -634,7 +664,6 @@ const SettingsScreen = () => {
       setCategoryModalVisible(false);
       setIconModalVisible(true);
     } else {
-      // Adding expense categories is usually done in target/budgets screen, but if they add here:
       Alert.alert("Thông tin", "Vui lòng vào màn hình 'Chia Tiền' để tạo danh mục chi tiêu mới.");
     }
   };
@@ -644,7 +673,6 @@ const SettingsScreen = () => {
     const catId = pendingCategoryId || 'income_' + pendingCategoryName.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Math.random().toString(36).substr(2, 5);
     const catName = pendingCategoryName;
 
-    // Use current or fallback to defaults so we always have a list of objects to edit
     const current = profile.incomeCategories && profile.incomeCategories.length > 0
       ? profile.incomeCategories
       : DEFAULT_INCOME_CATEGORIES.map(c => ({
@@ -654,7 +682,7 @@ const SettingsScreen = () => {
         }));
 
     const isExisting = current.some((c: any) => 
-      typeof c === 'string' ? c === catName : c.id === catId || c.name === catName
+      typeof c === 'string' ? c === catName : (c.id === catId || c.name === catName) && (c.deleteAt === null || c.deleteAt === undefined)
     );
 
     let updatedProfile;
@@ -675,11 +703,6 @@ const SettingsScreen = () => {
         incomeCategories: updatedCats as any,
       };
     } else {
-      const txs = await storage.getTransactions();
-      const matches = txs.filter(
-        (t) => t.categorySnapshot === catName && t.category === "Khác",
-      );
-
       const newCategory = { id: catId, name: catName, icon: iconKey };
       const normalizedCurrent = current.map((c: any) => {
         if (typeof c === 'string') {
@@ -693,20 +716,6 @@ const SettingsScreen = () => {
         ...profile,
         incomeCategories: [...normalizedCurrent, newCategory] as any,
       };
-
-      if (matches.length > 0) {
-        const updatedTxs = txs.map((t) => {
-          if (t.categoryId === "income_khac" && t.categorySnapshot === catName) {
-            return { ...t, categoryId: catId };
-          }
-          return t;
-        });
-        await storage.updateTransactionsBulk(updatedTxs);
-        Alert.alert(
-          "Thành công",
-          `Đã thêm danh mục "${catName}" và tự động đồng bộ ${matches.length} giao dịch cũ liên quan.`,
-        );
-      }
     }
 
     const success = await storage.saveUserProfile(updatedProfile);
@@ -716,7 +725,6 @@ const SettingsScreen = () => {
       setPendingCategoryId("");
       setPendingCategoryName("");
       setIconModalVisible(false);
-      // Mở lại modal quản lý danh mục sau khi hoàn thành
       setCategoryModalVisible(true);
     }
   };
@@ -748,6 +756,8 @@ const SettingsScreen = () => {
     if (
       catName === "Tiết kiệm" ||
       catName === "Rút tiết kiệm" ||
+      catName === "Nuôi heo béo" ||
+      catName === "Heo giảm cân" ||
       catName === "Số dư đầu tiên" ||
       catName === "Khác"
     ) {
@@ -757,15 +767,15 @@ const SettingsScreen = () => {
 
     const txs = await storage.getTransactions();
     const hasTx = txs.some(
-      (t) => t.categoryId === catId || (t.categorySnapshot || t.category) === catName,
+      (t) => t.categoryId && catId && isCategoryIdMatch(t.categoryId, catId)
     );
     const extraMsg = hasTx
-      ? `\n\n⚠️ Danh mục này có giao dịch lịch sử. Các giao dịch đó sẽ được lưu trong danh mục "Khác" tại trang Thống kê.`
+      ? `\n\n⚠️ Danh mục này có giao dịch lịch sử. Nó sẽ được lưu tạm trong mục 'Danh mục bị xoá gần đây'.`
       : "";
 
     Alert.alert(
       "Xác nhận xóa",
-      `Bạn có chắc muốn xóa danh mục "${catName}"?${extraMsg}`,
+      `Bạn có chắc muốn xóa danh mục "${catName}"?`,
       [
         { text: "Hủy", style: "cancel" },
         {
@@ -774,50 +784,49 @@ const SettingsScreen = () => {
           onPress: async () => {
             if (activeCategoryTab === 'income') {
               const current = profile.incomeCategories || [];
+              let updatedCats: any[];
+              if (hasTx) {
+                updatedCats = current.map((c: any) => {
+                  if (typeof c === 'string') {
+                    const fallbackId = 'income_' + c.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Math.random().toString(36).substr(2, 5);
+                    if (c === catName) {
+                      return { id: fallbackId, name: c, deleteAt: Date.now() };
+                    }
+                    return { id: fallbackId, name: c };
+                  }
+                  if (c.id === catId || c.name === catName) {
+                    return { ...c, deleteAt: Date.now() };
+                  }
+                  return c;
+                });
+              } else {
+                updatedCats = current.filter((c: any) => 
+                  typeof c === 'string' ? c !== catName : c.id !== catId
+                );
+              }
               const updatedProfile = {
                 ...profile,
-                incomeCategories: current.filter((c: any) => 
-                  typeof c === 'string' ? c !== catName : c.id !== catId
-                ),
+                incomeCategories: updatedCats,
               };
               const success = await storage.saveUserProfile(updatedProfile);
               if (success) {
                 setProfile(updatedProfile);
-                if (hasTx) {
-                  const updatedTxs = txs.map((t) => {
-                    if ((t.categoryId && catId && isCategoryIdMatch(t.categoryId, catId)) || (t.categorySnapshot || t.category) === catName) {
-                      return {
-                        ...t,
-                        categoryId: 'income_khac',
-                        category: "Khác",
-                        categorySnapshot: t.categorySnapshot || t.category || catName,
-                      };
-                    }
-                    return t;
-                  });
-                  await storage.updateTransactionsBulk(updatedTxs);
-                }
               }
             } else {
               // Delete Expense Category (CategoryBudget)
-              const updatedBudgets = categoryBudgets.filter((b) => b.id !== catId && b.name !== catName);
+              const allBudgets = await storage.getCategoryBudgets();
+              let updatedBudgets: CategoryBudget[];
+              if (hasTx) {
+                updatedBudgets = allBudgets.map((b) => {
+                  const isMatch = b.id && catId ? isCategoryIdMatch(b.id, catId) : b.name === catName;
+                  return isMatch ? { ...b, deleteAt: Date.now(), budget: 0 } : b;
+                });
+              } else {
+                updatedBudgets = allBudgets.filter((b) => b.id !== catId && b.name !== catName);
+              }
               const success = await storage.saveCategoryBudgets(updatedBudgets);
               if (success) {
-                setCategoryBudgets(updatedBudgets);
-                if (hasTx) {
-                  const updatedTxs = txs.map((t) => {
-                    if ((t.categoryId && catId && isCategoryIdMatch(t.categoryId, catId)) || (t.categorySnapshot || t.category) === catName) {
-                      return {
-                        ...t,
-                        categoryId: 'expense_khac',
-                        category: "Khác",
-                        categorySnapshot: t.categorySnapshot || t.category || catName,
-                      };
-                    }
-                    return t;
-                  });
-                  await storage.updateTransactionsBulk(updatedTxs);
-                }
+                setCategoryBudgets(updatedBudgets.filter(b => b.deleteAt === null || b.deleteAt === undefined));
               }
             }
           },
@@ -830,6 +839,8 @@ const SettingsScreen = () => {
     if (
       catName === "Tiết kiệm" ||
       catName === "Rút tiết kiệm" ||
+      catName === "Nuôi heo béo" ||
+      catName === "Heo giảm cân" ||
       catName === "Số dư đầu tiên" ||
       catName === "Khác"
     ) {
@@ -848,6 +859,8 @@ const SettingsScreen = () => {
     if (
       trimmedNewName === "Tiết kiệm" ||
       trimmedNewName === "Rút tiết kiệm" ||
+      trimmedNewName === "Nuôi heo béo" ||
+      trimmedNewName === "Heo giảm cân" ||
       trimmedNewName === "Số dư đầu tiên" ||
       trimmedNewName === "Khác"
     ) {
@@ -932,8 +945,10 @@ const SettingsScreen = () => {
     return (
       <View style={styles.categoryListItem}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          {activeCategoryTab === 'income' ? (
-            <TouchableOpacity
+          <TouchableOpacity onPress={() => handleOpenRenameModal(item.id, item.name)}>
+            <Settings color="#cbd5e1" size={20} />
+          </TouchableOpacity>
+          <TouchableOpacity
               style={styles.categoryIconContainer}
               onPress={() => {
                 setPendingCategoryId(item.id);
@@ -943,18 +958,10 @@ const SettingsScreen = () => {
               }}
             >
               <Image source={iconSource} style={styles.categoryIcon} />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.categoryIconContainer}>
-              <Image source={iconSource} style={styles.categoryIcon} />
-            </View>
-          )}
+          </TouchableOpacity>
           <Text style={styles.categoryListName}>{item.name}</Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
-          <TouchableOpacity onPress={() => handleOpenRenameModal(item.id, item.name)}>
-            <Settings color="#cbd5e1" size={20} />
-          </TouchableOpacity>
           <TouchableOpacity onPress={() => handleDeleteCategory(item.id, item.name)}>
             <Trash2 color="#cccccc" size={20} />
           </TouchableOpacity>
@@ -971,7 +978,7 @@ const SettingsScreen = () => {
           return { id: 'income_' + c.toLowerCase().replace(/[^a-z0-9]/g, '_'), name: c };
         }
         return c;
-      });
+      }).filter((c: any) => c.deleteAt === null || c.deleteAt === undefined);
     } else {
       return categoryBudgets.map((b) => ({
         id: b.id || 'expense_' + b.name.toLowerCase().replace(/[^a-z0-9]/g, '_'),

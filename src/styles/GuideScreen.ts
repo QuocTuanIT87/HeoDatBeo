@@ -384,4 +384,22 @@ export const styles = StyleSheet.create({
         fontWeight: "600",
         color: "#64748b",
     },
+    goldNavButton: {
+        backgroundColor: "#d97706",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 12,
+        borderRadius: 8,
+        shadowColor: "#d97706",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    goldNavButtonText: {
+        color: "#ffffff",
+        fontWeight: "bold",
+        fontSize: 15,
+    },
 });

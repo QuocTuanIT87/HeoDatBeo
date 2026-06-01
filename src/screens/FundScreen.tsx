@@ -24,12 +24,14 @@ import {
   History,
   RotateCcw,
   HelpCircle,
+  Settings,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { UserProfile, Transaction, CategoryBudget, CustomFund } from "../types";
 import { BottomTabParamList } from "../navigation/types";
 import Keypad from "../components/Keypad";
 import { styles } from "../styles/FundScreen";
+import { Archive } from "lucide-react-native/icons";
 
 const FUND_ICONS: Record<string, any> = {
   default: require("../../assets/fund_icon/default.png"),
@@ -72,7 +74,7 @@ const FundScreen = () => {
           text: "Đóng",
           style: "cancel",
         },
-      ]
+      ],
     );
   };
 
@@ -104,6 +106,78 @@ const FundScreen = () => {
   const [deleteFundModalVisible, setDeleteFundModalVisible] = useState(false);
   const [fundToDelete, setFundToDelete] = useState<CustomFund | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
+  // Sửa tên quỹ
+  const [isRenameFundModalVisible, setRenameFundModalVisible] = useState(false);
+  const [renameFundTarget, setRenameFundTarget] = useState<CustomFund | null>(
+    null,
+  );
+  const [renameFundInputText, setRenameFundInputText] = useState("");
+
+  const openRenameFundModal = (fund: CustomFund) => {
+    setRenameFundTarget(fund);
+    setRenameFundInputText(fund.name);
+    setRenameFundModalVisible(true);
+  };
+
+  const handleRenameFundConfirm = async () => {
+    const trimmedNewName = renameFundInputText.trim();
+    if (trimmedNewName === "Quỹ" || trimmedNewName === "") {
+      Alert.alert("Lỗi", "Vui lòng nhập tên quỹ hợp lệ.");
+      return;
+    }
+    if (!profile || !renameFundTarget) return;
+
+    const activeExists = (profile.customFunds || []).some(
+      (f) =>
+        (f.deleteAt === null || f.deleteAt === undefined) &&
+        f.id !== renameFundTarget.id &&
+        f.name === trimmedNewName,
+    );
+    if (activeExists) {
+      Alert.alert("Lỗi", "Tên quỹ này đã tồn tại.");
+      return;
+    }
+
+    const updatedFunds = (profile.customFunds || []).map((f) => {
+      if (f.id === renameFundTarget.id) {
+        return { ...f, name: trimmedNewName };
+      }
+      return f;
+    });
+
+    const updatedProfile = {
+      ...profile,
+      customFunds: updatedFunds,
+    };
+
+    const oldName = renameFundTarget.name;
+    const txs = await storage.getTransactions();
+    const updatedTxs = txs.map((t) => {
+      if (t.categoryId === `fund_${renameFundTarget.id}`) {
+        let newNote = t.note;
+        if (t.note) {
+          newNote = t.note
+            .replace(`Nạp vào ${oldName}`, `Nạp vào ${trimmedNewName}`)
+            .replace(`Rút từ ${oldName}`, `Rút từ ${trimmedNewName}`)
+            .replace(`Thu hồi từ ${oldName}`, `Thu hồi từ ${trimmedNewName}`);
+        }
+        return { ...t, note: newNote };
+      }
+      return t;
+    });
+
+    const success = await storage.saveUserProfile(updatedProfile);
+    if (success) {
+      await storage.updateTransactionsBulk(updatedTxs);
+      setProfile(updatedProfile);
+      setRenameFundModalVisible(false);
+      setRenameFundTarget(null);
+      setRenameFundInputText("");
+      loadData();
+      Alert.alert("Thành công", "Đã đổi tên quỹ thành công.");
+    }
+  };
 
   useEffect(() => {
     if (isFocused) {
@@ -140,18 +214,13 @@ const FundScreen = () => {
       transactions.forEach((t) => {
         if (
           t.categoryId === "system_tiet_kiem" ||
-          t.categoryId === "system_rut_tiet_kiem" ||
-          t.category === "Tiết kiệm" ||
-          t.category === "Rút tiết kiệm"
+          t.categoryId === "system_rut_tiet_kiem"
         ) {
-          if (
-            t.type === "expense" &&
-            (t.categoryId === "system_tiet_kiem" || t.category === "Tiết kiệm")
-          ) {
+          if (t.type === "expense" && t.categoryId === "system_tiet_kiem") {
             calcSaving += t.amount;
           } else if (
             t.type === "income" &&
-            (t.categoryId === "system_rut_tiet_kiem" || t.category === "Rút tiết kiệm")
+            t.categoryId === "system_rut_tiet_kiem"
           ) {
             calcSaving -= t.amount;
           }
@@ -166,7 +235,9 @@ const FundScreen = () => {
       // Calculate total funds (excluding unallocated)
       let customFundsTotal = 0;
       if (p.customFunds) {
-        customFundsTotal = p.customFunds.reduce((sum, f) => sum + f.balance, 0);
+        customFundsTotal = p.customFunds
+          .filter((f) => f.deleteAt === null || f.deleteAt === undefined)
+          .reduce((sum, f) => sum + f.balance, 0);
       }
       setTotalBalance(allocated + calcSaving + customFundsTotal);
     }
@@ -212,15 +283,68 @@ const FundScreen = () => {
   };
 
   const handleAddFund = async () => {
-    if (newFundName.trim() === "Quỹ" || newFundName.trim() === "") {
+    const trimmed = newFundName.trim();
+    if (trimmed === "Quỹ" || trimmed === "") {
       Alert.alert("Lỗi", "Vui lòng nhập tên quỹ hợp lệ.");
       return;
     }
 
     if (!profile) return;
 
+    // Check duplicate in active custom funds
+    const activeExists = (profile.customFunds || []).some(
+      (f) =>
+        (f.deleteAt === null || f.deleteAt === undefined) && f.name === trimmed,
+    );
+    if (activeExists) {
+      Alert.alert("Lỗi", "Quỹ này đã tồn tại và đang hoạt động.");
+      return;
+    }
+
+    // Check duplicate in soft-deleted custom funds
+    const softDeletedFund = (profile.customFunds || []).find(
+      (f) =>
+        f.deleteAt !== null && f.deleteAt !== undefined && f.name === trimmed,
+    );
+    if (softDeletedFund) {
+      Alert.alert(
+        "Khôi phục Quỹ",
+        `Phát hiện Quỹ "${softDeletedFund.name}" đã bị xoá gần đây. Bạn có muốn khôi phục lại quỹ này?`,
+        [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "Khôi phục",
+            onPress: async () => {
+              const updatedFunds = profile.customFunds!.map((f) => {
+                if (f.id === softDeletedFund.id) {
+                  return { ...f, deleteAt: null };
+                }
+                return f;
+              });
+              const updatedProfile = {
+                ...profile,
+                customFunds: updatedFunds,
+              };
+              const success = await storage.saveUserProfile(updatedProfile);
+              if (success) {
+                setProfile(updatedProfile);
+                setNewFundName("Quỹ ");
+                setAddFundModalVisible(false);
+                loadData();
+                Alert.alert(
+                  "Thành công",
+                  `Đã khôi phục Quỹ "${softDeletedFund.name}".`,
+                );
+              }
+            },
+          },
+        ],
+      );
+      return;
+    }
+
     // Đóng modal tên quỹ và mở modal chọn icon
-    setPendingFund({ name: newFundName.trim() });
+    setPendingFund({ name: trimmed });
     setAddFundModalVisible(false);
     setIconModalVisible(true);
   };
@@ -307,16 +431,14 @@ const FundScreen = () => {
 
   const handleConfirmDeleteFund = async () => {
     if (!fundToDelete || !profile) return;
-    const expected = `DELETE ${fundToDelete.name}`;
-    if (deleteConfirmText.trim() !== expected) {
-      Alert.alert("Xác nhận không đúng", `Vui lòng nhập đúng: ${expected}`);
-      return;
-    }
 
     const fundBalance = fundToDelete.balance;
-    const updatedFunds = (profile.customFunds || []).filter(
-      (f) => f.id !== fundToDelete.id,
-    );
+    const updatedFunds = (profile.customFunds || []).map((f) => {
+      if (f.id === fundToDelete.id) {
+        return { ...f, deleteAt: Date.now(), balance: 0 };
+      }
+      return f;
+    });
     const updatedProfile = {
       ...profile,
       customFunds: updatedFunds,
@@ -329,25 +451,11 @@ const FundScreen = () => {
         type: "income",
         amount: fundBalance,
         categoryId: "system_xoa_quy",
-        name: `Xóa quỹ ${fundToDelete.name}`,
         note: `Thu hồi từ ${fundToDelete.name}`,
         timestamp: Date.now(),
       };
       await storage.saveTransaction(tx);
     }
-
-    const txs = await storage.getTransactions();
-    const updatedTxs = txs.map((t) => {
-      if (t.categoryId === `fund_${fundToDelete.id}`) {
-        return {
-          ...t,
-          categoryId: t.type === "expense" ? "expense_khac" : "income_khac",
-          categorySnapshot: fundToDelete.name,
-        };
-      }
-      return t;
-    });
-    await storage.updateTransactionsBulk(updatedTxs);
 
     await storage.saveUserProfile(updatedProfile);
     setDeleteFundModalVisible(false);
@@ -413,7 +521,7 @@ const FundScreen = () => {
       type: txType === "deposit" ? "expense" : "income",
       amount: amount,
       categoryId: `fund_${selectedFund.id}`,
-      name:
+      note:
         txType === "deposit"
           ? `Nạp vào ${selectedFund.name}`
           : `Rút từ ${selectedFund.name}`,
@@ -444,8 +552,7 @@ const FundScreen = () => {
       <View style={styles.header}>
         {/* Top bar with User Profile and history action */}
         <View style={styles.headerTopBar}>
-          <View style={styles.profileSection}>
-          </View>
+          <View style={styles.profileSection}></View>
 
           <View style={styles.headerActions}>
             {/* <TouchableOpacity
@@ -462,19 +569,24 @@ const FundScreen = () => {
         <View style={styles.bankCard}>
           <View style={styles.cardHeader}>
             <View style={styles.cardBrandWrapper}>
-              
               <Wallet color="#f59e0b" size={18} />
               <Text style={styles.cardBrandText}>HEO ĐẤT BÉO DIGITAL</Text>
             </View>
             <View style={styles.row}>
-               <TouchableOpacity
-              onPress={() => navigation.navigate("FundHistory" as any)}
-              style={styles.actionBtn}
-              activeOpacity={0.85}
-            >
-              <History color="#ffffff" size={15} />
-            </TouchableOpacity>
-            <View style={styles.cardChip} />
+              <TouchableOpacity
+                onPress={() => (navigation as any).navigate("DeletedFunds")}
+                style={styles.actionBtn}
+              >
+                <Archive color="#ffffff" size={15} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("FundHistory" as any)}
+                style={styles.actionBtn}
+                activeOpacity={0.85}
+              >
+                <History color="#ffffff" size={15} />
+              </TouchableOpacity>
+              <View style={styles.cardChip} />
             </View>
           </View>
 
@@ -492,19 +604,19 @@ const FundScreen = () => {
             </View>
             <View style={styles.row}>
               <Text style={styles.cardBalanceAmount}>
-              {showAmount ? `${formatCurrency(totalBalance)} đ` : "•••••• đ"}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setShowAmount(!showAmount)}
-              style={styles.cardEyeBtn}
-              activeOpacity={0.85}
-            >
-              {showAmount ? (
-                <Eye color="#ffffff" size={15} />
-              ) : (
-                <EyeOff color="#ffffff" size={15} />
-              )}
-            </TouchableOpacity>
+                {showAmount ? `${formatCurrency(totalBalance)} đ` : "•••••• đ"}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowAmount(!showAmount)}
+                style={styles.cardEyeBtn}
+                activeOpacity={0.85}
+              >
+                {showAmount ? (
+                  <Eye color="#ffffff" size={15} />
+                ) : (
+                  <EyeOff color="#ffffff" size={15} />
+                )}
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -592,44 +704,61 @@ const FundScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {profile?.customFunds?.map((fund) => (
-          <TouchableOpacity
-            key={fund.id}
-            style={styles.fundCard}
-            onPress={() => openAllocModal(fund)}
-          >
+        {profile?.customFunds
+          ?.filter((f) => f.deleteAt === null || f.deleteAt === undefined)
+          .map((fund) => (
             <TouchableOpacity
-              style={[styles.fundIcon, { backgroundColor: "#e0f2fe" }]}
-              onPress={() => openEditIconModal(fund.id, fund.name)}
+              key={fund.id}
+              style={styles.fundCard}
+              onPress={() => openAllocModal(fund)}
             >
-              <Image
-                source={
-                  FUND_ICONS[fund.icon || "default"] || FUND_ICONS["default"]
-                }
-                style={{ width: 28, height: 28, resizeMode: "contain" }}
-              />
+              <TouchableOpacity
+                style={{
+                  position: "absolute",
+                  top: 6,
+                  left: 6,
+                  zIndex: 10,
+                  padding: 4,
+                }}
+                onPress={() => openRenameFundModal(fund)}
+              >
+                <Settings color="#cbd5e1" size={14} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.fundIcon, { backgroundColor: "#e0f2fe" }]}
+                onPress={() => openEditIconModal(fund.id, fund.name)}
+              >
+                <Image
+                  source={
+                    FUND_ICONS[fund.icon || "default"] || FUND_ICONS["default"]
+                  }
+                  style={{ width: 28, height: 28, resizeMode: "contain" }}
+                />
+              </TouchableOpacity>
+              <View style={styles.fundInfo}>
+                <Text style={styles.fundName}>{fund.name}</Text>
+                <Text style={styles.fundDesc}>Nhấn để nạp/rút</Text>
+              </View>
+              <View style={styles.fundBalanceContainer}>
+                <Text style={styles.fundBalance}>
+                  {showAmount ? formatCurrency(fund.balance) : "***"}
+                </Text>
+                <Text style={styles.currencyLabel}>đ</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.deleteFundBtn}
+                onPress={() => openDeleteFundModal(fund)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Trash2 color="#dddddd" size={16} />
+              </TouchableOpacity>
             </TouchableOpacity>
-            <View style={styles.fundInfo}>
-              <Text style={styles.fundName}>{fund.name}</Text>
-              <Text style={styles.fundDesc}>Nhấn để nạp/rút</Text>
-            </View>
-            <View style={styles.fundBalanceContainer}>
-              <Text style={styles.fundBalance}>
-                {showAmount ? formatCurrency(fund.balance) : "***"}
-              </Text>
-              <Text style={styles.currencyLabel}>đ</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.deleteFundBtn}
-              onPress={() => openDeleteFundModal(fund)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Trash2 color="#ef4444" size={18} />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        ))}
+          ))}
 
-        {(!profile?.customFunds || profile.customFunds.length === 0) && (
+        {(!profile?.customFunds ||
+          profile.customFunds.filter(
+            (f) => f.deleteAt === null || f.deleteAt === undefined,
+          ).length === 0) && (
           <View style={styles.emptyState}>
             <Wallet color="#cbd5e1" size={48} />
             <Text style={styles.emptyStateText}>
@@ -668,6 +797,56 @@ const FundScreen = () => {
             />
             <TouchableOpacity style={styles.confirmBtn} onPress={handleAddFund}>
               <Text style={styles.confirmBtnText}>Tạo Quỹ</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Đổi Tên Quỹ */}
+      <Modal
+        visible={isRenameFundModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRenameFundModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalTitle}>Đổi Tên Quỹ</Text>
+              <TouchableOpacity
+                onPress={() => setRenameFundModalVisible(false)}
+              >
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Tên quỹ (vd: Quỹ Đầu Tư...)"
+              placeholderTextColor="#94a3b8"
+              value={renameFundInputText}
+              onChangeText={(text) => {
+                if (!text.startsWith("Quỹ ")) {
+                  setRenameFundInputText("Quỹ ");
+                  return;
+                }
+                const words = text.split(" ");
+                const capitalized = words.map((word) => {
+                  if (word.length > 0) {
+                    return word.charAt(0).toUpperCase() + word.slice(1);
+                  }
+                  return word;
+                });
+                setRenameFundInputText(capitalized.join(" "));
+              }}
+              autoCapitalize="words"
+              autoFocus
+              onSubmitEditing={handleRenameFundConfirm}
+            />
+            <TouchableOpacity
+              style={styles.confirmBtn}
+              onPress={handleRenameFundConfirm}
+            >
+              <Text style={styles.confirmBtnText}>Cập Nhật</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -772,6 +951,15 @@ const FundScreen = () => {
                 <Text style={styles.amountInputModal}>
                   {amount > 0 ? formatCurrency(amount) + " đ" : "0 đ"}
                 </Text>
+                {amount > 0 && (
+                  <TouchableOpacity
+                    style={styles.actionCancelBtn}
+                    onPress={() => setAmount(0)}
+                    activeOpacity={0.8}
+                  >
+                    <RotateCcw color="gray" size={24} />
+                  </TouchableOpacity>
+                )}
                 <Keypad
                   amount={amount}
                   onAddAmount={(val) => setAmount(amount + val)}
@@ -794,12 +982,12 @@ const FundScreen = () => {
                 <Text style={styles.confirmBtnText}>Xác Nhận</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 style={styles.actionCancelBtn}
                 onPress={() => setAmount(0)}
               >
                 <RotateCcw color="#ef4444" size={22} />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           </View>
         </View>
@@ -816,7 +1004,7 @@ const FundScreen = () => {
           <View style={styles.modalContent}>
             <View style={styles.modalHeaderRow}>
               <Text style={[styles.modalTitle, { color: "#ef4444" }]}>
-                🗑 Xóa Quỹ
+                🗑 Xác nhận xóa
               </Text>
               <TouchableOpacity
                 onPress={() => setDeleteFundModalVisible(false)}
@@ -827,9 +1015,9 @@ const FundScreen = () => {
 
             <View style={styles.deleteWarningBox}>
               <Text style={styles.deleteWarningText}>
-                ⚠️ Quỹ{" "}
+                ⚠️{" "}
                 <Text style={{ fontWeight: "bold" }}>{fundToDelete?.name}</Text>{" "}
-                sẽ bị xóa vĩnh viễn.
+                sẽ bị xóa.
               </Text>
               {(fundToDelete?.balance ?? 0) > 0 && (
                 <Text style={styles.deleteRefundText}>
@@ -842,22 +1030,6 @@ const FundScreen = () => {
               )}
             </View>
 
-            <Text style={styles.deleteHintText}>
-              Nhập{" "}
-              <Text style={styles.deleteHintCode}>
-                DELETE {fundToDelete?.name}
-              </Text>{" "}
-              để xác nhận:
-            </Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder={`DELETE ${fundToDelete?.name}`}
-              placeholderTextColor="#94a3b8"
-              value={deleteConfirmText}
-              onChangeText={setDeleteConfirmText}
-              autoCapitalize="none"
-            />
-
             <View style={styles.deleteActions}>
               <TouchableOpacity
                 style={styles.deleteCancelBtn}
@@ -866,14 +1038,10 @@ const FundScreen = () => {
                 <Text style={styles.deleteCancelText}>Hủy</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[
-                  styles.deleteConfirmBtn,
-                  deleteConfirmText.trim() !== `DELETE ${fundToDelete?.name}` &&
-                    styles.bgDisabled,
-                ]}
+                style={styles.deleteConfirmBtn}
                 onPress={handleConfirmDeleteFund}
               >
-                <Text style={styles.deleteConfirmText}>Xóa Quỹ</Text>
+                <Text style={styles.deleteConfirmText}>Xác nhận</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -936,7 +1104,5 @@ const FundScreen = () => {
     </View>
   );
 };
-
-
 
 export default FundScreen;

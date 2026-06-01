@@ -40,7 +40,7 @@ const SavingHistoryScreen = () => {
       .filter(
         (t) =>
           t.timestamp >= p.initialBalanceTimestamp &&
-          (t.categoryId === "system_tiet_kiem" || t.categoryId === "system_rut_tiet_kiem" || t.category === "Tiết kiệm" || t.category === "Rút tiết kiệm"),
+          (t.categoryId === "system_tiet_kiem" || t.categoryId === "system_rut_tiet_kiem"),
       )
       .sort((a, b) => b.timestamp - a.timestamp);
 
@@ -94,14 +94,14 @@ const SavingHistoryScreen = () => {
 
             const p = await storage.getUserProfile();
             if (p) {
-              if (tx.type === "expense" && (tx.categoryId === "system_tiet_kiem" || tx.category === "Tiết kiệm")) {
+              if (tx.type === "expense" && tx.categoryId === "system_tiet_kiem") {
                 await storage.saveUserProfile({
                   ...p,
                   initialBalance: p.initialBalance + tx.amount,
                 });
               } else if (
                 tx.type === "income" &&
-                (tx.categoryId === "system_rut_tiet_kiem" || tx.category === "Rút tiết kiệm")
+                tx.categoryId === "system_rut_tiet_kiem"
               ) {
                 await storage.saveUserProfile({
                   ...p,
@@ -164,7 +164,7 @@ const SavingHistoryScreen = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
-    const isDeposit = item.categoryId === "system_tiet_kiem" || item.category === "Tiết kiệm";
+    const isDeposit = item.categoryId === "system_tiet_kiem";
     const canDelete = Date.now() - item.timestamp <= 3 * 24 * 60 * 60 * 1000;
 
     return (
@@ -172,9 +172,9 @@ const SavingHistoryScreen = () => {
         <View style={styles.cardRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.cardCategory}>{resolveCategoryName(item, null, [])}</Text>
-            {item.name ? (
-              <Text style={styles.cardName}>{item.name}</Text>
-            ) : null}
+            {/* {item.note ? (
+              <Text style={styles.cardName}>{item.note}</Text>
+            ) : null} */}
           </View>
           <Text
             style={[

@@ -15,15 +15,15 @@ export function isCategoryIdMatch(id1?: string, id2?: string): boolean {
 }
 
 export function resolveCategoryName(
-  tx: { categoryId?: string; category?: string; categorySnapshot?: string; type: 'income' | 'expense' },
+  tx: { categoryId?: string; type: 'income' | 'expense' },
   profile: UserProfile | null,
   categoryBudgets: CategoryBudget[]
 ): string {
-  const { categoryId, category, categorySnapshot, type } = tx;
+  const { categoryId, type } = tx;
 
   // 1. System categories
-  if (categoryId === "system_tiet_kiem") return "Tiết kiệm";
-  if (categoryId === "system_rut_tiet_kiem") return "Rút tiết kiệm";
+  if (categoryId === "system_tiet_kiem") return "Nuôi heo béo";
+  if (categoryId === "system_rut_tiet_kiem") return "Heo giảm cân";
   if (categoryId === "system_xoa_quy") return "Xóa quỹ";
 
   // 2. Custom funds
@@ -31,8 +31,7 @@ export function resolveCategoryName(
     const fundId = categoryId.substring(5);
     const fund = profile?.customFunds?.find(f => f.id && isCategoryIdMatch(f.id, fundId));
     if (fund) return fund.name;
-    // Legacy fallback or guess from fund ID
-    return categorySnapshot || category || "Quỹ";
+    return "Quỹ";
   }
 
   // 3. Normal categories
@@ -41,16 +40,12 @@ export function resolveCategoryName(
       const budget = categoryBudgets.find(b => b.id && isCategoryIdMatch(b.id, categoryId));
       if (budget) return budget.name;
     }
-    // Fallback if deleted or not found
-    if (categoryId === "expense_khac") return categorySnapshot || "Khác";
-    return categorySnapshot || category || "Khác";
+    return "Khác";
   } else {
     if (categoryId) {
       const incomeCat = profile?.incomeCategories?.find(c => c.id && isCategoryIdMatch(c.id, categoryId));
       if (incomeCat) return incomeCat.name;
     }
-    // Fallback if deleted or not found
-    if (categoryId === "income_khac") return categorySnapshot || "Khác";
-    return categorySnapshot || category || "Khác";
+    return "Khác";
   }
 }
