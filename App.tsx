@@ -5,6 +5,7 @@ import RootNavigator from './src/navigation/RootNavigator';
 import './src/utils/notifications';
 import * as Notifications from 'expo-notifications';
 import { CustomAlert } from './src/components/CustomAlert';
+import { storage } from './src/store/storage';
 
 const navigationRef = createNavigationContainerRef<any>();
 
@@ -12,6 +13,8 @@ export default function App() {
   const [isReady, setIsReady] = useState(false);
   const lastNotificationResponse = Notifications.useLastNotificationResponse();
   const handledNotifications = useRef<string[]>([]);
+
+
 
   useEffect(() => {
     if (

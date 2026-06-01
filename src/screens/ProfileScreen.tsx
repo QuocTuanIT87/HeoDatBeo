@@ -150,7 +150,7 @@ const ProfileScreen = () => {
     // Auto-fetch join date from "Số dư đầu tiên" transaction
     try {
       const txs = await storage.getTransactions();
-      const firstTx = txs.find((t) => t.name === "Số dư đầu tiên");
+      const firstTx = txs.find((t) => t.note === "Số dư đầu tiên");
       if (firstTx) {
         const joinMs = firstTx.timestamp;
         const joinD = new Date(joinMs);
@@ -846,6 +846,7 @@ const ProfileScreen = () => {
                       mode="date"
                       display={Platform.OS === "ios" ? "spinner" : "default"}
                       maximumDate={new Date()}
+                      accentColor="#5596e0ff"
                       onChange={(
                         event: DateTimePickerEvent,
                         selected?: Date,

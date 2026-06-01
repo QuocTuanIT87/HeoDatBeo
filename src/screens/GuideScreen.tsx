@@ -26,6 +26,7 @@ import {
   Trash2,
   Lock,
   ArrowRight,
+  Coins,
 } from "lucide-react-native";
 import { styles } from "../styles/GuideScreen";
 
@@ -655,6 +656,132 @@ const GuideScreen = () => {
                 </Text>
               </View>
             </View>
+          </View>
+        </View>
+
+        {/* SECTION 13: QUẢN LÝ VÀNG */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>13. Tích lũy và quản lý vàng</Text>
+          <Text style={styles.guideText}>
+            Đây là chức năng giúp bạn ghi chép, theo dõi các giao dịch mua, bán và chuyển đổi vàng cá nhân (phân, chỉ, cây). 
+            {"\n\n"}
+            <Text style={{ fontWeight: "bold", color: "#b45309" }}>Lưu ý:</Text> Trang này chỉ đóng vai trò sổ tay ghi chép lịch sử tích lũy vàng. Số dư các quỹ, tiền tiết kiệm và tiền chưa phân bổ của bạn sẽ <Text style={{ fontWeight: "bold" }}>hoàn toàn không bị ảnh hưởng</Text>.
+          </Text>
+
+          {/* Button to Gold History */}
+          <TouchableOpacity
+            style={styles.goldNavButton}
+            onPress={() => (navigation as any).navigate("GoldHistory")}
+          >
+            <Coins color="#ffffff" size={20} style={{ marginRight: 8 }} />
+            <Text style={styles.goldNavButtonText}>Đi tới trang Quản lý Vàng</Text>
+            <ArrowRight color="#ffffff" size={16} style={{ marginLeft: 8 }} />
+          </TouchableOpacity>
+
+          <View style={[styles.mockupContainer, { marginTop: 16 }]}>
+            {/* 1. Tổng quát & Lợi nhuận */}
+            <Text style={styles.mockSectionLabel}>📊 Báo cáo lợi nhuận & vốn đầu tư</Text>
+            <View style={[styles.mockCard, { borderColor: "#fcd34d", backgroundColor: "#fffdf2", marginBottom: 12 }]}>
+              <View style={{ marginBottom: 10 }}>
+                <Text style={{ fontSize: 11, fontWeight: "bold", color: "#b45309" }}>TỔNG VÀNG TÍCH TRỮ</Text>
+                <Text style={{ fontSize: 22, fontWeight: "900", color: "#78350f", marginTop: 2 }}>1.5 chỉ</Text>
+              </View>
+              <View style={{ marginBottom: 10 }}>
+                <Text style={{ fontSize: 11, fontWeight: "bold", color: "#b45309" }}>LỢI NHUẬN ĐÃ THU (ĐÃ BÁN)</Text>
+                <Text style={{ fontSize: 20, fontWeight: "bold", color: "#10b981", marginTop: 2 }}>+520,000 đ</Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#fde68a", paddingTop: 8 }}>
+                <View>
+                  <Text style={{ fontSize: 10, color: "#92400e" }}>Tổng Vốn Đầu Tư</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "bold", color: "#78350f" }}>11,200,000 đ</Text>
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={{ fontSize: 10, color: "#92400e" }}>Tổng số miếng</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "bold", color: "#78350f" }}>2 miếng</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* 2. Mua Vàng */}
+            <Text style={styles.mockSectionLabel}>🪙 Giao dịch mua vàng (Tích trữ)</Text>
+            <View style={[styles.mockCard, { borderColor: "#e2b632", backgroundColor: "#fff8d6", marginBottom: 12 }]}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <Text style={{ fontSize: 9, fontWeight: "900", letterSpacing: 0.5, color: "#5c3e00" }}>
+                  HEO ĐẤT BÉO JEWELRY
+                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={{ fontSize: 9, fontWeight: "700", color: "#78350f" }}>Nhẫn tròn 9999</Text>
+                  <View style={{ backgroundColor: "rgba(255, 255, 255, 0.5)", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ fontSize: 9, color: "#5c3e00", fontWeight: "bold" }}>Tích trữ</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={{ borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.06)", paddingBottom: 6, marginBottom: 6 }}>
+                <Text style={{ fontSize: 16, fontWeight: "900", color: "#5c3e00" }}>1.0 chỉ</Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <View>
+                  <Text style={{ fontSize: 9, color: "#92400e" }}>Giá mua vào</Text>
+                  <Text style={{ color: "#5c3e00", fontSize: 12, fontWeight: "700" }}>7,500,000 đ</Text>
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={{ fontSize: 9, color: "#92400e" }}>Phí gia công</Text>
+                  <Text style={{ color: "#5c3e00", fontSize: 12, fontWeight: "700" }}>150,000 đ</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* 3. Bán Vàng */}
+            <Text style={styles.mockSectionLabel}>📈 Giao dịch bán vàng (Chốt lời)</Text>
+            <View style={[styles.mockCard, { borderColor: "#bbf7d0", backgroundColor: "#f0fdf4", marginBottom: 12, borderWidth: 1 }]}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <Text style={{ fontSize: 11, color: "#64748b" }}>Ngày bán: 31/05/2026</Text>
+                <View style={{ backgroundColor: "#dcfce7", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "bold", color: "#16a34a" }}>Lời: +320,000 đ</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <View>
+                  <Text style={{ fontSize: 10, color: "#64748b" }}>Giá bán ra</Text>
+                  <Text style={{ color: "#1e293b", fontSize: 13, fontWeight: "700" }}>8,000,000 đ</Text>
+                </View>
+                <View style={{ alignItems: "center" }}>
+                  <Text style={{ fontSize: 10, color: "#64748b" }}>Giá mua vào</Text>
+                  <Text style={{ color: "#64748b", fontSize: 13, fontWeight: "700" }}>7,650,000 đ</Text>
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={{ fontSize: 10, color: "#64748b" }}>Chênh lệch</Text>
+                  <Text style={{ color: "#10b981", fontSize: 13, fontWeight: "700" }}>+350,000 đ</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* 4. Đổi Vàng */}
+            <Text style={styles.mockSectionLabel}>🔄 Chuyển đổi vàng</Text>
+            <View style={[styles.mockCard, { borderColor: "#bfdbfe", backgroundColor: "#eff6ff", borderWidth: 1 }]}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, paddingVertical: 4 }}>
+                <View style={{ alignItems: "center" }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "#fffdf2", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#fcd34d" }}>
+                    <Text style={{ fontSize: 11, fontWeight: "bold", color: "#b45309" }}>10 ph</Text>
+                  </View>
+                  <Text style={{ fontSize: 10, color: "#64748b", marginTop: 4 }}>Nhẫn trơn</Text>
+                </View>
+
+                <ArrowRight color="#3b82f6" size={16} />
+
+                <View style={{ alignItems: "center" }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "#fff8d6", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#e2b632" }}>
+                    <Text style={{ fontSize: 11, fontWeight: "bold", color: "#5c3e00" }}>1.0 chỉ</Text>
+                  </View>
+                  <Text style={{ fontSize: 10, color: "#64748b", marginTop: 4 }}>Kiềng vàng</Text>
+                </View>
+              </View>
+              <View style={{ borderTopWidth: 1, borderTopColor: "#dbeafe", paddingTop: 8, marginTop: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={{ fontSize: 11, color: "#1e40af" }}>Phí chuyển đổi phát sinh:</Text>
+                <Text style={{ fontSize: 12, fontWeight: "bold", color: "#2563eb" }}>50,000 đ</Text>
+              </View>
+            </View>
+
           </View>
         </View>
         <View style={styles.footerSpace} />

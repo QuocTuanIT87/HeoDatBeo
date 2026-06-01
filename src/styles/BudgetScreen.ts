@@ -103,6 +103,7 @@ export const styles = StyleSheet.create({
         borderRadius: 4,
         backgroundColor: "#f59e0b",
         opacity: 0.8,
+        marginLeft: 10
     },
     cardBalanceLabel: {
         color: "#94a3b8",
@@ -233,7 +234,6 @@ export const styles = StyleSheet.create({
     catCard: {
         backgroundColor: "#ffffff",
         borderRadius: 20,
-        padding: 18,
         marginBottom: 14,
         flexDirection: "row",
         alignItems: "center",
@@ -337,14 +337,8 @@ export const styles = StyleSheet.create({
         justifyContent: "center",
     },
     actionCancelBtn: {
-        width: 54,
-        height: 54,
-        borderRadius: 16,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#fee2e2",
-        borderWidth: 1,
-        borderColor: "#fecaca",
+        alignSelf: 'flex-end',
+
     },
     confirmDisabled: {
         backgroundColor: "#cbd5e1",
@@ -563,4 +557,9 @@ export const styles = StyleSheet.create({
         justifyContent: "space-between",
         marginBottom: 10,
     },
+    row: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    }
 });

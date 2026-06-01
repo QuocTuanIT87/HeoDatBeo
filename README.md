@@ -53,6 +53,21 @@
 - ⏰ **Nhắc nhở nuôi Heo**: Tự động nhắc nhở người dùng nuôi heo đất hàng ngày để duy trì chuỗi kỷ luật (Streak).
 - 📊 **Báo cáo định kỳ**: Tự động gửi thông báo báo cáo tài chính hàng ngày, hàng tháng và hàng năm. Khi bấm vào thông báo báo cáo, ứng dụng sẽ chuyển hướng ngay đến trang Thống kê và hiển thị chi tiết lịch sử báo cáo.
 
+### 8. Xuất Báo Cáo PDF Chuyên Nghiệp 📄
+
+- 📑 **Báo cáo tài chính năm**: Xuất toàn bộ dữ liệu thu chi, biến động số dư hũ, số dư tiết kiệm của cả năm ra file PDF định dạng đẹp mắt.
+- 📤 **Dễ dàng chia sẻ**: Tải xuống trực tiếp thiết bị hoặc chia sẻ ngay qua Zalo, Messenger, Email... nhờ tích hợp thư viện chia sẻ gốc của hệ điều hành.
+
+### 9. Quản Lý Tích Lũy Vàng 🪙
+
+- 🏷️ **Sổ tay vàng**: Theo dõi lịch sử mua, bán, đổi các miếng vàng cá nhân dưới các đơn vị đo lường phổ biến như phân, chỉ, cây.
+- 💰 **Báo cáo lợi nhuận**: Theo dõi chi tiết chênh lệch giá, tổng vốn đầu tư, số lượng miếng vàng thực tế và tính toán tổng lợi nhuận đã chốt lời. Các giao dịch vàng hoàn toàn không ảnh hưởng đến số dư tài sản chính.
+
+### 10. Widget Màn Hình Chính (Android Widget) 📱
+
+- ⚡ **Theo dõi nhanh**: Widget hiển thị trạng thái đã ghi nhận chi tiêu ngày hôm nay và chuỗi ngày streak ngay bên ngoài màn hình chính điện thoại Android.
+- 🔔 **Nhắc nhở trực quan**: Đóng vai trò nhắc nhở nhẹ nhàng giúp duy trì thói quen kỷ luật tài chính hàng ngày.
+
 ---
 
 ## Công Nghệ Sử Dụng 🛠️
@@ -79,9 +94,10 @@
 ## Định Hướng Phát Triển 🎯
 
 - [ ] **Giao diện Dark Mode**: Hỗ trợ nền tối giúp bảo vệ mắt khi sử dụng ban đêm.
-- [ ] **Xuất báo cáo PDF/Excel**: Xuất lịch sử chi tiêu năm/tháng ra file PDF hoặc Excel đẹp mắt, chuyên nghiệp.
 - [ ] **Đồng bộ hóa đám mây đa thiết bị**: Đồng bộ dữ liệu theo thời gian thực giữa nhiều thiết bị dùng chung một tài khoản Google.
-- [ ] **Widget ngoài màn hình chính (Home Screen Widget)**: Widget hiển thị nhanh số dư hiện tại, trạng thái Heo Đất và chuỗi ngày streak ngay trên màn hình chính điện thoại.
+- [ ] **Nhận diện giao dịch tự động**: Đọc thông báo biến động số dư ngân hàng hoặc tin nhắn SMS để tự động nhập nhanh giao dịch.
+- [ ] **Xuất báo cáo định dạng Excel**: Hỗ trợ xuất dữ liệu ra file Excel (.xlsx) phục vụ nhu cầu tính toán và phân tích chuyên sâu.
+- [ ] **Hũ tài chính chung (Quỹ nhóm)**: Cho phép các thành viên gia đình hoặc nhóm bạn bè cùng liên kết tài khoản để quản lý chi tiêu chung.
 
 ---
 

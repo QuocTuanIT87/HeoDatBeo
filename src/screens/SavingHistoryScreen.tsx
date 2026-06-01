@@ -10,6 +10,7 @@ import { Alert } from "../components/CustomAlert";
 import { storage } from "../store/storage";
 import { Transaction, SavingHistoryItem } from "../types";
 import { formatCurrency, formatPercent } from "../utils/format";
+import { resolveCategoryName } from "../utils/category";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { ArrowLeft, Trash2, Trophy, Clock } from "lucide-react-native";
 import { styles } from "../styles/SavingHistoryScreen";
@@ -39,7 +40,7 @@ const SavingHistoryScreen = () => {
       .filter(
         (t) =>
           t.timestamp >= p.initialBalanceTimestamp &&
-          (t.category === "Tiết kiệm" || t.category === "Rút tiết kiệm"),
+          (t.categoryId === "system_tiet_kiem" || t.categoryId === "system_rut_tiet_kiem"),
       )
       .sort((a, b) => b.timestamp - a.timestamp);
 
@@ -93,14 +94,14 @@ const SavingHistoryScreen = () => {
 
             const p = await storage.getUserProfile();
             if (p) {
-              if (tx.type === "expense" && tx.category === "Tiết kiệm") {
+              if (tx.type === "expense" && tx.categoryId === "system_tiet_kiem") {
                 await storage.saveUserProfile({
                   ...p,
                   initialBalance: p.initialBalance + tx.amount,
                 });
               } else if (
                 tx.type === "income" &&
-                tx.category === "Rút tiết kiệm"
+                tx.categoryId === "system_rut_tiet_kiem"
               ) {
                 await storage.saveUserProfile({
                   ...p,
@@ -163,17 +164,17 @@ const SavingHistoryScreen = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
-    const isDeposit = item.category === "Tiết kiệm";
+    const isDeposit = item.categoryId === "system_tiet_kiem";
     const canDelete = Date.now() - item.timestamp <= 3 * 24 * 60 * 60 * 1000;
 
     return (
       <View style={styles.card}>
         <View style={styles.cardRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.cardCategory}>{item.category}</Text>
-            {item.name ? (
-              <Text style={styles.cardName}>{item.name}</Text>
-            ) : null}
+            <Text style={styles.cardCategory}>{resolveCategoryName(item, null, [])}</Text>
+            {/* {item.note ? (
+              <Text style={styles.cardName}>{item.note}</Text>
+            ) : null} */}
           </View>
           <Text
             style={[

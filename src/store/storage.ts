@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Transaction, UserProfile, CategoryBudget, TransactionDateIndex, NotificationHistoryItem, GoldItem, GoldSaleRecord } from '../types';
 import { Paths } from 'expo-file-system';
 import { readAsStringAsync, writeAsStringAsync } from 'expo-file-system/legacy';
+import { isCategoryIdMatch } from '../utils/category';
 
 const TRANSACTIONS_KEY = '@transactions';
 const USER_PROFILE_KEY = '@userProfile';
@@ -75,7 +76,26 @@ export const storage = {
   async getUserProfile(): Promise<UserProfile | null> {
     try {
       const data = await getStorageItem(USER_PROFILE_KEY);
-      return data ? JSON.parse(data) : null;
+      if (!data) return null;
+      const profile: UserProfile = JSON.parse(data);
+      if (profile.incomeCategories) {
+        let changed = false;
+        profile.incomeCategories = profile.incomeCategories.map((c: any) => {
+          if (typeof c === 'string') {
+            const id = 'income_' + c.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Math.random().toString(36).substr(2, 5);
+            changed = true;
+            return { id, name: c };
+          } else if (c && !c.id) {
+            c.id = 'income_' + c.name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Math.random().toString(36).substr(2, 5);
+            changed = true;
+          }
+          return c;
+        });
+        if (changed) {
+          await this.saveUserProfile(profile);
+        }
+      }
+      return profile;
     } catch (e) {
       console.error('Error fetching user profile', e);
       return null;
@@ -182,7 +202,19 @@ export const storage = {
   async getCategoryBudgets(): Promise<CategoryBudget[]> {
     try {
       const data = await getStorageItem(CATEGORY_BUDGETS_KEY);
-      return data ? JSON.parse(data) : [];
+      const parsed: CategoryBudget[] = data ? JSON.parse(data) : [];
+      let changed = false;
+      const updated = parsed.map(b => {
+        if (!b.id) {
+          b.id = 'expense_' + b.name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Math.random().toString(36).substr(2, 5);
+          changed = true;
+        }
+        return b;
+      });
+      if (changed) {
+        await this.saveCategoryBudgets(updated);
+      }
+      return updated;
     } catch (e) {
       console.error('Error fetching category budgets', e);
       return [];
@@ -211,10 +243,12 @@ export const storage = {
     }
   },
 
+
   async saveTransaction(transaction: Transaction): Promise<boolean> {
     try {
+      const { category, categorySnapshot, name, ...cleanedTx } = transaction as any;
       const current = await this.getTransactions();
-      const updated = [...current, transaction];
+      const updated = [...current, cleanedTx];
       await setStorageItem(TRANSACTIONS_KEY, JSON.stringify(updated));
       // Cập nhật index tháng/năm
       await this._addToTransactionDateIndex(transaction.timestamp);
@@ -248,8 +282,9 @@ export const storage = {
 
   async updateTransaction(updatedTransaction: Transaction): Promise<boolean> {
     try {
+      const { category, categorySnapshot, name, ...cleanedTx } = updatedTransaction as any;
       const current = await this.getTransactions();
-      const updated = current.map(t => t.id === updatedTransaction.id ? updatedTransaction : t);
+      const updated = current.map(t => t.id === cleanedTx.id ? cleanedTx : t);
       await setStorageItem(TRANSACTIONS_KEY, JSON.stringify(updated));
       if (onTransactionChangeCallback) {
         onTransactionChangeCallback();
@@ -263,12 +298,17 @@ export const storage = {
 
   async updateTransactionsBulk(updatedTransactions: Transaction[]): Promise<boolean> {
     try {
-      return await setStorageItem(TRANSACTIONS_KEY, JSON.stringify(updatedTransactions));
+      const cleaned = updatedTransactions.map(t => {
+        const { category, categorySnapshot, name, ...rest } = t as any;
+        return rest;
+      });
+      return await setStorageItem(TRANSACTIONS_KEY, JSON.stringify(cleaned));
     } catch (e) {
       console.error('Error updating transactions in bulk', e);
       return false;
     }
   },
+
 
   // Backup / Restore capabilities
   async exportData(): Promise<string> {

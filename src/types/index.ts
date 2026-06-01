@@ -2,22 +2,27 @@ export interface Transaction {
   id: string;
   type: 'income' | 'expense';
   amount: number;
-  category: string;
-  categorySnapshot?: string; // Snapshot tên danh mục tại thời điểm tạo giao dịch (YC 6)
-  name?: string;            // Tên giao dịch tùy chỉnh (VD: "Nuôi heo béo")
+  categoryId?: string; // Khóa ngoại tham chiếu ID danh mục
   note?: string;            // Ghi chú thêm cho giao dịch
   timestamp: number;
 }
 
+export interface IncomeCategory {
+  id: string;
+  name: string;
+  icon?: string;
+  deleteAt?: number | null;
+}
+
 // Có thể xóa estimatedEndDate và estimatedEndDateSetAt
 export interface CategoryBudget {
+  id?: string;       // ID danh mục chi
   name: string;      // Tên danh mục chi
   budget: number;    // Số tiền còn lại trong "túi" danh mục
   spent?: number;    // Số tiền đã tiêu (được cache để tối ưu hiệu suất)
-  estimatedEndDate?: number;      // Ngày ước tính tiêu hết (timestamp ms) (YC 4)
-  estimatedEndDateSetAt?: number; // Timestamp lần cuối set estimatedEndDate, để cooldown 15 ngày
   type?: 'recharge' | 'direct';   // Loại danh mục: nạp tiền để chi hoặc không cần nạp
   icon?: string;     // Key biểu tượng từ assets/expense_icon
+  deleteAt?: number | null;
 }
 
 // Index tháng/năm có giao dịch — dùng để hiển thị modal lọc nhanh mà không scan toàn bộ transactions
@@ -38,6 +43,7 @@ export interface CustomFund {
   name: string;
   balance: number;
   icon?: string;
+  deleteAt?: number | null;
 }
 
 export interface UserProfile {
@@ -48,7 +54,7 @@ export interface UserProfile {
   savingTargetTimestamp?: number;
   savingYear?: number; // Năm của mục tiêu hiện tại (YC Mới)
   savingHistory?: SavingHistoryItem[]; // Lịch sử tiết kiệm các năm trước
-  incomeCategories?: string[];
+  incomeCategories?: IncomeCategory[];
   incomeCategoryIcons?: Record<string, string>; // Mapping tên danh mục thu -> tên icon (YC Mới)
   categoryBudgets?: CategoryBudget[]; // Danh mục chi kèm ngân sách
   customFunds?: CustomFund[]; // Quỹ tùy biến của người dùng
@@ -101,6 +107,7 @@ export interface GoldItem {
   exchangedFromIds?: string[]; // IDs các miếng vàng dùng để đổi ra miếng này
   exchangeFee?: number; // Phí đổi vàng / số tiền cần bù khi đổi (nếu có)
   goldType?: string; // Loại vàng (VD: Nhẫn tròn trơn, SJC 9999, PNJ)
+  oneChiPrice?: number; // Giá trị của một chỉ vàng lúc mua
 }
 
 export interface SoldItemSnapshot {
@@ -112,6 +119,9 @@ export interface SoldItemSnapshot {
   goldType?: string; // Loại vàng
   craftFee: number; // Phí gia công
   exchangeFee?: number; // Phí đổi
+  buyPrice?: number; // Giá mua vào
+  oneChiPrice?: number; // Giá một chỉ lúc mua
+  oneChiSellPrice?: number; // Giá một chỉ lúc bán
 }
 
 export interface GoldSaleRecord {
