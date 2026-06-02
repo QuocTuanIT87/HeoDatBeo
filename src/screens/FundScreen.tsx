@@ -976,7 +976,16 @@ const FundScreen = () => {
                   txType === "deposit" ? styles.bgDeposit : styles.bgWithdraw,
                   amount <= 0 && styles.bgDisabled,
                 ]}
-                onPress={executeTransaction}
+                onPress={() => {
+                  if (amount < 1000) {
+                    Alert.alert(
+                      "Số tiền không đủ",
+                      "Vui lòng nhập số tiền ít nhất 1.000 đ.",
+                    );
+                    return;
+                  }
+                  executeTransaction();
+                }}
                 disabled={amount <= 0}
               >
                 <Text style={styles.confirmBtnText}>Xác Nhận</Text>

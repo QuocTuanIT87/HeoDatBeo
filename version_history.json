@@ -1,5 +1,10 @@
 [
   {
+    "version": "01.06.2026",
+    "description": "- Cập nhật cơ chế nạp / rút tiền",
+    "order": 17
+  },
+  {
     "version": "31.05.2026",
     "description": "- Cập nhật giao diện nhập tiền\n- Sửa lỗi hiển thị lịch sử báo cáo\n- Sửa lỗi giao diện khi xóa Quỹ\n- Bổ sung thêm hướng dẫn\n- Cập nhật giao diện khi chọn danh mục\n- Cập nhật giao diện trang mua vàng\n- Cập nhật cơ chế lưu danh mục khác\n- Cập nhật báo cáo năm pdf",
     "order": 16

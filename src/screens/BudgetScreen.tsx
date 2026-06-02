@@ -1020,7 +1020,16 @@ const BudgetScreen = () => {
                     : { backgroundColor: "#ef4444" },
                   allocAmount === 0 && styles.confirmDisabled,
                 ]}
-                onPress={handleAllocate}
+                onPress={() => {
+                  if (allocAmount < 1000) {
+                    Alert.alert(
+                      "Số tiền không đủ",
+                      "Vui lòng nhập số tiền ít nhất 1.000 đ.",
+                    );
+                    return;
+                  }
+                  handleAllocate();
+                }}
                 disabled={allocAmount === 0}
               >
                 <Text style={styles.confirmBtnText}>

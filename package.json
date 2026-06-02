@@ -1,6 +1,6 @@
 {
   "name": "heodatbeo",
-  "version": "31.05.2026",
+  "version": "01.06.2026",
   "main": "index.ts",
   "scripts": {
     "prestart": "node sync-version.js",

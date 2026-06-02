@@ -10,7 +10,7 @@ import {
   Modal,
   ActivityIndicator,
 } from "react-native";
-import { X } from "lucide-react-native";
+import { X, HelpCircle } from "lucide-react-native";
 import { Alert } from "../components/CustomAlert";
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import { storage } from "../store/storage";
@@ -58,6 +58,19 @@ const SetupScreen = () => {
     initGoogleDrive();
     checkGoogleSignInStatus();
   }, []);
+
+  const handleShowBalanceInfo = () => {
+    Alert.normal(
+      "Số dư hiện hành",
+      "Tổng số dư hiện tại bạn đang có (bao gồm tiền mặt, tài khoản ngân hàng, ví điện tử...).\n\nSố tiền này sẽ được dùng làm số dư ban đầu, làm cơ sở để bạn ghi chép, theo dõi và phân chia vào các quỹ chi tiêu sau này.",
+      [
+        {
+          text: "Đã hiểu",
+          style: "cancel",
+        },
+      ]
+    );
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -245,7 +258,12 @@ const SetupScreen = () => {
             autoCapitalize="words"
           />
 
-          <Text style={styles.label}>Số dư hiện hành (VNĐ)</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8, gap: 6 }}>
+            <Text style={[styles.label, { marginBottom: 0 }]}>Số dư hiện hành (VNĐ)</Text>
+            <TouchableOpacity onPress={handleShowBalanceInfo} activeOpacity={0.7}>
+              <HelpCircle size={18} color="#0fb5b1" />
+            </TouchableOpacity>
+          </View>
           <TextInput
             style={styles.input}
             placeholder="Ví dụ: 5,000,000"
