@@ -619,7 +619,7 @@ const SavingScreen = () => {
                   activeOpacity={amount > 0 ? 0.8 : 1}
                 >
                   <Text style={styles.saveButtonText}>
-                    {type === "deposit" ? "Xác Nhận Nạp" : "Xác Nhận Rút"}
+                    {type === "deposit" ? "Xác nhận nạp" : "Xác nhận rút"}
                   </Text>
                 </TouchableOpacity>
 

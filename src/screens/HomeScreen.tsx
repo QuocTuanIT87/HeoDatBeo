@@ -557,7 +557,10 @@ const HomeScreen = () => {
   // Xác nhận lưu sau khi nhập ghi chú
   const handleConfirmNote = async () => {
     if (selectedCategoryNameForSave === "Khác" && !modalNoteInput.trim()) {
-      Alert.alert("Yêu cầu nhập ghi chú", "Bạn phải nhập ghi chú khi chọn danh mục Khác.");
+      Alert.alert(
+        "Yêu cầu nhập ghi chú",
+        "Bạn phải nhập ghi chú khi chọn danh mục Khác.",
+      );
       return;
     }
     setNoteModalVisible(false);
@@ -1027,6 +1030,10 @@ const HomeScreen = () => {
                 ]}
                 onPress={() => {
                   if (amount < 1000) {
+                    Alert.alert(
+                      "Số tiền không đủ",
+                      "Vui lòng nhập số tiền ít nhất 1.000 đ.",
+                    );
                     return;
                   }
                   handleSave();
@@ -1079,116 +1086,213 @@ const HomeScreen = () => {
                   Chưa có danh mục. Vào màn hình "Chia Tiền" để tạo danh mục.
                 </Text>
               </View>
-            ) : (() => {
-              const totalAllocated = budgets.reduce((s, b) => s + b.budget, 0);
-              const unallocated = profile ? Math.max(0, profile.initialBalance - totalAllocated) : 0;
-              return (
-                <ScrollView showsVerticalScrollIndicator={false} style={styles.catPickerList}>
-                  {type === "expense" ? (
-                    <>
-                      {/* SECTION 1: Cần nạp tiền */}
-                      <Text style={styles.sectionHeader}>📂 Danh mục Cần nạp tiền</Text>
-                      <View style={styles.gridContainer}>
-                        {expenseCategories.filter(c => c.type !== "direct").map((item) => {
-                          const catBudget = budgets.find(b => b.id === item.id || b.name === item.name);
-                          const remaining = catBudget ? catBudget.budget : 0;
-                          const iconSource = catBudget && catBudget.icon ? EXPENSE_ICONS[catBudget.icon] : EXPENSE_ICONS["default"];
-                          return (
-                            <TouchableOpacity
-                              key={item.id}
-                              style={styles.gridItemSquare}
-                              onPress={() => handlePickCategory(item)}
-                            >
-                              <Image source={iconSource} style={styles.gridItemIcon} />
-                              <Text style={styles.gridItemName} numberOfLines={1}>{item.name}</Text>
-                              <Text style={[styles.gridItemBudget, remaining <= 0 && { color: "#ef4444" }]} numberOfLines={1}>
-                                {formatCurrency(remaining)} đ
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
+            ) : (
+              (() => {
+                const totalAllocated = budgets.reduce(
+                  (s, b) => s + b.budget,
+                  0,
+                );
+                const unallocated = profile
+                  ? Math.max(0, profile.initialBalance - totalAllocated)
+                  : 0;
+                return (
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    style={styles.catPickerList}
+                  >
+                    {type === "expense" ? (
+                      <>
+                        {/* SECTION 1: Cần nạp tiền */}
+                        <Text style={styles.sectionHeader}>
+                          📂 Danh mục Cần nạp tiền
+                        </Text>
+                        <View style={styles.gridContainer}>
+                          {expenseCategories
+                            .filter((c) => c.type !== "direct")
+                            .map((item) => {
+                              const catBudget = budgets.find(
+                                (b) => b.id === item.id || b.name === item.name,
+                              );
+                              const remaining = catBudget
+                                ? catBudget.budget
+                                : 0;
+                              const iconSource =
+                                catBudget && catBudget.icon
+                                  ? EXPENSE_ICONS[catBudget.icon]
+                                  : EXPENSE_ICONS["default"];
+                              return (
+                                <TouchableOpacity
+                                  key={item.id}
+                                  style={styles.gridItemSquare}
+                                  onPress={() => handlePickCategory(item)}
+                                >
+                                  <Image
+                                    source={iconSource}
+                                    style={styles.gridItemIcon}
+                                  />
+                                  <Text
+                                    style={styles.gridItemName}
+                                    numberOfLines={1}
+                                  >
+                                    {item.name}
+                                  </Text>
+                                  <Text
+                                    style={[
+                                      styles.gridItemBudget,
+                                      remaining <= 0 && { color: "#ef4444" },
+                                    ]}
+                                    numberOfLines={1}
+                                  >
+                                    {formatCurrency(remaining)} đ
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                        </View>
 
-                      {/* SECTION 2: Chi trực tiếp */}
-                      <Text style={styles.sectionHeader}>⚡ Chi trực tiếp (Chưa phân bổ: {formatCurrency(unallocated)} đ)</Text>
-                      <View style={styles.gridContainer}>
-                        {expenseCategories.filter(c => c.type === "direct").map((item) => {
-                          const catBudget = budgets.find(b => b.id === item.id || b.name === item.name);
-                          const iconSource = catBudget && catBudget.icon ? EXPENSE_ICONS[catBudget.icon] : EXPENSE_ICONS["default"];
-                          return (
-                            <TouchableOpacity
-                              key={item.id}
-                              style={styles.gridItemSquare}
-                              onPress={() => handlePickCategory(item)}
-                            >
-                              <Image source={iconSource} style={styles.gridItemIcon} />
-                              <Text style={styles.gridItemName} numberOfLines={1}>{item.name}</Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
+                        {/* SECTION 2: Chi trực tiếp */}
+                        <Text style={styles.sectionHeader}>
+                          ⚡ Chi trực tiếp (Chưa phân bổ:{" "}
+                          {formatCurrency(unallocated)} đ)
+                        </Text>
+                        <View style={styles.gridContainer}>
+                          {expenseCategories
+                            .filter((c) => c.type === "direct")
+                            .map((item) => {
+                              const catBudget = budgets.find(
+                                (b) => b.id === item.id || b.name === item.name,
+                              );
+                              const iconSource =
+                                catBudget && catBudget.icon
+                                  ? EXPENSE_ICONS[catBudget.icon]
+                                  : EXPENSE_ICONS["default"];
+                              return (
+                                <TouchableOpacity
+                                  key={item.id}
+                                  style={styles.gridItemSquare}
+                                  onPress={() => handlePickCategory(item)}
+                                >
+                                  <Image
+                                    source={iconSource}
+                                    style={styles.gridItemIcon}
+                                  />
+                                  <Text
+                                    style={styles.gridItemName}
+                                    numberOfLines={1}
+                                  >
+                                    {item.name}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                        </View>
 
-                      {/* SECTION 3: Khác */}
-                      <Text style={styles.sectionHeader}>⚙️ Khác</Text>
-                      <View style={styles.gridContainer}>
-                        <TouchableOpacity
-                          style={styles.gridItemSquare}
-                          onPress={() =>
-                            handlePickCategory({
-                              id: "expense_khac",
-                              name: "Khác",
-                            })
-                          }
-                        >
-                          <Image source={EXPENSE_ICONS["other"]} style={styles.gridItemIcon} />
-                          <Text style={[styles.gridItemName, { color: "#7c3aed" }]} numberOfLines={1}>Khác</Text>
-                          <Text style={[styles.gridItemBudget, { color: unallocated <= 0 ? "#ef4444" : "#7c3aed" }]} numberOfLines={1}>
-                            {formatCurrency(unallocated)} đ
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </>
-                  ) : (
-                    <>
-                      {/* INCOME: Nguồn thu */}
-                      <Text style={styles.sectionHeader}>💰 Danh mục nguồn thu</Text>
-                      <View style={styles.gridContainer}>
-                        {incomeCategories.map((item) => {
-                          const iconSource = getIncomeIconSource(item.id, profile);
-                          return (
-                            <TouchableOpacity
-                              key={item.id}
-                              style={styles.gridItemSquare}
-                              onPress={() => handlePickCategory(item)}
+                        {/* SECTION 3: Khác */}
+                        <Text style={styles.sectionHeader}>⚙️ Khác</Text>
+                        <View style={styles.gridContainer}>
+                          <TouchableOpacity
+                            style={styles.gridItemSquare}
+                            onPress={() =>
+                              handlePickCategory({
+                                id: "expense_khac",
+                                name: "Khác",
+                              })
+                            }
+                          >
+                            <Image
+                              source={EXPENSE_ICONS["other"]}
+                              style={styles.gridItemIcon}
+                            />
+                            <Text
+                              style={[
+                                styles.gridItemName,
+                                { color: "#7c3aed" },
+                              ]}
+                              numberOfLines={1}
                             >
-                              <Image source={iconSource} style={styles.gridItemIcon} />
-                              <Text style={styles.gridItemName} numberOfLines={1}>{item.name}</Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
+                              Khác
+                            </Text>
+                            <Text
+                              style={[
+                                styles.gridItemBudget,
+                                {
+                                  color:
+                                    unallocated <= 0 ? "#ef4444" : "#7c3aed",
+                                },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {formatCurrency(unallocated)} đ
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        {/* INCOME: Nguồn thu */}
+                        <Text style={styles.sectionHeader}>
+                          💰 Danh mục nguồn thu
+                        </Text>
+                        <View style={styles.gridContainer}>
+                          {incomeCategories.map((item) => {
+                            const iconSource = getIncomeIconSource(
+                              item.id,
+                              profile,
+                            );
+                            return (
+                              <TouchableOpacity
+                                key={item.id}
+                                style={styles.gridItemSquare}
+                                onPress={() => handlePickCategory(item)}
+                              >
+                                <Image
+                                  source={iconSource}
+                                  style={styles.gridItemIcon}
+                                />
+                                <Text
+                                  style={styles.gridItemName}
+                                  numberOfLines={1}
+                                >
+                                  {item.name}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
 
-                      {/* INCOME: Khác */}
-                      <Text style={styles.sectionHeader}>⚙️ Khác</Text>
-                      <View style={styles.gridContainer}>
-                        <TouchableOpacity
-                          style={styles.gridItemSquare}
-                          onPress={() =>
-                            handlePickCategory({
-                              id: "income_khac",
-                              name: "Khác",
-                            })
-                          }
-                        >
-                          <Image source={INCOME_ICONS["other"]} style={styles.gridItemIcon} />
-                          <Text style={[styles.gridItemName, { color: "#7c3aed" }]} numberOfLines={1}>Khác</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </>
-                  )}
-                </ScrollView>
-              );
-            })()}
+                        {/* INCOME: Khác */}
+                        <Text style={styles.sectionHeader}>⚙️ Khác</Text>
+                        <View style={styles.gridContainer}>
+                          <TouchableOpacity
+                            style={styles.gridItemSquare}
+                            onPress={() =>
+                              handlePickCategory({
+                                id: "income_khac",
+                                name: "Khác",
+                              })
+                            }
+                          >
+                            <Image
+                              source={INCOME_ICONS["other"]}
+                              style={styles.gridItemIcon}
+                            />
+                            <Text
+                              style={[
+                                styles.gridItemName,
+                                { color: "#7c3aed" },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              Khác
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </>
+                    )}
+                  </ScrollView>
+                );
+              })()
+            )}
           </View>
         </View>
       </Modal>
@@ -1224,7 +1328,8 @@ const HomeScreen = () => {
                 : "💰 Hoàn tất thu tiền"}
             </Text>
             <Text style={styles.catPickerSubtitle}>
-              Danh mục: {selectedCategoryNameForSave} — {formatCurrency(amount)} đ
+              Danh mục: {selectedCategoryNameForSave} — {formatCurrency(amount)}{" "}
+              đ
             </Text>
 
             <Text style={styles.modalFieldLabel}>Ngày giờ giao dịch</Text>
@@ -1259,11 +1364,18 @@ const HomeScreen = () => {
             )}
 
             <Text style={styles.modalFieldLabel}>
-              Ghi chú {selectedCategoryNameForSave === "Khác" ? "(bắt buộc)" : "(không bắt buộc)"}
+              Ghi chú{" "}
+              {selectedCategoryNameForSave === "Khác"
+                ? "(bắt buộc)"
+                : "(không bắt buộc)"}
             </Text>
             <TextInput
               style={styles.modalNoteInput}
-              placeholder={selectedCategoryNameForSave === "Khác" ? "Nhập ghi chú (bắt buộc)..." : "Nhập ghi chú nếu có..."}
+              placeholder={
+                selectedCategoryNameForSave === "Khác"
+                  ? "Nhập ghi chú (bắt buộc)..."
+                  : "Nhập ghi chú nếu có..."
+              }
               placeholderTextColor="#94a3b8"
               value={modalNoteInput}
               onChangeText={setModalNoteInput}
@@ -1356,6 +1468,10 @@ const HomeScreen = () => {
               ]}
               onPress={() => {
                 if (amount < 1000) {
+                  Alert.alert(
+                    "Số tiền không đủ",
+                    "Vui lòng nhập số tiền ít nhất 1.000 đ.",
+                  );
                   return;
                 }
                 setManualInputModalVisible(false);
