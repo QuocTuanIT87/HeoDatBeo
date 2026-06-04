@@ -1774,6 +1774,35 @@ const SettingsScreen = () => {
         </View>
       </Modal>
 
+      {/* Modal: Khóa màn hình và hiển thị cảnh báo khi đang sao lưu */}
+      <Modal
+        visible={isBackingUp}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalOverlayCenter}>
+          <View style={[styles.settingsModalBox, { alignItems: "center", paddingVertical: 32 }]}>
+            <View style={{ marginBottom: 20, justifyContent: "center", alignItems: "center" }}>
+              <Cloud color="#0891b2" size={48} />
+              <ActivityIndicator 
+                size="large" 
+                color="#0891b2" 
+                style={{ position: "absolute", transform: [{ scale: 1.6 }] }} 
+              />
+            </View>
+            <Text style={{ fontSize: 18, fontWeight: "bold", color: "#0f172a", marginBottom: 12, textAlign: "center" }}>
+              Đang tiến hành sao lưu...
+            </Text>
+            <View style={{ backgroundColor: "#fef2f2", borderWidth: 1, borderColor: "#fee2e2", borderRadius: 12, padding: 12, width: "100%" }}>
+              <Text style={{ fontSize: 14, color: "#dc2626", fontWeight: "600", textAlign: "center", lineHeight: 20 }}>
+                ⚠️ Vui lòng không thoát khỏi ứng dụng trong quá trình sao lưu.
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 };
@@ -1781,3 +1810,4 @@ const SettingsScreen = () => {
 
 
 export default SettingsScreen;
+

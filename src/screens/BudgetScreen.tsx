@@ -654,6 +654,35 @@ const BudgetScreen = () => {
           <View style={styles.catNameRow}>
             <Text style={styles.catName}>{cat.name}</Text>
           </View>
+
+          {/* {isDirect ? (
+            <Text
+              style={[
+                styles.catBudget,
+                {
+                  color: spent > 0 ? "#ef4444" : "#64748b",
+                  marginTop: 4,
+                  fontSize: 14,
+                },
+              ]}
+            >
+              Đã chi tháng này:{" "}
+              {showAmount ? `${formatCurrency(spent)} đ` : "******"}
+            </Text>
+          ) : (
+            <Text
+              style={[
+                styles.catBudget,
+                {
+                  color: cat.budget <= 0 ? "#ef4444" : "#7c3aed",
+                  marginTop: 4,
+                },
+              ]}
+            >
+              {showAmount ? `${formatCurrency(cat.budget)} đ` : "******"}
+            </Text>
+          )} */}
+
           {!isDirect && (
             <Text
               style={[
@@ -667,7 +696,6 @@ const BudgetScreen = () => {
               {showAmount ? `${formatCurrency(cat.budget)} đ` : "******"}
             </Text>
           )}
-
           {!isDirect && (
             <View style={styles.progressContainer}>
               <View style={styles.progressTrack}>
@@ -686,12 +714,26 @@ const BudgetScreen = () => {
                   Đã dùng {Math.round(percentSpent)}%:{" "}
                 </Text>
                 <Text style={styles.progressPercent}>
-                  {showAmount ? `${formatCurrency(spent)} đ` : "******"}
+                  {showAmount ? `-${formatCurrency(spent)} đ` : "******"}
                 </Text>
               </View>
             </View>
           )}
+          {isDirect && (
+            <Text
+              style={[
+                {
+                  color: spent > 0 ? "#ef4444" : "#64748b",
+                  marginTop: 4,
+                  fontSize: 12,
+                },
+              ]}
+            >
+              Đã chi: {showAmount ? `-${formatCurrency(spent)} đ` : "******"}
+            </Text>
+          )}
         </View>
+
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <TouchableOpacity
             style={{ padding: 10 }}
