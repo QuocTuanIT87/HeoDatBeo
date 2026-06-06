@@ -27,7 +27,7 @@ import {
 import { storage } from "../store/storage";
 import { CategoryBudget, UserProfile } from "../types";
 import { formatCurrency } from "../utils/format";
-import { isCategoryIdMatch } from "../utils/category";
+import { isCategoryIdMatch, isProhibitedCategoryName } from "../utils/category";
 import Keypad from "../components/Keypad";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { styles } from "../styles/BudgetScreen";
@@ -315,12 +315,7 @@ const BudgetScreen = () => {
     const name = newCatName.trim();
     if (!name) return;
 
-    if (
-      name === "Tiết kiệm" ||
-      name === "Rút tiết kiệm" ||
-      name === "Nuôi heo béo" ||
-      name === "Heo giảm cân"
-    ) {
+    if (isProhibitedCategoryName(name)) {
       Alert.alert("Lỗi", "Tên danh mục này đã được sử dụng hệ thống.");
       return;
     }
@@ -488,14 +483,7 @@ const BudgetScreen = () => {
     const trimmedNewName = renameInputText.trim();
     if (!trimmedNewName || !renameTarget) return;
 
-    if (
-      trimmedNewName === "Tiết kiệm" ||
-      trimmedNewName === "Rút tiết kiệm" ||
-      trimmedNewName === "Nuôi heo béo" ||
-      trimmedNewName === "Heo giảm cân" ||
-      trimmedNewName === "Số dư đầu tiên" ||
-      trimmedNewName === "Khác"
-    ) {
+    if (isProhibitedCategoryName(trimmedNewName)) {
       Alert.alert("Lỗi", "Tên danh mục này trùng với tên danh mục hệ thống.");
       return;
     }
