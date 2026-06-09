@@ -130,6 +130,17 @@ export const storage = {
     }
   },
 
+  async clearGoldData(): Promise<boolean> {
+    try {
+      await AsyncStorage.removeItem(GOLD_ITEMS_KEY);
+      await AsyncStorage.removeItem(GOLD_SALES_KEY);
+      return true;
+    } catch (e) {
+      console.error('Error clearing gold data', e);
+      return false;
+    }
+  },
+
   // Transaction Date Index — lưu tháng/năm có giao dịch để lọc nhanh
   async getTransactionDateIndex(): Promise<TransactionDateIndex> {
     try {

@@ -91,6 +91,12 @@ const GoldHistoryScreen = () => {
   const [showExchangeDatePicker, setShowExchangeDatePicker] = useState(false);
   const [showExchangeTimePicker, setShowExchangeTimePicker] = useState(false);
 
+  // Secret Reset/Delete States
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [inputPassword, setInputPassword] = useState("");
+  const [clickCount, setClickCount] = useState(0);
+  const [lastClickTime, setLastClickTime] = useState(0);
+
   useEffect(() => {
     if (isFocused) {
       loadData();
@@ -102,6 +108,67 @@ const GoldHistoryScreen = () => {
     const sales = await storage.getGoldSales();
     setGoldItems(items || []);
     setGoldSales(sales || []);
+  };
+
+  const handleHeaderPress = () => {
+    const now = Date.now();
+    if (now - lastClickTime < 2000) {
+      const newCount = clickCount + 1;
+      if (newCount >= 10) {
+        setClickCount(0);
+        setInputPassword("");
+        setPasswordModalVisible(true);
+      } else {
+        setClickCount(newCount);
+      }
+    } else {
+      setClickCount(1);
+    }
+    setLastClickTime(now);
+  };
+
+  const validatePassword = (input: string) => {
+    const d = new Date();
+    const day = d.getDate();
+    const month = d.getMonth() + 1;
+    const year = d.getFullYear();
+
+    const sum = day + month + year + 87;
+    const concat1 = `${day}${month}${year}87`;
+    const concat2 = `${day.toString().padStart(2, '0')}${month.toString().padStart(2, '0')}${year}87`;
+
+    return input === sum.toString() || input === concat1 || input === concat2;
+  };
+
+  const handleClearGoldData = async () => {
+    const isCorrect = validatePassword(inputPassword);
+    if (!isCorrect) {
+      Alert.alert("Lỗi", "Mật khẩu không chính xác.");
+      return;
+    }
+
+    Alert.alert(
+      "Xác nhận xóa toàn bộ",
+      "Bạn có chắc chắn muốn xóa toàn bộ lịch sử giao dịch vàng và các miếng vàng đã tích trữ? Hành động này không thể hoàn tác.",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa toàn bộ",
+          style: "destructive",
+          onPress: async () => {
+            const success = await storage.clearGoldData();
+            if (success) {
+              Alert.alert("Thành công", "Đã xóa toàn bộ dữ liệu lịch sử vàng.");
+              setPasswordModalVisible(false);
+              setInputPassword("");
+              loadData();
+            } else {
+              Alert.alert("Lỗi", "Không thể xóa dữ liệu lịch sử vàng.");
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Helper conversions: 1 cây = 10 chỉ = 100 phân
@@ -1486,7 +1553,9 @@ const GoldHistoryScreen = () => {
             <ArrowLeft color="#ffffff" size={22} />
           </TouchableOpacity>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Text style={styles.headerTitle}>Giao Dịch Vàng</Text>
+            <TouchableOpacity activeOpacity={1} onPress={handleHeaderPress}>
+              <Text style={styles.headerTitle}>Giao Dịch Vàng</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={handleShowHelp}
               style={styles.helpIconTouch}
@@ -2302,6 +2371,57 @@ const GoldHistoryScreen = () => {
                 <Text style={styles.submitButtonText}>Xác nhận đổi</Text>
               </TouchableOpacity>
             </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* MODAL: RESET GOLD DATA */}
+      <Modal
+        visible={passwordModalVisible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setPasswordModalVisible(false)}
+      >
+        <KeyboardAvoidingView behavior="padding" style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { maxHeight: 300 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Xác Nhận Chủ Sở Hữu</Text>
+              <TouchableOpacity
+                onPress={() => setPasswordModalVisible(false)}
+                style={styles.modalCloseButton}
+              >
+                <X color="#64748b" size={20} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.formContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Nhập mật mã xác thực để xóa toàn bộ dữ liệu vàng:</Text>
+                <View style={styles.inputRow}>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Mật mã bảo mật"
+                    placeholderTextColor="#94a3b8"
+                    keyboardType="numeric"
+                    secureTextEntry
+                    value={inputPassword}
+                    onChangeText={setInputPassword}
+                  />
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.submitButton,
+                  !validatePassword(inputPassword) && styles.submitButtonDisabled,
+                ]}
+                disabled={!validatePassword(inputPassword)}
+                onPress={handleClearGoldData}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.submitButtonText}>Xác nhận xóa</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
