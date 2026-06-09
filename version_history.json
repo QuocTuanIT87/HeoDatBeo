@@ -1,5 +1,15 @@
 [
   {
+    "version": "09.06.2026",
+    "description": "- Cập nhật thông báo tổng hợp cuối ngày\n -Thêm chức năng xóa toàn bộ giao dịch vàng",
+    "order": 19
+  },
+  {
+    "version": "04.06.2026",
+    "description": "- Sửa lỗi nhập ghi chú\n- Thêm đã dùng bao nhiêu đối với danh mục tri trực tiếp\n- Cập nhật chức năng sao lưu dữ liệu\n- Cập nhật hiển thị lịch sử báo cáo\n- Sửa lỗi hiển thị ảnh của danh mục",
+    "order": 18
+  },
+  {
     "version": "01.06.2026",
     "description": "- Cập nhật cơ chế nạp / rút tiền",
     "order": 17

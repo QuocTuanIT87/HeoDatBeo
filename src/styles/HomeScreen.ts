@@ -491,7 +491,7 @@ export const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 12,
         paddingBottom: 40,
-        minHeight: "60%",
+        minHeight: 460,
     },
     noteModalBackBtn: {
         alignSelf: "flex-start",

@@ -13,6 +13,7 @@ import {
   PanResponder,
   Animated,
   Dimensions,
+  Keyboard,
 } from "react-native";
 import { Alert } from "../components/CustomAlert";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -162,15 +163,19 @@ export const getIncomeIconSource = (
   catNameOrId: string,
   profile: UserProfile | null,
 ) => {
+  const match = (profile?.incomeCategories || []).find(
+    (c: any) =>
+      typeof c === "object" && (c.id === catNameOrId || c.name === catNameOrId),
+  ) as any;
+  if (match && match.icon && INCOME_ICONS[match.icon]) {
+    return INCOME_ICONS[match.icon];
+  }
+
   const key = profile?.incomeCategoryIcons?.[catNameOrId];
   if (key && INCOME_ICONS[key]) {
     return INCOME_ICONS[key];
   }
   // Try looking up in incomeCategories if name was passed but icon is mapped to ID, or vice versa
-  const match = (profile?.incomeCategories || []).find(
-    (c: any) =>
-      typeof c === "object" && (c.id === catNameOrId || c.name === catNameOrId),
-  ) as any;
   if (match) {
     const keyByMatch =
       profile?.incomeCategoryIcons?.[match.id] ||
@@ -1306,7 +1311,7 @@ const HomeScreen = () => {
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior="padding"
         >
           <View style={styles.noteModal}>
             {/* Nút quay lại */}
@@ -1390,12 +1395,15 @@ const HomeScreen = () => {
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.suggestionsScroll}
+                  keyboardShouldPersistTaps="handled"
                 >
                   {suggestedNotes.map((item, index) => (
                     <TouchableOpacity
                       key={index}
                       style={styles.suggestionBadge}
-                      onPress={() => setModalNoteInput(item)}
+                      onPress={() => {
+                        setModalNoteInput(item);
+                      }}
                     >
                       <Text style={styles.suggestionText}>{item}</Text>
                     </TouchableOpacity>

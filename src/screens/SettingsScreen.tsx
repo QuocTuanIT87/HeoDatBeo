@@ -57,7 +57,7 @@ import { EXPENSE_ICONS } from "./HomeScreen";
 import { scheduleTestNotification } from "../utils/notifications";
 import { styles } from "../styles/SettingsScreen";
 import { exportYearlyPdfReport } from "../utils/pdfReport";
-import { isCategoryIdMatch } from "../utils/category";
+import { isCategoryIdMatch, isProhibitedCategoryName } from "../utils/category";
 
 const DEFAULT_INCOME_CATEGORIES = ["Lương", "Thưởng", "Bán hàng"];
 
@@ -96,8 +96,9 @@ export const getIncomeIconSource = (
   catNameOrId: string,
   profile: UserProfile | null,
 ) => {
-  const match = (profile?.incomeCategories || []).find((c: any) => 
-    typeof c === 'object' && (c.id === catNameOrId || c.name === catNameOrId)
+  const match = (profile?.incomeCategories || []).find(
+    (c: any) =>
+      typeof c === "object" && (c.id === catNameOrId || c.name === catNameOrId),
   ) as any;
   if (match && match.icon && INCOME_ICONS[match.icon]) {
     return INCOME_ICONS[match.icon];
@@ -109,7 +110,9 @@ export const getIncomeIconSource = (
     return INCOME_ICONS[key];
   }
   if (match) {
-    const keyByMatch = profile?.incomeCategoryIcons?.[match.id] || profile?.incomeCategoryIcons?.[match.name];
+    const keyByMatch =
+      profile?.incomeCategoryIcons?.[match.id] ||
+      profile?.incomeCategoryIcons?.[match.name];
     if (keyByMatch && INCOME_ICONS[keyByMatch]) {
       return INCOME_ICONS[keyByMatch];
     }
@@ -119,15 +122,23 @@ export const getIncomeIconSource = (
     if (catName === "Bán hàng") return INCOME_ICONS["sell"];
   }
 
-  if (catNameOrId === "Lương" || catNameOrId === "income_luong") return INCOME_ICONS["salary"];
-  if (catNameOrId === "Thưởng" || catNameOrId === "income_thuong") return INCOME_ICONS["gift-box"];
-  if (catNameOrId === "Bán hàng" || catNameOrId === "income_ban_hang") return INCOME_ICONS["sell"];
+  if (catNameOrId === "Lương" || catNameOrId === "income_luong")
+    return INCOME_ICONS["salary"];
+  if (catNameOrId === "Thưởng" || catNameOrId === "income_thuong")
+    return INCOME_ICONS["gift-box"];
+  if (catNameOrId === "Bán hàng" || catNameOrId === "income_ban_hang")
+    return INCOME_ICONS["sell"];
   return INCOME_ICONS["default"];
 };
 
 import VERSION_HISTORY from "../../version_history.json";
-import { BanknoteArrowUp, CopyMinus, FileX, FolderMinus, ShieldUser } from "lucide-react-native/icons";
-
+import {
+  BanknoteArrowUp,
+  CopyMinus,
+  FileX,
+  FolderMinus,
+  ShieldUser,
+} from "lucide-react-native/icons";
 
 const SettingsScreen = () => {
   const navigation = useNavigation();
@@ -143,12 +154,18 @@ const SettingsScreen = () => {
   const [isIconModalVisible, setIconModalVisible] = useState(false);
   const [pendingCategoryName, setPendingCategoryName] = useState("");
   const [pendingCategoryId, setPendingCategoryId] = useState("");
-  const [activeCategoryTab, setActiveCategoryTab] = useState<'income' | 'expense'>('income');
+  const [activeCategoryTab, setActiveCategoryTab] = useState<
+    "income" | "expense"
+  >("income");
   const [categoryBudgets, setCategoryBudgets] = useState<CategoryBudget[]>([]);
 
   // Rename states
   const [isRenameModalVisible, setRenameModalVisible] = useState(false);
-  const [renameTarget, setRenameTarget] = useState<{ id: string; name: string; type: 'income' | 'expense' } | null>(null);
+  const [renameTarget, setRenameTarget] = useState<{
+    id: string;
+    name: string;
+    type: "income" | "expense";
+  } | null>(null);
   const [renameInputText, setRenameInputText] = useState("");
 
   // Settings Modal State
@@ -156,7 +173,9 @@ const SettingsScreen = () => {
 
   // PDF Report States
   const [isPdfModalVisible, setPdfModalVisible] = useState(false);
-  const [selectedPdfYear, setSelectedPdfYear] = useState<number>(new Date().getFullYear());
+  const [selectedPdfYear, setSelectedPdfYear] = useState<number>(
+    new Date().getFullYear(),
+  );
   const [pdfAvailableYears, setPdfAvailableYears] = useState<number[]>([]);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
@@ -166,14 +185,14 @@ const SettingsScreen = () => {
   const [googleUserEmail, setGoogleUserEmail] = useState<string | null>(null);
   const [isAutoBackupEnabled, setIsAutoBackupEnabled] = useState(false);
   const [lastBackupTimestamp, setLastBackupTimestamp] = useState<number>(0);
-  const [lastBackupStatus, setLastBackupStatus] = useState<string>('none');
+  const [lastBackupStatus, setLastBackupStatus] = useState<string>("none");
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [isHistoryModalVisible, setHistoryModalVisible] = useState(false);
   const [isOfflineModalVisible, setOfflineModalVisible] = useState(false);
   const [isNotesModalVisible, setNotesModalVisible] = useState(false);
-  const [notesTab, setNotesTab] = useState<'expense' | 'income'>('expense');
+  const [notesTab, setNotesTab] = useState<"expense" | "income">("expense");
   const [newNoteText, setNewNoteText] = useState("");
   const [suggestedNotes, setSuggestedNotes] = useState<string[]>([]);
 
@@ -226,9 +245,9 @@ const SettingsScreen = () => {
           onPress: async () => {
             await storage.deleteSuggestedNote(notesTab, note);
             loadSuggestedNotes();
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
 
@@ -237,7 +256,9 @@ const SettingsScreen = () => {
       const token = await getAccessToken();
       if (token) {
         setIsGoogleSignedIn(true);
-        const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+        const {
+          GoogleSignin,
+        } = require("@react-native-google-signin/google-signin");
         const currentUser = await GoogleSignin.getCurrentUser();
         if (currentUser && currentUser.user) {
           setGoogleUserEmail(currentUser.user.email);
@@ -269,7 +290,7 @@ const SettingsScreen = () => {
         const userInfoAny = res.userInfo as any;
         setIsGoogleSignedIn(true);
         setGoogleUserEmail(userInfoAny.user.email);
-        
+
         let lastTimestamp = await storage.getGoogleDriveLastBackupTimestamp();
         let lastStatus = await storage.getGoogleDriveLastBackupStatus();
 
@@ -277,7 +298,7 @@ const SettingsScreen = () => {
           const driveBackup = await checkLatestBackupOnGoogleDrive();
           if (driveBackup && driveBackup.success && driveBackup.timestamp) {
             lastTimestamp = driveBackup.timestamp;
-            lastStatus = 'success';
+            lastStatus = "success";
             await storage.setGoogleDriveLastBackupTimestamp(lastTimestamp);
             await storage.setGoogleDriveLastBackupStatus(lastStatus);
           }
@@ -288,9 +309,15 @@ const SettingsScreen = () => {
         setLastBackupTimestamp(lastTimestamp);
         setLastBackupStatus(lastStatus);
 
-        Alert.alert("Thành công", `Đã liên kết tài khoản Google: ${userInfoAny.user.email}`);
+        Alert.alert(
+          "Thành công",
+          `Đã liên kết tài khoản Google: ${userInfoAny.user.email}`,
+        );
       } else {
-        Alert.alert("Lỗi đăng nhập", res.error || "Không thể đăng nhập Google.");
+        Alert.alert(
+          "Lỗi đăng nhập",
+          res.error || "Không thể đăng nhập Google.",
+        );
       }
     } catch (e: any) {
       Alert.alert("Lỗi", e.message || String(e));
@@ -315,17 +342,23 @@ const SettingsScreen = () => {
               setGoogleUserEmail(null);
               setIsAutoBackupEnabled(false);
               await storage.setGoogleDriveAutoBackupEnabled(false);
-              Alert.alert("Đăng xuất thành công", "Đã hủy liên kết Google Drive.");
+              Alert.alert(
+                "Đăng xuất thành công",
+                "Đã hủy liên kết Google Drive.",
+              );
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
 
   const handleToggleAutoBackup = async (value: boolean) => {
     if (!isGoogleSignedIn) {
-      Alert.alert("Yêu cầu đăng nhập", "Bạn cần liên kết tài khoản Google trước.");
+      Alert.alert(
+        "Yêu cầu đăng nhập",
+        "Bạn cần liên kết tài khoản Google trước.",
+      );
       return;
     }
     const success = await storage.setGoogleDriveAutoBackupEnabled(value);
@@ -336,7 +369,10 @@ const SettingsScreen = () => {
 
   const handleManualBackup = async () => {
     if (!isGoogleSignedIn) {
-      Alert.alert("Yêu cầu đăng nhập", "Bạn cần liên kết tài khoản Google trước.");
+      Alert.alert(
+        "Yêu cầu đăng nhập",
+        "Bạn cần liên kết tài khoản Google trước.",
+      );
       return;
     }
     setIsBackingUp(true);
@@ -345,10 +381,12 @@ const SettingsScreen = () => {
       const res = await uploadBackupToGoogleDrive(dataStr);
       const now = Date.now();
       await storage.setGoogleDriveLastBackupTimestamp(now);
-      await storage.setGoogleDriveLastBackupStatus(res.success ? 'success' : 'failed');
-      
+      await storage.setGoogleDriveLastBackupStatus(
+        res.success ? "success" : "failed",
+      );
+
       setLastBackupTimestamp(now);
-      setLastBackupStatus(res.success ? 'success' : 'failed');
+      setLastBackupStatus(res.success ? "success" : "failed");
 
       if (res.success) {
         Alert.alert("Thành công", "Đã sao lưu dữ liệu lên Google Drive.");
@@ -364,7 +402,10 @@ const SettingsScreen = () => {
 
   const handleRestoreFromGoogleDrive = async () => {
     if (!isGoogleSignedIn) {
-      Alert.alert("Yêu cầu đăng nhập", "Bạn cần liên kết tài khoản Google trước.");
+      Alert.alert(
+        "Yêu cầu đăng nhập",
+        "Bạn cần liên kết tài khoản Google trước.",
+      );
       return;
     }
 
@@ -373,7 +414,10 @@ const SettingsScreen = () => {
       // 1. Tải thông tin bản sao lưu mới nhất trước để hiển thị xác nhận cho người dùng
       const detailsRes = await getLatestBackupDetailsOnGoogleDrive();
       if (!detailsRes.success || !detailsRes.name || !detailsRes.timestamp) {
-        Alert.alert("Không tìm thấy bản sao lưu", detailsRes.message || "Không thể lấy thông tin bản sao lưu.");
+        Alert.alert(
+          "Không tìm thấy bản sao lưu",
+          detailsRes.message || "Không thể lấy thông tin bản sao lưu.",
+        );
         setIsRestoring(false);
         return;
       }
@@ -381,11 +425,11 @@ const SettingsScreen = () => {
       // Định dạng ngày giờ bản sao lưu
       const date = new Date(detailsRes.timestamp);
       const yyyy = date.getFullYear();
-      const mm = String(date.getMonth() + 1).padStart(2, '0');
-      const dd = String(date.getDate()).padStart(2, '0');
-      const hh = String(date.getHours()).padStart(2, '0');
-      const min = String(date.getMinutes()).padStart(2, '0');
-      const ss = String(date.getSeconds()).padStart(2, '0');
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      const hh = String(date.getHours()).padStart(2, "0");
+      const min = String(date.getMinutes()).padStart(2, "0");
+      const ss = String(date.getSeconds()).padStart(2, "0");
       const formattedTime = `${dd}/${mm}/${yyyy} lúc ${hh}:${min}:${ss}`;
 
       setIsRestoring(false); // Tắt spinner để hiển thị hộp thoại xác nhận
@@ -405,20 +449,21 @@ const SettingsScreen = () => {
                 if (res.success && res.content) {
                   const success = await storage.importData(res.content);
                   if (success) {
-                    const backupTime = res.timestamp || detailsRes.timestamp || Date.now();
+                    const backupTime =
+                      res.timestamp || detailsRes.timestamp || Date.now();
                     await storage.setGoogleDriveLastBackupTimestamp(backupTime);
                     await storage.setGoogleDriveLastBackupStatus("success");
                     setLastBackupTimestamp(backupTime);
                     setLastBackupStatus("success");
                     Alert.alert(
                       "Thành công",
-                      "Dữ liệu đã được phục hồi từ Google Drive. Vui lòng mở lại ứng dụng hoặc chuyển màn hình để làm mới."
+                      "Dữ liệu đã được phục hồi từ Google Drive. Vui lòng mở lại ứng dụng hoặc chuyển màn hình để làm mới.",
                     );
                     loadProfile();
                   } else {
                     Alert.alert(
                       "Lỗi phục hồi",
-                      "Dữ liệu không hợp lệ hoặc đã xảy ra lỗi trong quá trình phục hồi."
+                      "Dữ liệu không hợp lệ hoặc đã xảy ra lỗi trong quá trình phục hồi.",
                     );
                   }
                 } else {
@@ -429,9 +474,9 @@ const SettingsScreen = () => {
               } finally {
                 setIsRestoring(false);
               }
-            }
-          }
-        ]
+            },
+          },
+        ],
       );
     } catch (e: any) {
       Alert.alert("Lỗi", e.message || String(e));
@@ -443,11 +488,11 @@ const SettingsScreen = () => {
     if (!ts || ts === 0) return "Chưa từng sao lưu";
     const date = new Date(ts);
     const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    const hh = String(date.getHours()).padStart(2, '0');
-    const min = String(date.getMinutes()).padStart(2, '0');
-    const ss = String(date.getSeconds()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    const hh = String(date.getHours()).padStart(2, "0");
+    const min = String(date.getMinutes()).padStart(2, "0");
+    const ss = String(date.getSeconds()).padStart(2, "0");
     return `${dd}/${mm}/${yyyy} lúc ${hh}:${min}:${ss}`;
   };
 
@@ -455,7 +500,9 @@ const SettingsScreen = () => {
     const p = await storage.getUserProfile();
     setProfile(p);
     const budgets = await storage.getCategoryBudgets();
-    const activeBudgets = budgets.filter(b => b.deleteAt === null || b.deleteAt === undefined);
+    const activeBudgets = budgets.filter(
+      (b) => b.deleteAt === null || b.deleteAt === undefined,
+    );
     setCategoryBudgets(activeBudgets);
   };
 
@@ -463,7 +510,7 @@ const SettingsScreen = () => {
     try {
       const txs = await storage.getTransactions();
       const yearsSet = new Set<number>();
-      txs.forEach(tx => {
+      txs.forEach((tx) => {
         if (tx.timestamp) {
           const y = new Date(tx.timestamp).getFullYear();
           if (!isNaN(y)) {
@@ -471,23 +518,23 @@ const SettingsScreen = () => {
           }
         }
       });
-      
+
       // Default to current year if empty
       const currentYear = new Date().getFullYear();
       if (yearsSet.size === 0) {
         yearsSet.add(currentYear);
       }
-      
+
       const sortedYears = Array.from(yearsSet).sort((a, b) => b - a);
       setPdfAvailableYears(sortedYears);
-      
+
       // Default selection to current year if available, otherwise the latest year
       if (yearsSet.has(currentYear)) {
         setSelectedPdfYear(currentYear);
       } else {
         setSelectedPdfYear(sortedYears[0]);
       }
-      
+
       setPdfModalVisible(true);
     } catch (e) {
       console.error(e);
@@ -583,7 +630,10 @@ const SettingsScreen = () => {
             try {
               await signOutGoogle();
             } catch (e) {
-              console.error("Error signing out Google during factory reset:", e);
+              console.error(
+                "Error signing out Google during factory reset:",
+                e,
+              );
             }
             const success = await storage.clearUserResetData();
             if (success) {
@@ -606,14 +656,7 @@ const SettingsScreen = () => {
     const trimmedName = newCategoryName.trim();
     if (!trimmedName || !profile) return;
 
-    if (
-      trimmedName === "Tiết kiệm" ||
-      trimmedName === "Rút tiết kiệm" ||
-      trimmedName === "Nuôi heo béo" ||
-      trimmedName === "Heo giảm cân" ||
-      trimmedName === "Số dư đầu tiên" ||
-      trimmedName === "Khác"
-    ) {
+    if (isProhibitedCategoryName(trimmedName)) {
       Alert.alert(
         "Lỗi",
         `Tên danh mục "${trimmedName}" đã được hệ thống sử dụng. Vui lòng chọn tên khác.`,
@@ -621,11 +664,14 @@ const SettingsScreen = () => {
       return;
     }
 
-    if (activeCategoryTab === 'income') {
+    if (activeCategoryTab === "income") {
       const current = profile.incomeCategories || [];
       const isActiveExisting = current.some((c: any) => {
-        if (typeof c === 'string') return c === trimmedName;
-        return c.name === trimmedName && (c.deleteAt === null || c.deleteAt === undefined);
+        if (typeof c === "string") return c === trimmedName;
+        return (
+          c.name === trimmedName &&
+          (c.deleteAt === null || c.deleteAt === undefined)
+        );
       });
       if (isActiveExisting) {
         Alert.alert("Lỗi", "Danh mục này đã tồn tại.");
@@ -633,13 +679,17 @@ const SettingsScreen = () => {
       }
 
       const softDeletedCat = current.find((c: any) => {
-        if (typeof c === 'string') return false;
-        return c.name === trimmedName && c.deleteAt !== null && c.deleteAt !== undefined;
+        if (typeof c === "string") return false;
+        return (
+          c.name === trimmedName &&
+          c.deleteAt !== null &&
+          c.deleteAt !== undefined
+        );
       });
 
       if (softDeletedCat) {
         const restoredCats = current.map((c: any) => {
-          if (typeof c === 'object' && c.name === trimmedName) {
+          if (typeof c === "object" && c.name === trimmedName) {
             return { ...c, deleteAt: null };
           }
           return c;
@@ -653,49 +703,77 @@ const SettingsScreen = () => {
           setProfile(updatedProfile);
           setNewCategoryName("");
           setCategoryModalVisible(true);
-          Alert.alert("Thành công", `Đã khôi phục danh mục thu nhập "${trimmedName}".`);
+          Alert.alert(
+            "Thành công",
+            `Đã khôi phục danh mục thu nhập "${trimmedName}".`,
+          );
         }
         return;
       }
 
-      const newId = 'income_' + trimmedName.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Math.random().toString(36).substr(2, 5);
+      const newId =
+        "income_" +
+        trimmedName.toLowerCase().replace(/[^a-z0-9]/g, "_") +
+        "_" +
+        Math.random().toString(36).substr(2, 5);
       setPendingCategoryId(newId);
       setPendingCategoryName(trimmedName);
       setCategoryModalVisible(false);
       setIconModalVisible(true);
     } else {
-      Alert.alert("Thông tin", "Vui lòng vào màn hình 'Chia Tiền' để tạo danh mục chi tiêu mới.");
+      Alert.alert(
+        "Thông tin",
+        "Vui lòng vào màn hình 'Chia Tiền' để tạo danh mục chi tiêu mới.",
+      );
     }
   };
 
   const handleSelectIncomeIcon = async (iconKey: string) => {
     if (!pendingCategoryName || !profile) return;
-    const catId = pendingCategoryId || 'income_' + pendingCategoryName.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Math.random().toString(36).substr(2, 5);
+    const catId =
+      pendingCategoryId ||
+      "income_" +
+        pendingCategoryName.toLowerCase().replace(/[^a-z0-9]/g, "_") +
+        "_" +
+        Math.random().toString(36).substr(2, 5);
     const catName = pendingCategoryName;
 
-    const current = profile.incomeCategories && profile.incomeCategories.length > 0
-      ? profile.incomeCategories
-      : DEFAULT_INCOME_CATEGORIES.map(c => ({
-          id: 'income_' + c.toLowerCase().replace(/[^a-z0-9]/g, '_'),
-          name: c,
-          icon: c === "Lương" ? "salary" : c === "Thưởng" ? "gift-box" : c === "Bán hàng" ? "sell" : "default"
-        }));
+    const current =
+      profile.incomeCategories && profile.incomeCategories.length > 0
+        ? profile.incomeCategories
+        : DEFAULT_INCOME_CATEGORIES.map((c) => ({
+            id: "income_" + c.toLowerCase().replace(/[^a-z0-9]/g, "_"),
+            name: c,
+            icon:
+              c === "Lương"
+                ? "salary"
+                : c === "Thưởng"
+                  ? "gift-box"
+                  : c === "Bán hàng"
+                    ? "sell"
+                    : "default",
+          }));
 
-    const isExisting = current.some((c: any) => 
-      typeof c === 'string' ? c === catName : (c.id === catId || c.name === catName) && (c.deleteAt === null || c.deleteAt === undefined)
+    const isExisting = current.some((c: any) =>
+      typeof c === "string"
+        ? c === catName
+        : (c.id === catId || c.name === catName) &&
+          (c.deleteAt === null || c.deleteAt === undefined),
     );
 
     let updatedProfile;
     if (isExisting) {
       const updatedCats = current.map((c: any) => {
-        if (typeof c === 'string') {
+        if (typeof c === "string") {
           if (c === catName) {
             return { id: catId, name: c, icon: iconKey };
           }
-          const fallbackId = 'income_' + c.toLowerCase().replace(/[^a-z0-9]/g, '_');
+          const fallbackId =
+            "income_" + c.toLowerCase().replace(/[^a-z0-9]/g, "_");
           return { id: fallbackId, name: c };
         }
-        const isMatch = typeof c === 'object' && (c.id === catId || c.name === catName);
+        const isMatch =
+          typeof c === "object" && (c.id === catId || c.name === catName);
         return isMatch ? { ...c, icon: iconKey } : c;
       });
       updatedProfile = {
@@ -705,8 +783,9 @@ const SettingsScreen = () => {
     } else {
       const newCategory = { id: catId, name: catName, icon: iconKey };
       const normalizedCurrent = current.map((c: any) => {
-        if (typeof c === 'string') {
-          const fallbackId = 'income_' + c.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        if (typeof c === "string") {
+          const fallbackId =
+            "income_" + c.toLowerCase().replace(/[^a-z0-9]/g, "_");
           return { id: fallbackId, name: c };
         }
         return c;
@@ -736,8 +815,10 @@ const SettingsScreen = () => {
       return;
     }
     const current = profile.incomeCategories || [];
-    const isExisting = current.some((c: any) => 
-      typeof c === 'string' ? c === pendingCategoryName : c.id === pendingCategoryId || c.name === pendingCategoryName
+    const isExisting = current.some((c: any) =>
+      typeof c === "string"
+        ? c === pendingCategoryName
+        : c.id === pendingCategoryId || c.name === pendingCategoryName,
     );
 
     if (isExisting) {
@@ -767,72 +848,78 @@ const SettingsScreen = () => {
 
     const txs = await storage.getTransactions();
     const hasTx = txs.some(
-      (t) => t.categoryId && catId && isCategoryIdMatch(t.categoryId, catId)
+      (t) => t.categoryId && catId && isCategoryIdMatch(t.categoryId, catId),
     );
-    const extraMsg = hasTx
-      ? `\n\n⚠️ Danh mục này có giao dịch lịch sử. Nó sẽ được lưu tạm trong mục 'Danh mục bị xoá gần đây'.`
-      : "";
 
-    Alert.alert(
-      "Xác nhận xóa",
-      `Bạn có chắc muốn xóa danh mục "${catName}"?`,
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Xóa",
-          style: "destructive",
-          onPress: async () => {
-            if (activeCategoryTab === 'income') {
-              const current = profile.incomeCategories || [];
-              let updatedCats: any[];
-              if (hasTx) {
-                updatedCats = current.map((c: any) => {
-                  if (typeof c === 'string') {
-                    const fallbackId = 'income_' + c.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Math.random().toString(36).substr(2, 5);
-                    if (c === catName) {
-                      return { id: fallbackId, name: c, deleteAt: Date.now() };
-                    }
-                    return { id: fallbackId, name: c };
+    Alert.alert("Xác nhận xóa", `Bạn có chắc muốn xóa danh mục "${catName}"?`, [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: async () => {
+          if (activeCategoryTab === "income") {
+            const current = profile.incomeCategories || [];
+            let updatedCats: any[];
+            if (hasTx) {
+              updatedCats = current.map((c: any) => {
+                if (typeof c === "string") {
+                  const fallbackId =
+                    "income_" +
+                    c.toLowerCase().replace(/[^a-z0-9]/g, "_") +
+                    "_" +
+                    Math.random().toString(36).substr(2, 5);
+                  if (c === catName) {
+                    return { id: fallbackId, name: c, deleteAt: Date.now() };
                   }
-                  if (c.id === catId || c.name === catName) {
-                    return { ...c, deleteAt: Date.now() };
-                  }
-                  return c;
-                });
-              } else {
-                updatedCats = current.filter((c: any) => 
-                  typeof c === 'string' ? c !== catName : c.id !== catId
-                );
-              }
-              const updatedProfile = {
-                ...profile,
-                incomeCategories: updatedCats,
-              };
-              const success = await storage.saveUserProfile(updatedProfile);
-              if (success) {
-                setProfile(updatedProfile);
-              }
+                  return { id: fallbackId, name: c };
+                }
+                if (c.id === catId || c.name === catName) {
+                  return { ...c, deleteAt: Date.now() };
+                }
+                return c;
+              });
             } else {
-              // Delete Expense Category (CategoryBudget)
-              const allBudgets = await storage.getCategoryBudgets();
-              let updatedBudgets: CategoryBudget[];
-              if (hasTx) {
-                updatedBudgets = allBudgets.map((b) => {
-                  const isMatch = b.id && catId ? isCategoryIdMatch(b.id, catId) : b.name === catName;
-                  return isMatch ? { ...b, deleteAt: Date.now(), budget: 0 } : b;
-                });
-              } else {
-                updatedBudgets = allBudgets.filter((b) => b.id !== catId && b.name !== catName);
-              }
-              const success = await storage.saveCategoryBudgets(updatedBudgets);
-              if (success) {
-                setCategoryBudgets(updatedBudgets.filter(b => b.deleteAt === null || b.deleteAt === undefined));
-              }
+              updatedCats = current.filter((c: any) =>
+                typeof c === "string" ? c !== catName : c.id !== catId,
+              );
             }
-          },
+            const updatedProfile = {
+              ...profile,
+              incomeCategories: updatedCats,
+            };
+            const success = await storage.saveUserProfile(updatedProfile);
+            if (success) {
+              setProfile(updatedProfile);
+            }
+          } else {
+            // Delete Expense Category (CategoryBudget)
+            const allBudgets = await storage.getCategoryBudgets();
+            let updatedBudgets: CategoryBudget[];
+            if (hasTx) {
+              updatedBudgets = allBudgets.map((b) => {
+                const isMatch =
+                  b.id && catId
+                    ? isCategoryIdMatch(b.id, catId)
+                    : b.name === catName;
+                return isMatch ? { ...b, deleteAt: Date.now(), budget: 0 } : b;
+              });
+            } else {
+              updatedBudgets = allBudgets.filter(
+                (b) => b.id !== catId && b.name !== catName,
+              );
+            }
+            const success = await storage.saveCategoryBudgets(updatedBudgets);
+            if (success) {
+              setCategoryBudgets(
+                updatedBudgets.filter(
+                  (b) => b.deleteAt === null || b.deleteAt === undefined,
+                ),
+              );
+            }
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const handleOpenRenameModal = (catId: string, catName: string) => {
@@ -856,22 +943,20 @@ const SettingsScreen = () => {
     const trimmedNewName = renameInputText.trim();
     if (!trimmedNewName || !profile || !renameTarget) return;
 
-    if (
-      trimmedNewName === "Tiết kiệm" ||
-      trimmedNewName === "Rút tiết kiệm" ||
-      trimmedNewName === "Nuôi heo béo" ||
-      trimmedNewName === "Heo giảm cân" ||
-      trimmedNewName === "Số dư đầu tiên" ||
-      trimmedNewName === "Khác"
-    ) {
+    if (isProhibitedCategoryName(trimmedNewName)) {
       Alert.alert("Lỗi", "Tên danh mục này trùng với tên danh mục hệ thống.");
       return;
     }
 
-    if (renameTarget.type === 'income') {
+    if (renameTarget.type === "income") {
       const current = profile.incomeCategories || [];
-      const isConflicting = current.some((c: any) => 
-        typeof c === 'string' ? c === trimmedNewName : c.id && renameTarget.id && !isCategoryIdMatch(c.id, renameTarget.id) && c.name === trimmedNewName
+      const isConflicting = current.some((c: any) =>
+        typeof c === "string"
+          ? c === trimmedNewName
+          : c.id &&
+            renameTarget.id &&
+            !isCategoryIdMatch(c.id, renameTarget.id) &&
+            c.name === trimmedNewName,
       );
       if (isConflicting) {
         Alert.alert("Lỗi", "Tên danh mục này đã tồn tại.");
@@ -879,15 +964,24 @@ const SettingsScreen = () => {
       }
 
       const updatedIncomeCats = current.map((c: any) => {
-        if (typeof c === 'string') {
+        if (typeof c === "string") {
           if (c === renameTarget.name) {
-            const newId = 'income_' + trimmedNewName.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Math.random().toString(36).substr(2, 5);
+            const newId =
+              "income_" +
+              trimmedNewName.toLowerCase().replace(/[^a-z0-9]/g, "_") +
+              "_" +
+              Math.random().toString(36).substr(2, 5);
             return { id: newId, name: trimmedNewName };
           }
-          const fallbackId = 'income_' + c.toLowerCase().replace(/[^a-z0-9]/g, '_');
+          const fallbackId =
+            "income_" + c.toLowerCase().replace(/[^a-z0-9]/g, "_");
           return { id: fallbackId, name: c };
         }
-        return c.id && renameTarget.id && isCategoryIdMatch(c.id, renameTarget.id) ? { ...c, name: trimmedNewName } : c;
+        return c.id &&
+          renameTarget.id &&
+          isCategoryIdMatch(c.id, renameTarget.id)
+          ? { ...c, name: trimmedNewName }
+          : c;
       });
 
       const updatedProfile = {
@@ -902,7 +996,11 @@ const SettingsScreen = () => {
     } else {
       // Expense category rename
       const isConflicting = categoryBudgets.some(
-        (b) => b.id && renameTarget.id && !isCategoryIdMatch(b.id, renameTarget.id) && b.name === trimmedNewName
+        (b) =>
+          b.id &&
+          renameTarget.id &&
+          !isCategoryIdMatch(b.id, renameTarget.id) &&
+          b.name === trimmedNewName,
       );
       if (isConflicting) {
         Alert.alert("Lỗi", "Tên danh mục này đã tồn tại.");
@@ -910,7 +1008,9 @@ const SettingsScreen = () => {
       }
 
       const updatedBudgets = categoryBudgets.map((b) =>
-        b.id && renameTarget.id && isCategoryIdMatch(b.id, renameTarget.id) ? { ...b, name: trimmedNewName } : b
+        b.id && renameTarget.id && isCategoryIdMatch(b.id, renameTarget.id)
+          ? { ...b, name: trimmedNewName }
+          : b,
       );
 
       const success = await storage.saveCategoryBudgets(updatedBudgets);
@@ -934,35 +1034,48 @@ const SettingsScreen = () => {
     }
   };
 
-  const renderCategoryItem = ({ item }: { item: { id: string; name: string } }) => {
-    const iconSource = activeCategoryTab === 'income' 
-      ? getIncomeIconSource(item.id, profile)
-      : (() => {
-          const budget = categoryBudgets.find(b => b.id === item.id || b.name === item.name);
-          return budget && budget.icon ? EXPENSE_ICONS[budget.icon] : EXPENSE_ICONS["default"];
-        })();
+  const renderCategoryItem = ({
+    item,
+  }: {
+    item: { id: string; name: string };
+  }) => {
+    const iconSource =
+      activeCategoryTab === "income"
+        ? getIncomeIconSource(item.id, profile)
+        : (() => {
+            const budget = categoryBudgets.find(
+              (b) => b.id === item.id || b.name === item.name,
+            );
+            return budget && budget.icon
+              ? EXPENSE_ICONS[budget.icon]
+              : EXPENSE_ICONS["default"];
+          })();
 
     return (
       <View style={styles.categoryListItem}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <TouchableOpacity onPress={() => handleOpenRenameModal(item.id, item.name)}>
+          <TouchableOpacity
+            onPress={() => handleOpenRenameModal(item.id, item.name)}
+          >
             <Settings color="#cbd5e1" size={20} />
           </TouchableOpacity>
           <TouchableOpacity
-              style={styles.categoryIconContainer}
-              onPress={() => {
-                setPendingCategoryId(item.id);
-                setPendingCategoryName(item.name);
-                setCategoryModalVisible(false);
-                setIconModalVisible(true);
-              }}
-            >
-              <Image source={iconSource} style={styles.categoryIcon} />
+            style={styles.categoryIconContainer}
+            onPress={() => {
+              setPendingCategoryId(item.id);
+              setPendingCategoryName(item.name);
+              setCategoryModalVisible(false);
+              setIconModalVisible(true);
+            }}
+          >
+            <Image source={iconSource} style={styles.categoryIcon} />
           </TouchableOpacity>
           <Text style={styles.categoryListName}>{item.name}</Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
-          <TouchableOpacity onPress={() => handleDeleteCategory(item.id, item.name)}>
+          <TouchableOpacity
+            onPress={() => handleDeleteCategory(item.id, item.name)}
+          >
             <Trash2 color="#cccccc" size={20} />
           </TouchableOpacity>
         </View>
@@ -971,17 +1084,23 @@ const SettingsScreen = () => {
   };
 
   const getActiveCategories = () => {
-    if (activeCategoryTab === 'income') {
+    if (activeCategoryTab === "income") {
       const raw = profile?.incomeCategories || DEFAULT_INCOME_CATEGORIES;
-      return raw.map((c: any) => {
-        if (typeof c === 'string') {
-          return { id: 'income_' + c.toLowerCase().replace(/[^a-z0-9]/g, '_'), name: c };
-        }
-        return c;
-      }).filter((c: any) => c.deleteAt === null || c.deleteAt === undefined);
+      return raw
+        .map((c: any) => {
+          if (typeof c === "string") {
+            return {
+              id: "income_" + c.toLowerCase().replace(/[^a-z0-9]/g, "_"),
+              name: c,
+            };
+          }
+          return c;
+        })
+        .filter((c: any) => c.deleteAt === null || c.deleteAt === undefined);
     } else {
       return categoryBudgets.map((b) => ({
-        id: b.id || 'expense_' + b.name.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+        id:
+          b.id || "expense_" + b.name.toLowerCase().replace(/[^a-z0-9]/g, "_"),
         name: b.name,
       }));
     }
@@ -1095,10 +1214,7 @@ const SettingsScreen = () => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.card}
-          onPress={handleOpenPdfModal}
-        >
+        <TouchableOpacity style={styles.card} onPress={handleOpenPdfModal}>
           <View style={[styles.iconContainer, { backgroundColor: "#ecfeff" }]}>
             <ChartNoAxesCombined color="#0891b2" size={18} />
           </View>
@@ -1120,10 +1236,14 @@ const SettingsScreen = () => {
       {/* Footer cố định phía dưới */}
       <View style={styles.footerInfo}>
         <View style={styles.versionRow}>
-          <Text style={styles.versionText}>Phiên bản hiện tại : {VERSION_HISTORY[0]?.version}</Text>
+          <Text style={styles.versionText}>
+            Phiên bản hiện tại : {VERSION_HISTORY[0]?.version}
+          </Text>
           <Text style={styles.versionSeparator}>|</Text>
           <TouchableOpacity onPress={() => setHistoryModalVisible(true)}>
-            <Text style={styles.versionHistoryBtn}>Lịch sử phiên bản ({VERSION_HISTORY.length})</Text>
+            <Text style={styles.versionHistoryBtn}>
+              Lịch sử phiên bản ({VERSION_HISTORY.length})
+            </Text>
           </TouchableOpacity>
         </View>
         <Text style={styles.authorText}>
@@ -1147,18 +1267,27 @@ const SettingsScreen = () => {
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
             </View>
-              <Text style={styles.modalTitleSub}>{VERSION_HISTORY.length} phiên bản</Text>
+            <Text style={styles.modalTitleSub}>
+              {VERSION_HISTORY.length} phiên bản
+            </Text>
 
-            <ScrollView contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              contentContainerStyle={{ paddingVertical: 10 }}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.historyList}>
                 {VERSION_HISTORY.map((item, idx) => (
                   <View key={idx} style={styles.historyItem}>
                     <View style={styles.historyDotContainer}>
                       <View style={styles.historyDot} />
-                      {idx < VERSION_HISTORY.length - 1 && <View style={styles.historyLine} />}
+                      {idx < VERSION_HISTORY.length - 1 && (
+                        <View style={styles.historyLine} />
+                      )}
                     </View>
                     <View style={styles.historyContent}>
-                      <Text style={styles.historyVersion}>Mã phiên bản {item.order}: {item.version}</Text>
+                      <Text style={styles.historyVersion}>
+                        Mã phiên bản {item.order}: {item.version}
+                      </Text>
                       <View>
                         <Text style={styles.historyDesc}>Tính năng mới: </Text>
                         <Text>{item.description}</Text>
@@ -1188,17 +1317,39 @@ const SettingsScreen = () => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              contentContainerStyle={{ paddingVertical: 10 }}
+              showsVerticalScrollIndicator={false}
+            >
               {/* Trạng thái liên kết */}
               <View style={styles.driveStatusCard}>
-                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
-                  <Cloud color={isGoogleSignedIn ? "#0891b2" : "#94a3b8"} size={28} />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 12,
+                  }}
+                >
+                  <Cloud
+                    color={isGoogleSignedIn ? "#0891b2" : "#94a3b8"}
+                    size={28}
+                  />
                   <View style={{ marginLeft: 12 }}>
-                    <Text style={{ fontSize: 16, fontWeight: "bold", color: "#1e293b" }}>
-                      {isGoogleSignedIn ? "Đã liên kết Google Drive" : "Chưa liên kết tài khoản"}
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: "bold",
+                        color: "#1e293b",
+                      }}
+                    >
+                      {isGoogleSignedIn
+                        ? "Đã liên kết Google Drive"
+                        : "Chưa liên kết tài khoản"}
                     </Text>
                     {isGoogleSignedIn && googleUserEmail && (
-                      <Text style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>
+                      <Text
+                        style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}
+                      >
                         {googleUserEmail}
                       </Text>
                     )}
@@ -1210,7 +1361,9 @@ const SettingsScreen = () => {
                     style={styles.driveLogoutBtn}
                     onPress={handleGoogleLogout}
                   >
-                    <Text style={styles.driveLogoutBtnText}>Hủy liên kết tài khoản</Text>
+                    <Text style={styles.driveLogoutBtnText}>
+                      Hủy liên kết tài khoản
+                    </Text>
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
@@ -1221,18 +1374,28 @@ const SettingsScreen = () => {
                     {isLoggingIn ? (
                       <ActivityIndicator color="#ffffff" size="small" />
                     ) : (
-                      <Text style={styles.driveLoginBtnText}>Đăng nhập Google</Text>
+                      <Text style={styles.driveLoginBtnText}>
+                        Đăng nhập Google
+                      </Text>
                     )}
                   </TouchableOpacity>
                 )}
               </View>
 
               {/* Tùy chọn Tự động Sao lưu */}
-              <View style={[styles.driveOptionRow, !isGoogleSignedIn && { opacity: 0.5 }]}>
+              <View
+                style={[
+                  styles.driveOptionRow,
+                  !isGoogleSignedIn && { opacity: 0.5 },
+                ]}
+              >
                 <View style={{ flex: 1, paddingRight: 10 }}>
-                  <Text style={styles.driveOptionTitle}>Tự động sao lưu hàng ngày</Text>
+                  <Text style={styles.driveOptionTitle}>
+                    Tự động sao lưu hàng ngày
+                  </Text>
                   <Text style={styles.driveOptionDesc}>
-                    Tự động đồng bộ và sao lưu dữ liệu lên Google Drive lúc 1:00 sáng mỗi ngày.
+                    Tự động đồng bộ và sao lưu dữ liệu lên Google Drive lúc 1:00
+                    sáng mỗi ngày.
                   </Text>
                 </View>
                 <Switch
@@ -1245,45 +1408,60 @@ const SettingsScreen = () => {
               </View>
 
               {/* Sao lưu thủ công */}
-              <View style={[styles.driveActionBox, !isGoogleSignedIn && { opacity: 0.5 }]}>
+              <View
+                style={[
+                  styles.driveActionBox,
+                  !isGoogleSignedIn && { opacity: 0.5 },
+                ]}
+              >
                 <Text style={styles.driveSectionTitle}>Sao lưu thủ công</Text>
                 <Text style={styles.driveSectionDesc}>
                   Tải dữ liệu hiện tại lên Google Drive ngay lập tức.
                 </Text>
                 <TouchableOpacity
-                  style={[styles.driveManualBtn, !isGoogleSignedIn && styles.driveBtnDisabled]}
+                  style={[
+                    styles.driveManualBtn,
+                    !isGoogleSignedIn && styles.driveBtnDisabled,
+                  ]}
                   onPress={handleManualBackup}
                   disabled={!isGoogleSignedIn || isBackingUp}
                 >
                   {isBackingUp ? (
                     <ActivityIndicator color="#ffffff" size="small" />
                   ) : (
-                    <Text style={styles.driveManualBtnText}>Sao lưu ngay bây giờ</Text>
+                    <Text style={styles.driveManualBtnText}>
+                      Sao lưu ngay bây giờ
+                    </Text>
                   )}
                 </TouchableOpacity>
               </View>
 
               {/* Thông tin lịch sử sao lưu */}
               <View style={styles.driveHistoryBox}>
-                <Text style={styles.driveHistoryTitle}>Thông tin sao lưu gần nhất</Text>
-                
+                <Text style={styles.driveHistoryTitle}>
+                  Thông tin sao lưu gần nhất
+                </Text>
+
                 <View style={styles.driveHistoryRow}>
                   <Text style={styles.driveHistoryLabel}>Trạng thái:</Text>
-                  <Text style={[
-                    styles.driveHistoryValue, 
-                    { 
-                      fontWeight: "bold", 
-                      color: lastBackupStatus === 'success' 
-                        ? "#16a34a" 
-                        : lastBackupStatus === 'failed' 
-                          ? "#dc2626" 
-                          : "#64748b" 
-                    }
-                  ]}>
-                    {lastBackupStatus === 'success' 
-                      ? "Thành công" 
-                      : lastBackupStatus === 'failed' 
-                        ? "Thất bại" 
+                  <Text
+                    style={[
+                      styles.driveHistoryValue,
+                      {
+                        fontWeight: "bold",
+                        color:
+                          lastBackupStatus === "success"
+                            ? "#16a34a"
+                            : lastBackupStatus === "failed"
+                              ? "#dc2626"
+                              : "#64748b",
+                      },
+                    ]}
+                  >
+                    {lastBackupStatus === "success"
+                      ? "Thành công"
+                      : lastBackupStatus === "failed"
+                        ? "Thất bại"
                         : "Chưa thực hiện"}
                   </Text>
                 </View>
@@ -1297,26 +1475,40 @@ const SettingsScreen = () => {
 
                 <View style={styles.driveWarningBox}>
                   <Text style={styles.driveWarningText}>
-                    * Lưu ý: Mỗi lần sao lưu sẽ tạo một file riêng có tên dạng heodatbeo_YYYY-MM-DD_[giây UTC].txt. Khi đạt tối đa 20 bản sao lưu trên Google Drive, hệ thống sẽ tự động xóa 17 bản sao lưu cũ nhất và chỉ giữ lại 3 bản sao lưu mới nhất.
+                    * Lưu ý: Mỗi lần sao lưu sẽ tạo một file riêng có tên dạng
+                    heodatbeo_YYYY-MM-DD_[giây UTC].txt. Khi đạt tối đa 20 bản
+                    sao lưu trên Google Drive, hệ thống sẽ tự động xóa 17 bản
+                    sao lưu cũ nhất và chỉ giữ lại 3 bản sao lưu mới nhất.
                   </Text>
                 </View>
               </View>
 
               {/* Khôi phục dữ liệu từ Google Drive */}
-              <View style={[styles.driveActionBox, { marginTop: 16 }, !isGoogleSignedIn && { opacity: 0.5 }]}>
+              <View
+                style={[
+                  styles.driveActionBox,
+                  { marginTop: 16 },
+                  !isGoogleSignedIn && { opacity: 0.5 },
+                ]}
+              >
                 <Text style={styles.driveSectionTitle}>Khôi phục dữ liệu</Text>
                 <Text style={styles.driveSectionDesc}>
                   Khôi phục bản sao lưu mới nhất từ Google Drive của bạn.
                 </Text>
                 <TouchableOpacity
-                  style={[styles.driveRestoreBtn, !isGoogleSignedIn && styles.driveBtnDisabled]}
+                  style={[
+                    styles.driveRestoreBtn,
+                    !isGoogleSignedIn && styles.driveBtnDisabled,
+                  ]}
                   onPress={handleRestoreFromGoogleDrive}
                   disabled={!isGoogleSignedIn || isRestoring}
                 >
                   {isRestoring ? (
                     <ActivityIndicator color="#ffffff" size="small" />
                   ) : (
-                    <Text style={styles.driveRestoreBtnText}>Khôi phục dữ liệu</Text>
+                    <Text style={styles.driveRestoreBtnText}>
+                      Khôi phục dữ liệu
+                    </Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -1392,7 +1584,10 @@ const SettingsScreen = () => {
             </Text>
 
             <TextInput
-              style={[styles.addCategoryInput, { flex: 0, width: "100%", marginBottom: 12 }]}
+              style={[
+                styles.addCategoryInput,
+                { flex: 0, width: "100%", marginBottom: 12 },
+              ]}
               placeholder="Nhập tên mới..."
               value={renameInputText}
               onChangeText={setRenameInputText}
@@ -1402,7 +1597,10 @@ const SettingsScreen = () => {
 
             <View style={{ flexDirection: "row", gap: 12, marginTop: 20 }}>
               <TouchableOpacity
-                style={[styles.closeSettingsBtn, { flex: 1, marginBottom: 0, backgroundColor: "#f1f5f9" }]}
+                style={[
+                  styles.closeSettingsBtn,
+                  { flex: 1, marginBottom: 0, backgroundColor: "#f1f5f9" },
+                ]}
                 onPress={() => setRenameModalVisible(false)}
               >
                 <Text style={styles.closeSettingsBtnText}>Hủy</Text>
@@ -1507,7 +1705,10 @@ const SettingsScreen = () => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              contentContainerStyle={{ paddingVertical: 10 }}
+              showsVerticalScrollIndicator={false}
+            >
               <TouchableOpacity
                 style={[styles.card, { marginBottom: 16 }]}
                 onPress={() => {
@@ -1515,13 +1716,23 @@ const SettingsScreen = () => {
                   handleExport();
                 }}
               >
-                <View style={[styles.iconContainer, { backgroundColor: "#e0e7ff" }]}>
+                <View
+                  style={[styles.iconContainer, { backgroundColor: "#e0e7ff" }]}
+                >
                   <Upload color="#4f46e5" size={18} />
                 </View>
                 <View style={styles.cardContent}>
                   <Text style={styles.cardTitle}>Xuất dữ liệu (.txt)</Text>
-                  <Text style={{ fontSize: 13, color: "#64748b", marginTop: 4, lineHeight: 18 }}>
-                    Xuất dữ liệu ra file văn bản (.txt) mã hóa để lưu trữ hoặc chuyển thiết bị.
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: "#64748b",
+                      marginTop: 4,
+                      lineHeight: 18,
+                    }}
+                  >
+                    Xuất dữ liệu ra file văn bản (.txt) mã hóa để lưu trữ hoặc
+                    chuyển thiết bị.
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -1533,13 +1744,23 @@ const SettingsScreen = () => {
                   handleImport();
                 }}
               >
-                <View style={[styles.iconContainer, { backgroundColor: "#dcfce7" }]}>
+                <View
+                  style={[styles.iconContainer, { backgroundColor: "#dcfce7" }]}
+                >
                   <Download color="#16a34a" size={18} />
                 </View>
                 <View style={styles.cardContent}>
                   <Text style={styles.cardTitle}>Nhập dữ liệu (.txt)</Text>
-                  <Text style={{ fontSize: 13, color: "#64748b", marginTop: 4, lineHeight: 18 }}>
-                    Nhập và phục hồi dữ liệu từ file văn bản (.txt) đã xuất trước đó.
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: "#64748b",
+                      marginTop: 4,
+                      lineHeight: 18,
+                    }}
+                  >
+                    Nhập và phục hồi dữ liệu từ file văn bản (.txt) đã xuất
+                    trước đó.
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -1626,8 +1847,17 @@ const SettingsScreen = () => {
             </View>
 
             {suggestedNotes.length === 0 ? (
-              <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 40 }}>
-                <Text style={{ color: "#94a3b8", fontSize: 16 }}>Chưa có ghi chú gợi ý nào.</Text>
+              <View
+                style={{
+                  flex: 1,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  padding: 40,
+                }}
+              >
+                <Text style={{ color: "#94a3b8", fontSize: 16 }}>
+                  Chưa có ghi chú gợi ý nào.
+                </Text>
               </View>
             ) : (
               <FlatList
@@ -1637,7 +1867,13 @@ const SettingsScreen = () => {
                 contentContainerStyle={{ paddingBottom: 20 }}
                 renderItem={({ item }) => (
                   <View style={styles.categoryListItem}>
-                    <Text style={[styles.categoryListName, { flex: 1, paddingRight: 10 }]} numberOfLines={2}>
+                    <Text
+                      style={[
+                        styles.categoryListName,
+                        { flex: 1, paddingRight: 10 },
+                      ]}
+                      numberOfLines={2}
+                    >
                       {item}
                     </Text>
                     <TouchableOpacity onPress={() => handleDeleteNote(item)}>
@@ -1698,7 +1934,12 @@ const SettingsScreen = () => {
               onPress={handleCancelIncomeIcon}
             >
               <Text style={[styles.closeSettingsBtnText, { color: "#ffffff" }]}>
-                {profile?.incomeCategories?.some((c: any) => typeof c === 'string' ? c === pendingCategoryName : c.name === pendingCategoryName || c.id === pendingCategoryId)
+                {profile?.incomeCategories?.some((c: any) =>
+                  typeof c === "string"
+                    ? c === pendingCategoryName
+                    : c.name === pendingCategoryName ||
+                      c.id === pendingCategoryId,
+                )
                   ? "Hủy"
                   : "Dùng biểu tượng mặc định"}
               </Text>
@@ -1720,7 +1961,14 @@ const SettingsScreen = () => {
             {isGeneratingPdf && (
               <View style={styles.pdfLoadingOverlay}>
                 <ActivityIndicator size="large" color="#f43f5e" />
-                <Text style={{ marginTop: 12, color: "#e11d48", fontWeight: "600", fontSize: 14 }}>
+                <Text
+                  style={{
+                    marginTop: 12,
+                    color: "#e11d48",
+                    fontWeight: "600",
+                    fontSize: 14,
+                  }}
+                >
                   Đang tạo PDF báo cáo...
                 </Text>
               </View>
@@ -1728,7 +1976,7 @@ const SettingsScreen = () => {
 
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Báo cáo PDF</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setPdfModalVisible(false)}
                 disabled={isGeneratingPdf}
               >
@@ -1774,10 +2022,72 @@ const SettingsScreen = () => {
         </View>
       </Modal>
 
+      {/* Modal: Khóa màn hình và hiển thị cảnh báo khi đang sao lưu */}
+      <Modal
+        visible={isBackingUp}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalOverlayCenter}>
+          <View
+            style={[
+              styles.settingsModalBox,
+              { alignItems: "center", paddingVertical: 32 },
+            ]}
+          >
+            <View
+              style={{
+                marginBottom: 20,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Cloud color="#0891b2" size={48} />
+              <ActivityIndicator
+                size="large"
+                color="#0891b2"
+                style={{ position: "absolute", transform: [{ scale: 1.6 }] }}
+              />
+            </View>
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "bold",
+                color: "#0f172a",
+                marginBottom: 12,
+                textAlign: "center",
+              }}
+            >
+              Đang tiến hành sao lưu...
+            </Text>
+            <View
+              style={{
+                backgroundColor: "#fef2f2",
+                borderWidth: 1,
+                borderColor: "#fee2e2",
+                borderRadius: 12,
+                padding: 12,
+                width: "100%",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: "#dc2626",
+                  fontWeight: "600",
+                  textAlign: "center",
+                  lineHeight: 20,
+                }}
+              >
+                ⚠️ Vui lòng không thoát khỏi ứng dụng trong quá trình sao lưu.
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
-
-
 
 export default SettingsScreen;

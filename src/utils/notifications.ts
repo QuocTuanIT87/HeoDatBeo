@@ -453,13 +453,13 @@ export async function scheduleDailyReminder() {
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-  const hasExpenseToday = transactions.some((tx) => {
+  const todayTransactions = transactions.filter((tx) => {
     return (
-      tx.type === "expense" &&
       tx.timestamp >= startOfToday.getTime() &&
       tx.timestamp <= endOfToday.getTime()
     );
   });
+  const hasTransactionsToday = todayTransactions.length > 0;
 
   const currentHour = now.getHours();
 
@@ -469,31 +469,58 @@ export async function scheduleDailyReminder() {
     const targetDate23 = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, 23, 0, 0, 0);
 
     if (i === 0) {
-      if (hasExpenseToday) {
-        continue;
-      }
-      if (currentHour < 22) {
-        await scheduleSpecificNotification(
-          targetDate22,
-          "Ghi giao dịch hôm nay 🐷",
-          "Hôm nay bạn chưa ghi nhận khoản chi tiêu nào. Ghi lại ngay để Heo Đất nhắc bạn nhé!",
-          { type: 'reminder' }
-        );
-        await scheduleSpecificNotification(
-          targetDate23,
-          "Nhắc nhở muộn 🐷",
-          "Đã 23h rồi, hãy dành ra 30 giây để ghi chép các giao dịch chi tiêu hôm nay nha!",
-          { type: 'reminder' }
-        );
-      } else if (currentHour === 22) {
-        await scheduleSpecificNotification(
-          targetDate23,
-          "Nhắc nhở muộn 🐷",
-          "Đã 23h rồi, hãy dành ra 30 giây để ghi chép các giao dịch chi tiêu hôm nay nha!",
-          { type: 'reminder' }
-        );
+      if (hasTransactionsToday) {
+        // Nếu đã có giao dịch hôm nay, chỉ lên lịch thông báo tóm tắt lúc 22h (nếu chưa quá giờ)
+        if (currentHour < 22) {
+          const maxShown = 5;
+          const shownTxs = todayTransactions.slice(0, maxShown);
+          let txListStr = shownTxs.map(tx => {
+            const sign = tx.type === 'expense' ? '🔴 -' : '🟢 +';
+            const noteStr = tx.note ? ` (${tx.note})` : '';
+            const catName = resolveCategoryName(tx, profile, categoryBudgets);
+            return `- ${catName}${noteStr}: ${sign}${formatCurrency(tx.amount)}`;
+          }).join('\n');
+
+          if (todayTransactions.length > maxShown) {
+            txListStr += `\n... và ${todayTransactions.length - maxShown} giao dịch khác`;
+          }
+
+          const title = "Hôm nay bạn đã ghi chép 🐷";
+          const body = `Hôm nay bạn đã ghi nhận giao dịch:\n${txListStr}\nBạn có muốn bổ sung thêm giao dịch nào khác không? Nhấp vào đây để ghi chép thêm nhé! ✨`;
+
+          await scheduleSpecificNotification(
+            targetDate22,
+            title,
+            body,
+            { type: 'reminder' }
+          );
+        }
+      } else {
+        // Nếu chưa có giao dịch nào hôm nay
+        if (currentHour < 22) {
+          await scheduleSpecificNotification(
+            targetDate22,
+            "Ghi giao dịch hôm nay 🐷",
+            "Hôm nay bạn chưa ghi nhận khoản chi tiêu nào. Ghi lại ngay để Heo Đất nhắc bạn nhé!",
+            { type: 'reminder' }
+          );
+          await scheduleSpecificNotification(
+            targetDate23,
+            "Nhắc nhở muộn 🐷",
+            "Đã 23h rồi, hãy dành ra 30 giây để ghi chép các giao dịch chi tiêu hôm nay nha!",
+            { type: 'reminder' }
+          );
+        } else if (currentHour === 22) {
+          await scheduleSpecificNotification(
+            targetDate23,
+            "Nhắc nhở muộn 🐷",
+            "Đã 23h rồi, hãy dành ra 30 giây để ghi chép các giao dịch chi tiêu hôm nay nha!",
+            { type: 'reminder' }
+          );
+        }
       }
     } else {
+      // Cho các ngày tiếp theo trong tương lai
       await scheduleSpecificNotification(
         targetDate22,
         "Ghi giao dịch hôm nay 🐷",

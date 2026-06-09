@@ -9,7 +9,7 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
   const transactions = await storage.getTransactions();
   const profile = await storage.getUserProfile();
   const categoryBudgets = await storage.getCategoryBudgets();
-  
+
   // Filter transactions for this year
   let yearTxs = transactions.filter(tx => {
     const date = new Date(tx.timestamp);
@@ -75,14 +75,14 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
   const renderKhacDetails = (txs: Transaction[], type: 'income' | 'expense') => {
     const khacTxs = txs.filter(tx => tx.type === type && resolveCategoryName(tx, profile, categoryBudgets) === 'Khác');
     if (khacTxs.length === 0) return '';
-    
+
     let detailsHtml = `
       <tr>
         <td colspan="2" style="padding: 6px 12px 10px 24px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
           <div style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Chi tiết danh mục Khác:</div>
           <ul style="margin: 0; padding-left: 15px; font-size: 12px; color: #475569; list-style-type: disc;">
     `;
-    
+
     khacTxs.forEach(tx => {
       const noteText = tx.note ? tx.note.trim() : 'Không có ghi chú';
       const amountText = type === 'income' ? `+${formatCurrency(tx.amount)} đ` : `-${formatCurrency(tx.amount)} đ`;
@@ -94,7 +94,7 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
             </li>
       `;
     });
-    
+
     detailsHtml += `
           </ul>
         </td>
@@ -111,11 +111,14 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
     <meta charset="utf-8">
     <title>Báo cáo tài chính năm ${year}</title>
     <style>
+      @page {
+        margin: 20mm 15mm;
+      }
       body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         color: #1e293b;
         margin: 0;
-        padding: 30px;
+        padding: 0;
         line-height: 1.5;
         background-color: #ffffff;
       }
@@ -186,16 +189,19 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
       
       /* Tables */
       .table-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
         margin-bottom: 30px;
-        page-break-inside: avoid;
+      }
+      .table-grid > div {
+        margin-bottom: 25px;
+        page-break-inside: avoid; /* Keeps each category table whole if it fits, else lets it break */
       }
       table {
         width: 100%;
         border-collapse: collapse;
         margin-bottom: 20px;
+      }
+      tr {
+        page-break-inside: avoid;
       }
       th, td {
         padding: 10px 12px;
@@ -465,7 +471,7 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
 
   // Write to PDF using expo-print
   const { uri } = await Print.printToFileAsync({ html });
-  
+
   // Share the generated PDF
   await Sharing.shareAsync(uri, {
     mimeType: 'application/pdf',

@@ -49,3 +49,25 @@ export function resolveCategoryName(
     return "Khác";
   }
 }
+
+export function isProhibitedCategoryName(name: string): boolean {
+  if (!name) return false;
+  const normalized = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .replace(/\s+/g, "");
+
+  const prohibited = [
+    "khac",
+    "tietkiem",
+    "ruttietkiem",
+    "nuoiheobeo",
+    "heogiamcan",
+    "sodudautien"
+  ];
+
+  return prohibited.includes(normalized);
+}

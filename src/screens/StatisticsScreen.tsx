@@ -466,7 +466,9 @@ const StatisticsScreen = () => {
   const [notificationHistory, setNotificationHistory] = useState<
     NotificationHistoryItem[]
   >([]);
-  const [historyDisplayLimit, setHistoryDisplayLimit] = useState<number>(10);
+  const [historyDayLimit, setHistoryDayLimit] = useState<number>(10);
+  const [historyMonthLimit, setHistoryMonthLimit] = useState<number>(3);
+  const [historyYearLimit, setHistoryYearLimit] = useState<number>(2);
   const [historyTab, setHistoryTab] = useState<'day' | 'month' | 'year'>('day');
 
   const loadNotificationHistory = async () => {
@@ -478,12 +480,11 @@ const StatisticsScreen = () => {
     }
     const data = await storage.getNotificationHistory();
     setNotificationHistory(data);
-    setHistoryDisplayLimit(10);
+    setHistoryDayLimit(10);
+    setHistoryMonthLimit(3);
+    setHistoryYearLimit(2);
   };
 
-  useEffect(() => {
-    setHistoryDisplayLimit(10);
-  }, [historyTab]);
 
   const [period, setPeriod] = useState<FilterPeriod>("day");
   const [type, setType] = useState<FilterType>("all");
@@ -1867,15 +1868,33 @@ const StatisticsScreen = () => {
                 );
               }
 
+              const currentLimit = historyTab === 'day' 
+                ? historyDayLimit 
+                : historyTab === 'month' 
+                  ? historyMonthLimit 
+                  : historyYearLimit;
+
+              const setLimit = historyTab === 'day'
+                ? setHistoryDayLimit
+                : historyTab === 'month'
+                  ? setHistoryMonthLimit
+                  : setHistoryYearLimit;
+
+              const increment = historyTab === 'day'
+                ? 10
+                : historyTab === 'month'
+                  ? 3
+                  : 2;
+
               return (
                 <FlatList
-                  data={filteredHistory.slice(0, historyDisplayLimit)}
+                  data={filteredHistory.slice(0, currentLimit)}
                   keyExtractor={(item) => item.id}
                   contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
                   showsVerticalScrollIndicator={false}
                   onEndReached={() => {
-                    if (historyDisplayLimit < filteredHistory.length) {
-                      setHistoryDisplayLimit((prev) => prev + 10);
+                    if (currentLimit < filteredHistory.length) {
+                      setLimit((prev) => prev + increment);
                     }
                   }}
                   onEndReachedThreshold={0.5}
