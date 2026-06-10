@@ -20,7 +20,7 @@
         "backgroundColor": "#ffffff"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.expomobile87.HeoDatBeo"
+      "package": "com.satsboy87.heodatbeo"
     },
     "web": {
       "favicon": "./assets/savepig.jpg"

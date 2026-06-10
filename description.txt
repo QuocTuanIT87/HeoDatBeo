@@ -1,0 +1,6 @@
+Heo Đất Béo 🐷 - Thu Chi & Tiết Kiệm Kỷ Luật
+
+Ứng dụng quản lý tài chính cá nhân giúp bạn ghi chép thu chi nhanh chóng, chia hũ ngân sách khoa học và rèn luyện thói quen tích lũy tiết kiệm bền bỉ.
+
+* Thu chi nhanh gọn ⚡: Nhập dữ liệu trong 3 giây bằng bảng mệnh giá tiện lợi, kiểm soát ngân sách theo từng "hũ" chi tiêu trực quan.
+* Heo đất kỷ luật 🐖: Đặt mục tiêu tích lũy theo năm. Cơ chế rút tiền giới hạn (tối đa 500k, cách nhau tối thiểu 7 ngày) giúp bạn giữ vững kế hoạch.
