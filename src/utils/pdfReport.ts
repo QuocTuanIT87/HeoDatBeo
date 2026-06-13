@@ -71,29 +71,58 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
   const netSign = yearlyNet >= 0 ? '+' : '';
   const netColor = yearlyNet >= 0 ? '#16a34a' : '#dc2626'; // Green 600 or Red 600
 
-  // Helper to render Khác details
-  const renderKhacDetails = (txs: Transaction[], type: 'income' | 'expense') => {
-    const khacTxs = txs.filter(tx => tx.type === type && resolveCategoryName(tx, profile, categoryBudgets) === 'Khác');
-    if (khacTxs.length === 0) return '';
+  // Helper to render category transaction details (notes and amounts)
+  const renderCategoryDetails = (txs: Transaction[], categoryName: string, type: 'income' | 'expense') => {
+    const catTxs = txs.filter(tx => tx.type === type && resolveCategoryName(tx, profile, categoryBudgets) === categoryName);
+    if (catTxs.length === 0) return '';
+
+    // Chỉ hiển thị chi tiết nếu danh mục đó có ít nhất một giao dịch chứa ghi chú
+    const hasAnyNote = catTxs.some(tx => tx.note && tx.note.trim() !== '');
+    if (!hasAnyNote) return '';
+
+    const noteGroups: Record<string, number> = {};
+    let noNoteTotal = 0;
+
+    catTxs.forEach(tx => {
+      const note = tx.note ? tx.note.trim() : '';
+      if (note) {
+        noteGroups[note] = (noteGroups[note] || 0) + tx.amount;
+      } else {
+        noNoteTotal += tx.amount;
+      }
+    });
 
     let detailsHtml = `
       <tr>
         <td colspan="2" style="padding: 6px 12px 10px 24px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-          <div style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Chi tiết danh mục Khác:</div>
+          <div style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Chi tiết ghi chú:</div>
           <ul style="margin: 0; padding-left: 15px; font-size: 12px; color: #475569; list-style-type: disc;">
     `;
 
-    khacTxs.forEach(tx => {
-      const noteText = tx.note ? tx.note.trim() : 'Không có ghi chú';
-      const amountText = type === 'income' ? `+${formatCurrency(tx.amount)} đ` : `-${formatCurrency(tx.amount)} đ`;
-      const amountColor = type === 'income' ? '#16a34a' : '#dc2626';
+    const amountColor = type === 'income' ? '#16a34a' : '#dc2626';
+
+    // Sắp xếp các ghi chú theo tổng số tiền giảm dần
+    const sortedNotes = Object.entries(noteGroups).sort((a, b) => b[1] - a[1]);
+
+    sortedNotes.forEach(([note, amount]) => {
+      const amountText = type === 'income' ? `+${formatCurrency(amount)} đ` : `-${formatCurrency(amount)} đ`;
       detailsHtml += `
             <li style="margin-bottom: 4px;">
-              <span>${noteText}</span>: 
+              <span>${note}</span> - 
               <span style="font-weight: 600; color: ${amountColor};">${amountText}</span>
             </li>
       `;
     });
+
+    if (noNoteTotal > 0) {
+      const amountText = type === 'income' ? `+${formatCurrency(noNoteTotal)} đ` : `-${formatCurrency(noNoteTotal)} đ`;
+      detailsHtml += `
+            <li style="margin-bottom: 4px;">
+              <span>Không ghi chú</span> - 
+              <span style="font-weight: 600; color: ${amountColor};">${amountText}</span>
+            </li>
+      `;
+    }
 
     detailsHtml += `
           </ul>
@@ -214,6 +243,9 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
         font-weight: bold;
         color: #475569;
       }
+      .category-row {
+        border-top: 1.8px solid #cbd5e1;
+      }
       .text-right { text-align: right; }
       .text-center { text-align: center; }
       
@@ -286,14 +318,12 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
     const sortedIncomes = prepareCategoryEntries(yearlyIncomeCategoryTotals);
     sortedIncomes.forEach(([cat, amount]) => {
       html += `
-        <tr>
+        <tr class="category-row">
           <td>${cat}</td>
           <td class="text-right value-income">+${formatCurrency(amount)} đ</td>
         </tr>
       `;
-      if (cat === "Khác" && amount > 0) {
-        html += renderKhacDetails(yearTxs, 'income');
-      }
+      html += renderCategoryDetails(yearTxs, cat, 'income');
     });
   }
 
@@ -321,14 +351,12 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
     const sortedExpenses = prepareCategoryEntries(yearlyExpenseCategoryTotals);
     sortedExpenses.forEach(([cat, amount]) => {
       html += `
-        <tr>
+        <tr class="category-row">
           <td>${cat}</td>
           <td class="text-right value-expense">-${formatCurrency(amount)} đ</td>
         </tr>
       `;
-      if (cat === "Khác" && amount > 0) {
-        html += renderKhacDetails(yearTxs, 'expense');
-      }
+      html += renderCategoryDetails(yearTxs, cat, 'expense');
     });
   }
 
@@ -410,14 +438,12 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
       const sortedMIncomes = prepareCategoryEntries(mIncomeCategoryTotals);
       sortedMIncomes.forEach(([cat, amount]) => {
         html += `
-          <tr>
+          <tr class="category-row">
             <td>${cat}</td>
             <td class="text-right value-income">+${formatCurrency(amount)} đ</td>
           </tr>
         `;
-        if (cat === "Khác" && amount > 0) {
-          html += renderKhacDetails(monthTxs, 'income');
-        }
+        html += renderCategoryDetails(monthTxs, cat, 'income');
       });
     }
 
@@ -444,14 +470,12 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
       const sortedMExpenses = prepareCategoryEntries(mExpenseCategoryTotals);
       sortedMExpenses.forEach(([cat, amount]) => {
         html += `
-          <tr>
+          <tr class="category-row">
             <td>${cat}</td>
             <td class="text-right value-expense">-${formatCurrency(amount)} đ</td>
           </tr>
         `;
-        if (cat === "Khác" && amount > 0) {
-          html += renderKhacDetails(monthTxs, 'expense');
-        }
+        html += renderCategoryDetails(monthTxs, cat, 'expense');
       });
     }
 
