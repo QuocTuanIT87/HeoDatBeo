@@ -20,4 +20,5 @@ export type RootStackParamList = {
   GoldHistory: undefined;
   DeletedCategories: undefined;
   DeletedFunds: undefined;
+  YearlyReport: undefined;
 };
