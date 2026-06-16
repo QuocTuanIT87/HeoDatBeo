@@ -1,5 +1,15 @@
 [
   {
+    "version": "16.06.2026",
+    "description": "- Cập nhật báo cáo năm",
+    "order": 21
+  },
+  {
+    "version": "13.06.2026",
+    "description": "- Cập nhật báo cáo năm",
+    "order": 20
+  },
+  {
     "version": "09.06.2026",
     "description": "- Cập nhật thông báo tổng hợp cuối ngày\n -Thêm chức năng xóa toàn bộ giao dịch vàng",
     "order": 19

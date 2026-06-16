@@ -56,7 +56,6 @@ import { UserProfile, CategoryBudget, IncomeCategory } from "../types";
 import { EXPENSE_ICONS } from "./HomeScreen";
 import { scheduleTestNotification } from "../utils/notifications";
 import { styles } from "../styles/SettingsScreen";
-import { exportYearlyPdfReport } from "../utils/pdfReport";
 import { isCategoryIdMatch, isProhibitedCategoryName } from "../utils/category";
 
 const DEFAULT_INCOME_CATEGORIES = ["Lương", "Thưởng", "Bán hàng"];
@@ -170,14 +169,6 @@ const SettingsScreen = () => {
 
   // Settings Modal State
   const [isSettingsModalVisible, setSettingsModalVisible] = useState(false);
-
-  // PDF Report States
-  const [isPdfModalVisible, setPdfModalVisible] = useState(false);
-  const [selectedPdfYear, setSelectedPdfYear] = useState<number>(
-    new Date().getFullYear(),
-  );
-  const [pdfAvailableYears, setPdfAvailableYears] = useState<number[]>([]);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // Google Drive Backup States
   const [isDriveModalVisible, setDriveModalVisible] = useState(false);
@@ -504,55 +495,6 @@ const SettingsScreen = () => {
       (b) => b.deleteAt === null || b.deleteAt === undefined,
     );
     setCategoryBudgets(activeBudgets);
-  };
-
-  const handleOpenPdfModal = async () => {
-    try {
-      const txs = await storage.getTransactions();
-      const yearsSet = new Set<number>();
-      txs.forEach((tx) => {
-        if (tx.timestamp) {
-          const y = new Date(tx.timestamp).getFullYear();
-          if (!isNaN(y)) {
-            yearsSet.add(y);
-          }
-        }
-      });
-
-      // Default to current year if empty
-      const currentYear = new Date().getFullYear();
-      if (yearsSet.size === 0) {
-        yearsSet.add(currentYear);
-      }
-
-      const sortedYears = Array.from(yearsSet).sort((a, b) => b - a);
-      setPdfAvailableYears(sortedYears);
-
-      // Default selection to current year if available, otherwise the latest year
-      if (yearsSet.has(currentYear)) {
-        setSelectedPdfYear(currentYear);
-      } else {
-        setSelectedPdfYear(sortedYears[0]);
-      }
-
-      setPdfModalVisible(true);
-    } catch (e) {
-      console.error(e);
-      Alert.alert("Lỗi", "Không thể tải danh sách năm giao dịch.");
-    }
-  };
-
-  const handleExportPdf = async () => {
-    setIsGeneratingPdf(true);
-    try {
-      await exportYearlyPdfReport(selectedPdfYear);
-      setPdfModalVisible(false);
-    } catch (e: any) {
-      console.error(e);
-      Alert.alert("Lỗi", e.message || "Không thể xuất file PDF báo cáo năm.");
-    } finally {
-      setIsGeneratingPdf(false);
-    }
   };
 
   const handleExport = async () => {
@@ -1214,7 +1156,7 @@ const SettingsScreen = () => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.card} onPress={handleOpenPdfModal}>
+        <TouchableOpacity style={styles.card} onPress={() => (navigation as any).navigate("YearlyReport")}>
           <View style={[styles.iconContainer, { backgroundColor: "#ecfeff" }]}>
             <ChartNoAxesCombined color="#0891b2" size={18} />
           </View>
@@ -1943,80 +1885,6 @@ const SettingsScreen = () => {
                   ? "Hủy"
                   : "Dùng biểu tượng mặc định"}
               </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal: Chọn năm xuất PDF */}
-      <Modal
-        visible={isPdfModalVisible}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => !isGeneratingPdf && setPdfModalVisible(false)}
-      >
-        <View style={styles.modalOverlayCenter}>
-          <View style={styles.settingsModalBox}>
-            {/* Loading Overlay */}
-            {isGeneratingPdf && (
-              <View style={styles.pdfLoadingOverlay}>
-                <ActivityIndicator size="large" color="#f43f5e" />
-                <Text
-                  style={{
-                    marginTop: 12,
-                    color: "#e11d48",
-                    fontWeight: "600",
-                    fontSize: 14,
-                  }}
-                >
-                  Đang tạo PDF báo cáo...
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Báo cáo PDF</Text>
-              <TouchableOpacity
-                onPress={() => setPdfModalVisible(false)}
-                disabled={isGeneratingPdf}
-              >
-                <X color="#0f172a" size={24} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={{ fontSize: 14, color: "#475569", marginBottom: 10 }}>
-              Chọn năm tài chính cần xuất báo cáo dữ liệu thu chi:
-            </Text>
-
-            <View style={styles.pdfYearGrid}>
-              {pdfAvailableYears.map((year) => (
-                <TouchableOpacity
-                  key={year}
-                  style={[
-                    styles.pdfYearItem,
-                    selectedPdfYear === year && styles.pdfYearItemActive,
-                  ]}
-                  onPress={() => setSelectedPdfYear(year)}
-                  disabled={isGeneratingPdf}
-                >
-                  <Text
-                    style={[
-                      styles.pdfYearText,
-                      selectedPdfYear === year && styles.pdfYearTextActive,
-                    ]}
-                  >
-                    {year}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={styles.pdfExportBtn}
-              onPress={handleExportPdf}
-              disabled={isGeneratingPdf}
-            >
-              <Text style={styles.pdfExportBtnText}>Xuất báo cáo</Text>
             </TouchableOpacity>
           </View>
         </View>

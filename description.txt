@@ -1,0 +1,67 @@
+MÔ TẢ NGẮN (SHORT DESCRIPTION)
+==================================================
+Heo Đất Béo 🐷 - Thu Chi & Tiết Kiệm Kỷ Luật
+
+Ứng dụng quản lý tài chính cá nhân giúp bạn ghi chép thu chi nhanh chóng, chia hũ ngân sách khoa học và rèn luyện thói quen tích lũy tiết kiệm bền bỉ.
+
+* Thu chi nhanh gọn ⚡: Nhập dữ liệu trong 3 giây bằng bảng mệnh giá tiện lợi, kiểm soát ngân sách theo từng "hũ" chi tiêu trực quan.
+* Heo đất kỷ luật 🐖: Đặt mục tiêu tích lũy theo năm. Cơ chế rút tiền giới hạn (tối đa 500k, cách nhau tối thiểu 7 ngày) giúp bạn giữ vững kế hoạch.
+
+
+MÔ TẢ CHI TIẾT - ĐẦY ĐỦ (LONG DESCRIPTION)
+==================================================
+Heo Đất Béo 🐷 - Người bạn đồng hành quản lý tài chính, chia hũ ngân sách và tích lũy tiết kiệm kỷ luật.
+
+Bạn luôn gặp khó khăn trong việc kiểm soát dòng tiền? Bạn muốn tiết kiệm tiền nhưng luôn tiêu lẹm vào quỹ tích lũy? "Heo Đất Béo" ra đời để giúp bạn giải quyết triệt để những vấn đề đó bằng phương pháp quản lý tài chính khoa học và cơ chế rèn luyện kỷ luật thép.
+
+CÁC TÍNH NĂNG NỔI BẬT:
+
+1. GHI CHÉP THU CHI NHANH CHÓNG TRONG 3 GIÂY ⚡
+- Hỗ trợ 2 phương thức nhập liệu linh hoạt: bàn phím số thủ công hoặc bàn phím mệnh giá nhanh (keypad) độc đáo giúp nhập giao dịch chỉ qua vài cái chạm.
+- Tùy chỉnh danh sách ghi chú gợi ý giúp tối ưu hóa thời gian nhập liệu cho các chi tiêu hàng ngày.
+- Phân loại danh mục thu nhập và chi tiêu rõ ràng với kho biểu tượng sinh động.
+
+2. NUÔI HEO ĐẤT TIẾT KIỆM KỶ LUẬT THỰC SỰ 🐖
+- Đặt mục tiêu tiết kiệm dài hạn theo năm.
+- Cơ chế rút tiền siêu kỷ luật: Giới hạn số tiền rút tối đa chỉ 500k mỗi lần và bắt buộc giãn cách tối thiểu 7 ngày giữa các lần rút. Điều này giúp ngăn chặn triệt để thói quen rút tiền tùy tiện và bảo vệ quỹ tiết kiệm của bạn trước những cám dỗ chi tiêu nhất thời.
+- Theo dõi lịch sử nuôi heo và biểu đồ tiến trình hoàn thành mục tiêu trực quan.
+
+3. PHÂN CHIA HŨ NGÂN SÁCH KHOA HỌC (TÚI TIỀN CHI TIÊU) 💰
+- Áp dụng phương pháp chia hũ tài chính thông minh. Bạn có thể thiết lập ngân sách tối đa cho từng danh mục chi tiêu (Ăn uống, Mua sắm, Đi lại, Giải trí...).
+- Cảnh báo trực quan khi ngân sách của một hũ sắp cạn kiệt, giúp bạn chủ động thắt chặt chi tiêu kịp thời.
+- Dễ dàng nạp thêm tiền vào ngân sách hoặc rút bớt về số dư chính khi cần thiết.
+
+4. QUẢN LÝ CÁC QUỸ TÙY BIẾN ĐA DẠNG 📂
+- Tạo các quỹ riêng biệt theo nhu cầu cá nhân: Quỹ khẩn cấp, Quỹ du lịch, Quỹ học tập, Quỹ báo hiếu cha mẹ, hay thậm chí là "quỹ đen".
+- Theo dõi chi tiết biến động số dư và lịch sử chuyển tiền giữa các quỹ một cách minh bạch.
+
+5. SỔ TÍCH TRỮ VÀNG THÔNG MINH 🪙
+- Quản lý tài sản tích trữ bằng vàng (Nhẫn tròn trơn, SJC, PNJ...) với các đơn vị phân, chỉ, cây.
+- Ghi chép giá mua, giá bán, phí gia công và phí quy đổi linh hoạt.
+- Tự động tính toán lợi nhuận thực tế (lời/lỗ) dựa trên chênh lệch giá, giúp bạn nắm bắt hiệu quả đầu tư tích lũy vàng theo thời gian.
+
+6. BÁO CÁO THỐNG KÊ & BIỂU ĐỒ TRỰC QUAN 📊
+- Hệ thống biểu đồ tròn (cơ cấu chi tiêu) và biểu đồ cột (xu hướng thu chi) cực kỳ đẹp mắt và dễ hiểu.
+- Lọc báo cáo linh hoạt theo tuần, tháng, năm hoặc khoảng thời gian tùy chọn.
+- So sánh tỷ lệ chi tiêu giữa các danh mục để biết chính xác tiền của bạn đã đi đâu.
+
+7. LINH VẬT MASCOT TƯƠNG TÁC VUI NHỘN 💖
+- Chú Heo Đất Mascot đồng hành dễ thương xuất hiện ngay trên trang chủ.
+- Heo sẽ phản ứng trạng thái cảm xúc theo hành vi chi tiêu của bạn: vui tươi đầy năng lượng khi bạn tiết kiệm tốt, nhưng sẽ tỏ ra buồn bã hoặc lo lắng nếu bạn chi tiêu vượt định mức.
+- Thay đổi linh vật Mascot yêu thích và cá nhân hóa trải nghiệm.
+
+8. THEO DÕI CHUỖI KỶ LUẬT (STREAK COUNT) 🔥
+- Ghi nhận và theo dõi số ngày liên tục bạn duy trì việc ghi chép tài chính.
+- Thúc đẩy động lực ghi chép hàng ngày để giữ chuỗi kỷ luật không bị ngắt quãng.
+
+9. SAO LƯU GOOGLE DRIVE & XUẤT BÁO CÁO PDF CHUYÊN NGHIỆP ☁️
+- Xuất báo cáo tài chính năm chi tiết dưới dạng tệp PDF chuyên nghiệp để lưu trữ hoặc chia sẻ.
+- Đồng bộ hóa và sao lưu toàn bộ dữ liệu an toàn lên tài khoản Google Drive cá nhân của bạn.
+- Khôi phục dữ liệu nhanh chóng khi chuyển đổi thiết bị hoặc cài đặt lại ứng dụng.
+
+TẠI SAO NÊN CHỌN HEO ĐẤT BÉO?
+- Kỷ luật thực tế: Ứng dụng duy nhất áp dụng các ràng buộc rút tiền vật lý để bảo vệ mục tiêu của bạn.
+- Giao diện cao cấp: Trải nghiệm mượt mà, màu sắc hài hòa, hỗ trợ chế độ tối ưu và các hiệu ứng chuyển động sinh động.
+- An toàn tuyệt đối: Dữ liệu của bạn thuộc về bạn. Mọi dữ liệu được lưu cục bộ trên thiết bị và đồng bộ trực tiếp lên Google Drive cá nhân của chính bạn mà không qua máy chủ trung gian.
+
+Hãy tải ngay Heo Đất Béo 🐷 và bắt đầu hành trình làm chủ tài chính cá nhân một cách có kỷ luật ngay hôm nay!
