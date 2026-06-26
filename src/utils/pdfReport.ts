@@ -108,7 +108,7 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
       const amountText = type === 'income' ? `+${formatCurrency(amount)} đ` : `-${formatCurrency(amount)} đ`;
       detailsHtml += `
             <li style="margin-bottom: 4px;">
-              <span>${note}</span> - 
+              <span>${note}</span>: 
               <span style="font-weight: 600; color: ${amountColor};">${amountText}</span>
             </li>
       `;
@@ -118,7 +118,7 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
       const amountText = type === 'income' ? `+${formatCurrency(noNoteTotal)} đ` : `-${formatCurrency(noNoteTotal)} đ`;
       detailsHtml += `
             <li style="margin-bottom: 4px;">
-              <span>Không ghi chú</span> - 
+              <span>Không ghi chú</span>: 
               <span style="font-weight: 600; color: ${amountColor};">${amountText}</span>
             </li>
       `;
@@ -246,6 +246,20 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
       .category-row {
         border-top: 1.8px solid #cbd5e1;
       }
+      .category-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: bold;
+        color: #ffffff;
+      }
+      .badge-income {
+        background-color: #16a34a;
+      }
+      .badge-expense {
+        background-color: #dc2626;
+      }
       .text-right { text-align: right; }
       .text-center { text-align: center; }
       
@@ -319,7 +333,7 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
     sortedIncomes.forEach(([cat, amount]) => {
       html += `
         <tr class="category-row">
-          <td>${cat}</td>
+          <td><span class="category-badge badge-income">${cat}</span></td>
           <td class="text-right value-income">+${formatCurrency(amount)} đ</td>
         </tr>
       `;
@@ -352,7 +366,7 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
     sortedExpenses.forEach(([cat, amount]) => {
       html += `
         <tr class="category-row">
-          <td>${cat}</td>
+          <td><span class="category-badge badge-expense">${cat}</span></td>
           <td class="text-right value-expense">-${formatCurrency(amount)} đ</td>
         </tr>
       `;
@@ -439,7 +453,7 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
       sortedMIncomes.forEach(([cat, amount]) => {
         html += `
           <tr class="category-row">
-            <td>${cat}</td>
+            <td><span class="category-badge badge-income">${cat}</span></td>
             <td class="text-right value-income">+${formatCurrency(amount)} đ</td>
           </tr>
         `;
@@ -471,7 +485,7 @@ export const exportYearlyPdfReport = async (year: number): Promise<void> => {
       sortedMExpenses.forEach(([cat, amount]) => {
         html += `
           <tr class="category-row">
-            <td>${cat}</td>
+            <td><span class="category-badge badge-expense">${cat}</span></td>
             <td class="text-right value-expense">-${formatCurrency(amount)} đ</td>
           </tr>
         `;
