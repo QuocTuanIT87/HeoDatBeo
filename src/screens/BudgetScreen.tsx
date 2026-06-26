@@ -890,8 +890,14 @@ const BudgetScreen = () => {
           </View>
         ) : (
           <View style={styles.listSection}>
-            {budgets
+            {[...budgets]
               .filter((b) => (b.type || "recharge") === activeTab)
+              .sort((a, b) => {
+                if (activeTab === "direct") {
+                  return (b.spent || 0) - (a.spent || 0);
+                }
+                return 0;
+              })
               .map((cat) => renderCategoryItem(cat))}
           </View>
         )}
