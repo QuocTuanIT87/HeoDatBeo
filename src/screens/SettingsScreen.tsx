@@ -1156,7 +1156,10 @@ const SettingsScreen = () => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.card} onPress={() => (navigation as any).navigate("YearlyReport")}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => (navigation as any).navigate("YearlyReport")}
+        >
           <View style={[styles.iconContainer, { backgroundColor: "#ecfeff" }]}>
             <ChartNoAxesCombined color="#0891b2" size={18} />
           </View>

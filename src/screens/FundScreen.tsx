@@ -704,9 +704,10 @@ const FundScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {profile?.customFunds
-          ?.filter((f) => f.deleteAt === null || f.deleteAt === undefined)
-          .map((fund) => (
+        {[...(profile?.customFunds || [])]
+          .filter((f) => f.deleteAt === null || f.deleteAt === undefined)
+          .sort((a, b) => b.balance - a.balance)
+          .map((fund, index) => (
             <TouchableOpacity
               key={fund.id}
               style={styles.fundCard}

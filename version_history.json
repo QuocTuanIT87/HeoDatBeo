@@ -1,5 +1,15 @@
 [
   {
+    "version": "27.06.2026",
+    "description": "- Cập nhật quyền hạn truy cập ứng dụng",
+    "order": 24
+  },
+  {
+    "version": "26.06.2026",
+    "description": "- Cập nhật hiển thị danh sách danh mục",
+    "order": 23
+  },
+  {
     "version": "17.06.2026",
     "description": "- Sửa lỗi hiển thị danh mục trong báo cáo",
     "order": 22
