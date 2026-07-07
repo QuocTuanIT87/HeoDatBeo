@@ -1,5 +1,10 @@
 [
   {
+    "version": "28.06.2026",
+    "description": "- Cập nhật ID lưu trữ",
+    "order": 25
+  },
+  {
     "version": "27.06.2026",
     "description": "- Cập nhật quyền hạn truy cập ứng dụng",
     "order": 24
