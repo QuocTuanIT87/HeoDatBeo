@@ -1,7 +1,7 @@
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { storage } from '../store/storage';
 
-const GOOGLE_CLIENT_ID = '765227702920-caeghllgauea96583eircrrtuv2gvcpj.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '765227702920-f9kg547udkvej555u1if39teneaa61l3.apps.googleusercontent.com';
 const BACKUP_FOLDER_NAME = 'data_heo_dat_beo';
 
 export interface GoogleDriveBackupInfo {
