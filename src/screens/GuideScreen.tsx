@@ -88,24 +88,12 @@ const GuideScreen = () => {
 
         {/* MOCKUP 2: CHIA TIỀN */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>2. Chia Tiền (Lập ngân sách)</Text>
+          <Text style={styles.sectionTitle}>2. Tạo Danh mục Chi tiêu</Text>
           <Text style={styles.guideText}>
-            Sau khi có tiền Chưa phân bổ, bạn sang màn hình{" "}
-            <Text style={{ fontWeight: "bold" }}>Chia Tiền</Text> để lập kế
-            hoạch chi tiêu. Hệ thống hỗ trợ 2 loại danh mục:
+            Bạn sang màn hình{" "}
+            <Text style={{ fontWeight: "bold" }}>Chi tiêu</Text> để quản lý danh sách
+            danh mục chi tiêu của mình.
           </Text>
-
-          <View style={styles.noteItem}>
-            <Layers color="#7c3aed" size={20} />
-            <Text style={styles.noteText}>
-              <Text style={{ fontWeight: "bold", color: "#7c3aed" }}>
-                1. Danh mục Cần nạp tiền:
-              </Text>{" "}
-              Giống như một phong bì tiền mặt. Bạn phải nạp tiền vào phong bì
-              này trước khi tiêu. Tiền tiêu sẽ trừ vào số dư trong phong bì đó.
-              (Vd: Ăn uống, Xăng xe).
-            </Text>
-          </View>
 
           <View
             style={[
@@ -115,19 +103,16 @@ const GuideScreen = () => {
           >
             <PlusCircle color="#3b82f6" size={20} />
             <Text style={[styles.noteText, { color: "#1e40af" }]}>
-              <Text style={{ fontWeight: "bold", color: "#3b82f6" }}>
-                2. Danh mục Chi trực tiếp:
-              </Text>{" "}
-              Tiền sẽ được trừ trực tiếp từ giỏ{" "}
-              <Text style={{ fontWeight: "bold" }}>"Chưa phân bổ"</Text>. Bạn
-              không cần nạp tiền vào danh mục này.
+              💡 Giao dịch từ các danh mục chi tiêu sẽ được trừ trực tiếp từ giỏ{" "}
+              <Text style={{ fontWeight: "bold" }}>"Chưa phân bổ"</Text> (Số dư khả dụng)
+              của bạn khi ghi chép giao dịch.
             </Text>
           </View>
 
           <View style={styles.mockupContainer}>
             <View style={styles.mockFlow}>
               <View style={styles.mockPillBlue}>
-                <Text style={styles.mockPillText}>Chưa phân bổ: 5tr</Text>
+                <Text style={styles.mockPillText}>Chưa phân bổ: 5,000,000 đ</Text>
               </View>
               <ArrowDown
                 color="#94a3b8"
@@ -136,21 +121,10 @@ const GuideScreen = () => {
               />
 
               <View style={styles.mockGrid}>
-                <TouchableOpacity style={styles.mockCategory}>
-                  <Text style={styles.mockCatName}>Ăn uống (Nạp)</Text>
-                  <Text style={styles.mockCatValue}>3,000,000 đ</Text>
-                  <View style={styles.mockActionBadge}>
-                    <Text style={styles.mockActionBadgeText}>Đã nạp</Text>
-                  </View>
-                </TouchableOpacity>
-
                 <TouchableOpacity
-                  style={[styles.mockCategory, { borderColor: "#3b82f6" }]}
+                  style={[styles.mockCategory, { borderColor: "#3b82f6", width: "100%" }]}
                 >
-                  <Text style={styles.mockCatName}>Thuê nhà </Text>
-                  <Text style={[styles.mockCatValue, { color: "#3b82f6" }]}>
-                    - Trực tiếp -
-                  </Text>
+                  <Text style={styles.mockCatName}>Ăn uống (Chi trực tiếp)</Text>
                   <View
                     style={[
                       styles.mockActionBadge,
@@ -175,8 +149,9 @@ const GuideScreen = () => {
           <Text style={styles.guideText}>
             Khi đi ăn hay đổ xăng, bạn ấn{" "}
             <Text style={{ fontWeight: "bold" }}>Chi Tiền</Text> ở Trang chủ. Hệ
-            thống sẽ trừ thẳng số tiền này vào ngân sách danh mục tương ứng. Bạn
-            không thể chi lố số tiền đang có trong danh mục.
+            thống sẽ trừ thẳng số tiền này vào số dư{" "}
+            <Text style={{ fontWeight: "bold" }}>Chưa phân bổ</Text>. Bạn
+            không thể chi lố số dư khả dụng đang có.
           </Text>
 
           <View style={styles.mockupContainer}>
@@ -187,7 +162,7 @@ const GuideScreen = () => {
               <Text style={styles.mockGuideSubText}>
                 Chọn danh mục:{" "}
                 <Text style={{ fontWeight: "bold" }}>
-                  Ăn uống (Đang có: 3,000,000 đ)
+                  Ăn uống
                 </Text>
               </Text>
               <Text style={styles.mockGuideSubText}>
@@ -249,18 +224,7 @@ const GuideScreen = () => {
             {/* Quỹ mặc định */}
             <Text style={styles.mockGroupLabel}>Quỹ mặc định</Text>
             <View style={styles.mockFundRow}>
-              <View style={[styles.mockFundCard, { borderColor: "#e9d5ff" }]}>
-                <View
-                  style={[styles.mockFundIcon, { backgroundColor: "#f3e8ff" }]}
-                >
-                  <Layers color="#a855f7" size={18} />
-                </View>
-                <Text style={styles.mockFundName}>Tiêu Sài</Text>
-                <Text style={[styles.mockFundBalance, { color: "#a855f7" }]}>
-                  3,500,000 đ
-                </Text>
-              </View>
-              <View style={[styles.mockFundCard, { borderColor: "#fde68a" }]}>
+              <View style={[styles.mockFundCard, { borderColor: "#fde68a", width: "100%" }]}>
                 <View
                   style={[styles.mockFundIcon, { backgroundColor: "#fef3c7" }]}
                 >

@@ -51,7 +51,9 @@ import {
   FileText,
   Settings,
   ChartNoAxesCombined,
+  Globe,
 } from "lucide-react-native";
+import { useLanguage } from "../i18n/LanguageContext";
 import { UserProfile, CategoryBudget, IncomeCategory } from "../types";
 import { EXPENSE_ICONS } from "./HomeScreen";
 import { scheduleTestNotification } from "../utils/notifications";
@@ -183,6 +185,8 @@ const SettingsScreen = () => {
   const [isHistoryModalVisible, setHistoryModalVisible] = useState(false);
   const [isOfflineModalVisible, setOfflineModalVisible] = useState(false);
   const [isNotesModalVisible, setNotesModalVisible] = useState(false);
+  const { language, changeLanguage, t } = useLanguage();
+  const [isLangModalVisible, setLangModalVisible] = useState(false);
   const [notesTab, setNotesTab] = useState<"expense" | "income">("expense");
   const [newNoteText, setNewNoteText] = useState("");
   const [suggestedNotes, setSuggestedNotes] = useState<string[]>([]);
@@ -1051,10 +1055,25 @@ const SettingsScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Cài đặt & Dữ liệu</Text>
+        <Text style={styles.headerTitle}>{t("settings.title")}</Text>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.body}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => setLangModalVisible(true)}
+        >
+          <View style={[styles.iconContainer, { backgroundColor: "#e0e7ff" }]}>
+            <Globe color="#4f46e5" size={18} />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>{t("settings.language")}</Text>
+            <Text style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+              {language === "vi" ? "Tiếng Việt" : language === "en" ? "English" : "Deutsch"}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.card}
           onPress={() => (navigation as any).navigate("Profile")}
@@ -1954,6 +1973,96 @@ const SettingsScreen = () => {
                 ⚠️ Vui lòng không thoát khỏi ứng dụng trong quá trình sao lưu.
               </Text>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Chọn Ngôn ngữ */}
+      <Modal
+        visible={isLangModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setLangModalVisible(false)}
+      >
+        <View style={styles.modalOverlayCenter}>
+          <View style={styles.settingsModalBox}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t("settings.selectLanguage")}</Text>
+              <TouchableOpacity onPress={() => setLangModalVisible(false)}>
+                <X color="#0f172a" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingGroup}>
+                <TouchableOpacity
+                  style={[
+                    styles.settingOption,
+                    language === "vi" && styles.settingOptionActive,
+                  ]}
+                  onPress={() => {
+                    changeLanguage("vi");
+                    setLangModalVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.settingOptionTitle,
+                      language === "vi" && styles.settingOptionTextActive,
+                    ]}
+                  >
+                    🇻🇳 {t("settings.vi")}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.settingOption,
+                    language === "en" && styles.settingOptionActive,
+                  ]}
+                  onPress={() => {
+                    changeLanguage("en");
+                    setLangModalVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.settingOptionTitle,
+                      language === "en" && styles.settingOptionTextActive,
+                    ]}
+                  >
+                    🇺🇸 {t("settings.en")}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.settingOption,
+                    language === "de" && styles.settingOptionActive,
+                  ]}
+                  onPress={() => {
+                    changeLanguage("de");
+                    setLangModalVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.settingOptionTitle,
+                      language === "de" && styles.settingOptionTextActive,
+                    ]}
+                  >
+                    🇩🇪 {t("settings.de")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.closeSettingsBtn}
+              onPress={() => setLangModalVisible(false)}
+            >
+              <Text style={styles.closeSettingsBtnText}>{t("common.close")}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

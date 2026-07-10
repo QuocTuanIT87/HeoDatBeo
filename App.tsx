@@ -6,6 +6,7 @@ import './src/utils/notifications';
 import * as Notifications from 'expo-notifications';
 import { CustomAlert } from './src/components/CustomAlert';
 import { storage } from './src/store/storage';
+import { LanguageProvider } from './src/i18n/LanguageContext';
 
 const navigationRef = createNavigationContainerRef<any>();
 
@@ -39,13 +40,15 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer
-        ref={navigationRef}
-        onReady={() => setIsReady(true)}
-      >
-        <RootNavigator />
-      </NavigationContainer>
-      <CustomAlert />
+      <LanguageProvider>
+        <NavigationContainer
+          ref={navigationRef}
+          onReady={() => setIsReady(true)}
+        >
+          <RootNavigator />
+        </NavigationContainer>
+        <CustomAlert />
+      </LanguageProvider>
     </SafeAreaProvider>
   );
 }

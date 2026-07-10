@@ -1107,94 +1107,41 @@ const HomeScreen = () => {
                   >
                     {type === "expense" ? (
                       <>
-                        {/* SECTION 1: Cần nạp tiền */}
+                        {/* Danh mục Chi tiêu */}
                         <Text style={styles.sectionHeader}>
-                          📂 Danh mục Cần nạp tiền
-                        </Text>
-                        <View style={styles.gridContainer}>
-                          {expenseCategories
-                            .filter((c) => c.type !== "direct")
-                            .map((item) => {
-                              const catBudget = budgets.find(
-                                (b) => b.id === item.id || b.name === item.name,
-                              );
-                              const remaining = catBudget
-                                ? catBudget.budget
-                                : 0;
-                              const iconSource =
-                                catBudget && catBudget.icon
-                                  ? EXPENSE_ICONS[catBudget.icon]
-                                  : EXPENSE_ICONS["default"];
-                              return (
-                                <TouchableOpacity
-                                  key={item.id}
-                                  style={styles.gridItemSquare}
-                                  onPress={() => handlePickCategory(item)}
-                                >
-                                  <Image
-                                    source={iconSource}
-                                    style={styles.gridItemIcon}
-                                  />
-                                  <Text
-                                    style={styles.gridItemName}
-                                    numberOfLines={1}
-                                  >
-                                    {item.name}
-                                  </Text>
-                                  <Text
-                                    style={[
-                                      styles.gridItemBudget,
-                                      remaining <= 0 && { color: "#ef4444" },
-                                    ]}
-                                    numberOfLines={1}
-                                  >
-                                    {formatCurrency(remaining)} đ
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                        </View>
-
-                        {/* SECTION 2: Chi trực tiếp */}
-                        <Text style={styles.sectionHeader}>
-                          ⚡ Chi trực tiếp (Chưa phân bổ:{" "}
+                          📂 Danh mục Chi tiêu (Số dư khả dụng:{" "}
                           {formatCurrency(unallocated)} đ)
                         </Text>
                         <View style={styles.gridContainer}>
-                          {expenseCategories
-                            .filter((c) => c.type === "direct")
-                            .map((item) => {
-                              const catBudget = budgets.find(
-                                (b) => b.id === item.id || b.name === item.name,
-                              );
-                              const iconSource =
-                                catBudget && catBudget.icon
-                                  ? EXPENSE_ICONS[catBudget.icon]
-                                  : EXPENSE_ICONS["default"];
-                              return (
-                                <TouchableOpacity
-                                  key={item.id}
-                                  style={styles.gridItemSquare}
-                                  onPress={() => handlePickCategory(item)}
+                          {expenseCategories.map((item) => {
+                            const catBudget = budgets.find(
+                              (b) => b.id === item.id || b.name === item.name,
+                            );
+                            const iconSource =
+                              catBudget && catBudget.icon
+                                ? EXPENSE_ICONS[catBudget.icon]
+                                : EXPENSE_ICONS["default"];
+                            return (
+                              <TouchableOpacity
+                                key={item.id}
+                                style={styles.gridItemSquare}
+                                onPress={() => handlePickCategory(item)}
+                              >
+                                <Image
+                                  source={iconSource}
+                                  style={styles.gridItemIcon}
+                                />
+                                <Text
+                                  style={styles.gridItemName}
+                                  numberOfLines={1}
                                 >
-                                  <Image
-                                    source={iconSource}
-                                    style={styles.gridItemIcon}
-                                  />
-                                  <Text
-                                    style={styles.gridItemName}
-                                    numberOfLines={1}
-                                  >
-                                    {item.name}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                        </View>
+                                  {item.name}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
 
-                        {/* SECTION 3: Khác */}
-                        <Text style={styles.sectionHeader}>⚙️ Khác</Text>
-                        <View style={styles.gridContainer}>
+                          {/* Danh mục Khác ở cuối grid */}
                           <TouchableOpacity
                             style={styles.gridItemSquare}
                             onPress={() =>
@@ -1216,18 +1163,6 @@ const HomeScreen = () => {
                               numberOfLines={1}
                             >
                               Khác
-                            </Text>
-                            <Text
-                              style={[
-                                styles.gridItemBudget,
-                                {
-                                  color:
-                                    unallocated <= 0 ? "#ef4444" : "#7c3aed",
-                                },
-                              ]}
-                              numberOfLines={1}
-                            >
-                              {formatCurrency(unallocated)} đ
                             </Text>
                           </TouchableOpacity>
                         </View>

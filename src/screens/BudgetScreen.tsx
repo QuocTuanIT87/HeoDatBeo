@@ -32,6 +32,7 @@ import Keypad from "../components/Keypad";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { styles } from "../styles/BudgetScreen";
 import { Archive } from "lucide-react-native/icons";
+import { useLanguage } from "../i18n/LanguageContext";
 
 export const EXPENSE_ICONS: Record<string, any> = {
   badminton: require("../../assets/expense_icon/badminton.png"),
@@ -111,6 +112,7 @@ export const EXPENSE_ICONS: Record<string, any> = {
 const BudgetScreen = () => {
   const isFocused = useIsFocused();
   const navigation = useNavigation<any>();
+  const { t } = useLanguage();
 
   const handleShowTotalFundInfo = () => {
     Alert.normal(
@@ -158,31 +160,17 @@ const BudgetScreen = () => {
   const [iconModalVisible, setIconModalVisible] = useState(false);
   const [pendingCategory, setPendingCategory] = useState<{
     name: string;
-    type: "recharge" | "direct";
+    type: "direct";
   } | null>(null);
   const [editingCategory, setEditingCategory] = useState<CategoryBudget | null>(
     null,
   );
 
-  const [allocModalVisible, setAllocModalVisible] = useState(false);
-  const [selectedCat, setSelectedCat] = useState<CategoryBudget | null>(null);
-  const [allocAmount, setAllocAmount] = useState<number>(0);
-  const [allocType, setAllocType] = useState<"deposit" | "withdraw">("deposit");
-
   // Modal: Thêm danh mục mới
   const [addCatModalVisible, setAddCatModalVisible] = useState(false);
   const [newCatName, setNewCatName] = useState("");
-  const [newCatType, setNewCatType] = useState<"recharge" | "direct">(
-    "recharge",
-  );
 
-  // Modal: Xác nhận xóa danh mục (Bảo mật cao)
-  const [deleteConfirmModal, setDeleteConfirmModal] = useState(false);
-  const [catToDelete, setCatToDelete] = useState<CategoryBudget | null>(null);
-  const [deleteInput, setDeleteInput] = useState("");
-  const [hasTxToDelete, setHasTxToDelete] = useState(false);
   const [showAmount, setShowAmount] = useState(false);
-  const [activeTab, setActiveTab] = useState<"recharge" | "direct">("recharge");
 
   // Rename state for expense category
   const [isRenameModalVisible, setRenameModalVisible] = useState(false);
@@ -256,60 +244,7 @@ const BudgetScreen = () => {
     }
   };
 
-  const openAllocModal = (cat: CategoryBudget) => {
-    setSelectedCat(cat);
-    setAllocAmount(0);
-    setAllocType("deposit");
-    setAllocModalVisible(true);
-  };
 
-  const handleAllocate = async () => {
-    if (!selectedCat || allocAmount <= 0) {
-      Alert.alert("Lỗi", "Vui lòng nhập số tiền hợp lệ.");
-      return;
-    }
-    if (allocType === "deposit" && allocAmount > unallocated) {
-      Alert.alert(
-        "Không đủ tiền",
-        `Số dư chưa phân bổ chỉ còn ${formatCurrency(unallocated)} đ.`,
-      );
-      return;
-    }
-    if (allocType === "withdraw" && allocAmount > selectedCat.budget) {
-      Alert.alert(
-        "Không đủ tiền",
-        `Danh mục này chỉ còn ${formatCurrency(selectedCat.budget)} đ.`,
-      );
-      return;
-    }
-
-    const allBudgets = await storage.getCategoryBudgets();
-    const updated = allBudgets.map((b) => {
-      const isMatch =
-        b.id && selectedCat.id
-          ? isCategoryIdMatch(b.id, selectedCat.id)
-          : b.name === selectedCat.name;
-      return isMatch
-        ? {
-            ...b,
-            budget:
-              allocType === "deposit"
-                ? b.budget + allocAmount
-                : b.budget - allocAmount,
-          }
-        : b;
-    });
-    const success = await storage.saveCategoryBudgets(updated);
-    if (success) {
-      await loadData();
-      setAllocModalVisible(false);
-      setAllocAmount(0);
-      Alert.alert(
-        "Thành công",
-        `Đã ${allocType === "deposit" ? "nạp" : "rút"} ${formatCurrency(allocAmount)} đ ${allocType === "deposit" ? "vào" : "từ"} "${selectedCat.name}".`,
-      );
-    }
-  };
 
   const handleAddCategory = async () => {
     const name = newCatName.trim();
@@ -348,7 +283,7 @@ const BudgetScreen = () => {
     }
 
     // Chuyển sang bước chọn icon
-    setPendingCategory({ name, type: newCatType });
+    setPendingCategory({ name, type: "direct" });
     setAddCatModalVisible(false);
     setIconModalVisible(true);
   };
@@ -391,45 +326,35 @@ const BudgetScreen = () => {
 
     const updated = [
       ...allBudgets,
-      { id: newId, name, budget: 0, spent: 0, type, icon: iconKey },
+      { id: newId, name, budget: 0, spent: 0, type: "direct" as const, icon: iconKey },
     ];
     const success = await storage.saveCategoryBudgets(updated);
     if (success) {
       await loadData();
       setNewCatName("");
-      setNewCatType("recharge");
       setPendingCategory(null);
       setIconModalVisible(false);
     }
   };
 
   const handleOpenDeleteConfirm = async (cat: CategoryBudget) => {
-    const isDirect = cat.type === "direct";
     const txs = await storage.getTransactions();
     const hasTx = txs.some(
       (t) => t.categoryId && cat.id && isCategoryIdMatch(t.categoryId, cat.id),
     );
 
-    if (isDirect) {
-      Alert.alert(
-        "Xác nhận xóa",
-        `Bạn có chắc chắn muốn xóa danh mục "${cat.name}"?`,
-        [
-          { text: "Hủy", style: "cancel" },
-          {
-            text: "Xóa",
-            style: "destructive",
-            onPress: () => executeDeletion(cat, hasTx),
-          },
-        ],
-      );
-      return;
-    }
-
-    setCatToDelete(cat);
-    setHasTxToDelete(hasTx);
-    setDeleteInput("");
-    setDeleteConfirmModal(true);
+    Alert.alert(
+      "Xác nhận xóa",
+      `Bạn có chắc chắn muốn xóa danh mục "${cat.name}"?`,
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: () => executeDeletion(cat, hasTx),
+        },
+      ],
+    );
   };
 
   const executeDeletion = async (cat: CategoryBudget, hasTx: boolean) => {
@@ -451,15 +376,8 @@ const BudgetScreen = () => {
     const success = await storage.saveCategoryBudgets(updated);
     if (success) {
       await loadData();
-      setDeleteConfirmModal(false);
-      setCatToDelete(null);
       Alert.alert("Thành công", `Đã xóa danh mục "${cat.name}".`);
     }
-  };
-
-  const handleFinalDelete = async () => {
-    if (!catToDelete) return;
-    await executeDeletion(catToDelete, hasTxToDelete);
   };
 
   const handleOpenRenameModal = (cat: CategoryBudget) => {
@@ -529,96 +447,18 @@ const BudgetScreen = () => {
     }
   };
 
-  const handleSwitchCategoryType = (cat: CategoryBudget) => {
-    const isDirect = cat.type === "direct";
-
-    if (isDirect) {
-      Alert.alert(
-        "Chuyển đổi danh mục",
-        `Bạn muốn chuyển "${cat.name}" thành danh mục Cần nạp tiền?`,
-        [
-          { text: "Hủy", style: "cancel" },
-          {
-            text: "Đồng ý",
-            onPress: async () => {
-              const allBudgets = await storage.getCategoryBudgets();
-              const updated = allBudgets.map((b) => {
-                const isMatch =
-                  b.id && cat.id
-                    ? isCategoryIdMatch(b.id, cat.id)
-                    : b.name === cat.name;
-                return isMatch ? { ...b, type: "recharge" as const } : b;
-              });
-              const success = await storage.saveCategoryBudgets(updated);
-              if (success) {
-                await loadData();
-                Alert.alert(
-                  "Thành công",
-                  `Đã chuyển "${cat.name}" thành Cần nạp tiền.`,
-                );
-              }
-            },
-          },
-        ],
-      );
-    } else {
-      Alert.alert(
-        "Chuyển đổi danh mục",
-        `Bạn muốn chuyển "${cat.name}" thành danh mục Chi trực tiếp?\n\nSố tiền còn lại trong túi (${formatCurrency(cat.budget)} đ) sẽ được hoàn trả vào tiền chưa phân bổ.`,
-        [
-          { text: "Hủy", style: "cancel" },
-          {
-            text: "Đồng ý",
-            onPress: async () => {
-              const returnedAmount = cat.budget;
-              const allBudgets = await storage.getCategoryBudgets();
-              const updated = allBudgets.map((b) => {
-                const isMatch =
-                  b.id && cat.id
-                    ? isCategoryIdMatch(b.id, cat.id)
-                    : b.name === cat.name;
-                return isMatch
-                  ? { ...b, budget: 0, type: "direct" as const }
-                  : b;
-              });
-              const success = await storage.saveCategoryBudgets(updated);
-              if (success) {
-                await loadData();
-                Alert.alert(
-                  "Thành công",
-                  `Đã chuyển "${cat.name}" thành Chi trực tiếp và hoàn lại ${formatCurrency(returnedAmount)} đ.`,
-                );
-              }
-            },
-          },
-        ],
-      );
-    }
-  };
-
-  const totalBalance = budgets.reduce((sum, c) => sum + c.budget, 0);
+  const totalSpent = budgets.reduce((sum, c) => sum + (c.spent || 0), 0);
 
   const renderCategoryItem = (cat: CategoryBudget) => {
     const spent = cat.spent || 0;
-    const total = cat.budget + spent;
-    const percentSpent =
-      total > 0 ? (spent / total) * 100 : spent > 0 ? 100 : 0;
-    const percentRemaining = 100 - percentSpent;
-
-    let progressColor = "#10b981";
-    if (percentRemaining < 20) progressColor = "#ef4444";
-    else if (percentRemaining < 50) progressColor = "#f59e0b";
-
-    const isDirect = cat.type === "direct";
     const iconSource =
       EXPENSE_ICONS[cat.icon || "default"] || EXPENSE_ICONS["default"];
 
     return (
       <TouchableOpacity
         key={cat.name}
-        style={[styles.catCard, { padding: isDirect ? 22 : 18 }]}
-        onPress={() => (isDirect ? null : openAllocModal(cat))}
-        activeOpacity={isDirect ? 1 : 0.7}
+        style={[styles.catCard, { padding: 22 }]}
+        activeOpacity={1}
       >
         <TouchableOpacity
           style={{
@@ -642,93 +482,20 @@ const BudgetScreen = () => {
           <View style={styles.catNameRow}>
             <Text style={styles.catName}>{cat.name}</Text>
           </View>
-
-          {/* {isDirect ? (
-            <Text
-              style={[
-                styles.catBudget,
-                {
-                  color: spent > 0 ? "#ef4444" : "#64748b",
-                  marginTop: 4,
-                  fontSize: 14,
-                },
-              ]}
-            >
-              Đã chi tháng này:{" "}
-              {showAmount ? `${formatCurrency(spent)} đ` : "******"}
-            </Text>
-          ) : (
-            <Text
-              style={[
-                styles.catBudget,
-                {
-                  color: cat.budget <= 0 ? "#ef4444" : "#7c3aed",
-                  marginTop: 4,
-                },
-              ]}
-            >
-              {showAmount ? `${formatCurrency(cat.budget)} đ` : "******"}
-            </Text>
-          )} */}
-
-          {!isDirect && (
-            <Text
-              style={[
-                styles.catBudget,
-                {
-                  color: cat.budget <= 0 ? "#ef4444" : "#7c3aed",
-                  marginTop: 4,
-                },
-              ]}
-            >
-              {showAmount ? `${formatCurrency(cat.budget)} đ` : "******"}
-            </Text>
-          )}
-          {!isDirect && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${Math.min(100, percentSpent)}%`,
-                      backgroundColor: progressColor,
-                    },
-                  ]}
-                />
-              </View>
-              <View style={styles.progressLabelRow}>
-                <Text style={styles.progressText}>
-                  Đã dùng {Math.round(percentSpent)}%:{" "}
-                </Text>
-                <Text style={styles.progressPercent}>
-                  {showAmount ? `-${formatCurrency(spent)} đ` : "******"}
-                </Text>
-              </View>
-            </View>
-          )}
-          {isDirect && (
-            <Text
-              style={[
-                {
-                  color: spent > 0 ? "#ef4444" : "#64748b",
-                  marginTop: 4,
-                  fontSize: 12,
-                },
-              ]}
-            >
-              Đã chi: {showAmount ? `-${formatCurrency(spent)} đ` : "******"}
-            </Text>
-          )}
+          <Text
+            style={[
+              {
+                color: spent > 0 ? "#ef4444" : "#64748b",
+                marginTop: 4,
+                fontSize: 12,
+              },
+            ]}
+          >
+            {t("budget.spentLabel")}{showAmount ? `-${formatCurrency(spent)} ${t("common.currencySymbol")}` : "******"}
+          </Text>
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <TouchableOpacity
-            style={{ padding: 10 }}
-            onPress={() => handleSwitchCategoryType(cat)}
-          >
-            <ArrowRightLeft color="#cbd5e1" size={18} />
-          </TouchableOpacity>
           <TouchableOpacity
             style={styles.deleteBtn}
             onPress={() => handleOpenDeleteConfirm(cat)}
@@ -753,7 +520,7 @@ const BudgetScreen = () => {
           <View style={styles.cardHeader}>
             <View style={styles.cardBrandWrapper}>
               <Wallet color="#f59e0b" size={16} />
-              <Text style={styles.cardBrandText}>QUỸ TIÊU SÀI</Text>
+              <Text style={styles.cardBrandText}>{t("budget.title")}</Text>
             </View>
             <View style={styles.row}>
               <TouchableOpacity
@@ -769,7 +536,7 @@ const BudgetScreen = () => {
           </View>
 
           <View style={styles.cardBalanceLabelContainer}>
-            <Text style={styles.cardBalanceLabel}>SỐ DƯ CHƯA PHÂN BỔ</Text>
+            <Text style={styles.cardBalanceLabel}>{t("budget.unallocated")}</Text>
             <TouchableOpacity
               onPress={handleShowUnallocatedInfo}
               style={styles.helpIconTouch}
@@ -780,7 +547,7 @@ const BudgetScreen = () => {
           </View>
           <View style={styles.rowmb10}>
             <Text style={styles.cardBalanceAmount}>
-              {showAmount ? `${formatCurrency(unallocated)} đ` : "•••••• đ"}
+              {showAmount ? `${formatCurrency(unallocated)} ${t("common.currencySymbol")}` : `•••••• ${t("common.currencySymbol")}`}
             </Text>
             <TouchableOpacity
               onPress={() => setShowAmount(!showAmount)}
@@ -797,7 +564,7 @@ const BudgetScreen = () => {
           <View style={styles.cardStats}>
             <View style={styles.cardStat}>
               <View style={styles.cardStatLabelContainer}>
-                <Text style={styles.cardStatLabel}>TỔNG QUỸ</Text>
+                <Text style={styles.cardStatLabel}>{t("budget.totalSpent")}</Text>
                 <TouchableOpacity
                   onPress={handleShowTotalFundInfo}
                   style={styles.helpIconTouch}
@@ -807,46 +574,15 @@ const BudgetScreen = () => {
                 </TouchableOpacity>
               </View>
               <Text style={styles.cardStatValue}>
-                {showAmount ? `${formatCurrency(totalBalance)} đ` : "••••••"}
+                {showAmount ? `${formatCurrency(totalSpent)} ${t("common.currencySymbol")}` : "••••••"}
               </Text>
             </View>
             <View style={styles.cardStatDivider} />
             <View style={styles.cardStat}>
-              <Text style={styles.cardStatLabel}>KỲ HIỆN TẠI</Text>
+              <Text style={styles.cardStatLabel}>{t("budget.currentPeriod")}</Text>
               <Text style={styles.cardStatValue}>{currentMonthStr}</Text>
             </View>
           </View>
-        </View>
-      </View>
-
-      <View style={styles.tabSection}>
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "recharge" && styles.tabActive]}
-            onPress={() => setActiveTab("recharge")}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === "recharge" && styles.tabTextActive,
-              ]}
-            >
-              Cần nạp tiền
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "direct" && styles.tabActive]}
-            onPress={() => setActiveTab("direct")}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === "direct" && styles.tabTextActive,
-              ]}
-            >
-              Chi trực tiếp
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -855,278 +591,38 @@ const BudgetScreen = () => {
         contentContainerStyle={styles.bodyContent}
       >
         <View style={styles.sectionHeader}>
-          {/* <Text style={styles.sectionTitle}>
-            {activeTab === "recharge" ? "Danh mục" : "Danh mục chi trực tiếp"}
-          </Text> */}
           <TouchableOpacity
             style={styles.addCatBtn}
             onPress={() => {
-              setNewCatType(activeTab);
               setAddCatModalVisible(true);
             }}
           >
             <PlusCircle color="#7c3aed" size={20} />
-            <Text style={styles.addCatText}>Thêm mới danh mục chi tiêu</Text>
+            <Text style={styles.addCatText}>{t("budget.addCategory")}</Text>
           </TouchableOpacity>
         </View>
 
-        {activeTab === "direct" && (
-          <View style={styles.tabNoteBox}>
-            <Text style={styles.tabNoteText}>
-              💡 Giao dịch từ các danh mục này sẽ được trừ trực tiếp vào số dư
-              chưa phân bổ của bạn.
-            </Text>
-          </View>
-        )}
+        <View style={styles.tabNoteBox}>
+          <Text style={styles.tabNoteText}>
+            {t("budget.note")}
+          </Text>
+        </View>
 
-        {budgets.filter((b) => (b.type || "recharge") === activeTab).length ===
-        0 ? (
+        {budgets.length === 0 ? (
           <View style={styles.emptyBox}>
             <Text style={styles.emptyText}>
-              {activeTab === "recharge"
-                ? "Chưa có túi chi tiêu nào cần nạp tiền."
-                : "Chưa có danh mục chi trực tiếp nào."}
+              {t("budget.empty")}
             </Text>
           </View>
         ) : (
           <View style={styles.listSection}>
             {[...budgets]
-              .filter((b) => (b.type || "recharge") === activeTab)
-              .sort((a, b) => {
-                if (activeTab === "direct") {
-                  return (b.spent || 0) - (a.spent || 0);
-                }
-                return 0;
-              })
+              .sort((a, b) => (b.spent || 0) - (a.spent || 0))
               .map((cat) => renderCategoryItem(cat))}
           </View>
         )}
         <View style={{ height: 40 }} />
       </ScrollView>
-
-      {/* Modal: Nạp/Rút tiền */}
-      <Modal
-        visible={allocModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setAllocModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
-              >
-                <Image
-                  source={
-                    EXPENSE_ICONS[selectedCat?.icon || "default"] ||
-                    EXPENSE_ICONS["default"]
-                  }
-                  style={{ width: 28, height: 28, resizeMode: "contain" }}
-                />
-                <Text style={styles.modalTitle}>
-                  Phân bổ cho "{selectedCat?.name}"
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => setAllocModalVisible(false)}>
-                <X color="#64748b" size={24} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.allocTabs}>
-              <TouchableOpacity
-                style={[
-                  styles.allocTab,
-                  allocType === "deposit" && styles.allocTabActiveDeposit,
-                ]}
-                onPress={() => setAllocType("deposit")}
-              >
-                <Text
-                  style={[
-                    styles.allocTabText,
-                    allocType === "deposit" && styles.allocTabTextActive,
-                  ]}
-                >
-                  Nạp thêm
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.allocTab,
-                  allocType === "withdraw" && styles.allocTabActiveWithdraw,
-                ]}
-                onPress={() => setAllocType("withdraw")}
-              >
-                <Text
-                  style={[
-                    styles.allocTabText,
-                    allocType === "withdraw" && styles.allocTabTextActive,
-                  ]}
-                >
-                  Rút ra
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.modalSubtitle}>
-              {allocType === "deposit"
-                ? "Tiền chưa phân bổ: "
-                : "Tiền trong túi: "}
-              <Text style={styles.modalHighlight}>
-                {formatCurrency(
-                  allocType === "deposit"
-                    ? unallocated
-                    : selectedCat?.budget || 0,
-                )}{" "}
-                đ
-              </Text>
-            </Text>
-
-            {/* <View style={styles.inputMethodToggleRow}>
-              <TouchableOpacity
-                style={styles.quickToggleBtnCircle}
-                onPress={toggleInputMethod}
-              >
-                {profile?.inputMethod === "manual" ? (
-                  <LayoutGrid color="#64748b" size={24} />
-                ) : (
-                  <Keyboard color="#64748b" size={24} />
-                )}
-              </TouchableOp
-              
-              acity>
-            </View> */}
-
-            {profile?.inputMethod === "manual" ? (
-              <View style={styles.manualInputWrapper}>
-                <TextInput
-                  style={styles.manualInput}
-                  keyboardType="numeric"
-                  placeholder="Nhập số tiền..."
-                  placeholderTextColor="#94a3b8"
-                  autoFocus
-                  value={
-                    allocAmount === 0 ? "" : allocAmount.toLocaleString("vi-VN")
-                  }
-                  onChangeText={(text) => {
-                    const numericValue = text.replace(/[^0-9]/g, "");
-                    setAllocAmount(
-                      numericValue ? parseInt(numericValue, 10) : 0,
-                    );
-                  }}
-                />
-              </View>
-            ) : (
-              <>
-                <View style={styles.amountDisplayModal}>
-                  <Text style={styles.amountTextModal}>
-                    {formatCurrency(allocAmount)}
-                  </Text>
-                  <Text style={styles.currencyLabelModal}>VNĐ</Text>
-                </View>
-
-                {allocAmount > 0 && (
-                  <TouchableOpacity
-                    style={styles.actionCancelBtn}
-                    onPress={() => setAllocAmount(0)}
-                    activeOpacity={0.8}
-                  >
-                    <RotateCcw color="gray" size={24} />
-                  </TouchableOpacity>
-                )}
-
-                <Keypad
-                  amount={allocAmount}
-                  onAddAmount={(val) => setAllocAmount((prev) => prev + val)}
-                  onClear={() => setAllocAmount(0)}
-                  hideClearButton={true}
-                />
-              </>
-            )}
-
-            <View style={styles.actionButtonRow}>
-              <TouchableOpacity
-                style={[
-                  styles.actionConfirmBtn,
-                  allocType === "deposit"
-                    ? { backgroundColor: "#7c3aed" }
-                    : { backgroundColor: "#ef4444" },
-                  allocAmount === 0 && styles.confirmDisabled,
-                ]}
-                onPress={() => {
-                  if (allocAmount < 1000) {
-                    Alert.alert(
-                      "Số tiền không đủ",
-                      "Vui lòng nhập số tiền ít nhất 1.000 đ.",
-                    );
-                    return;
-                  }
-                  handleAllocate();
-                }}
-                disabled={allocAmount === 0}
-              >
-                <Text style={styles.confirmBtnText}>
-                  {allocType === "deposit" ? "Xác nhận nạp" : "Xác nhận rút"}
-                </Text>
-              </TouchableOpacity>
-
-              {/* <TouchableOpacity
-                style={styles.actionCancelBtn}
-                onPress={() => setAllocAmount(0)}
-              >
-                <RotateCcw color="#ef4444" size={22} />
-              </TouchableOpacity> */}
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* Modal: Xác nhận xóa (Bảo mật) */}
-      <Modal
-        visible={deleteConfirmModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDeleteConfirmModal(false)}
-      >
-        <View style={styles.modalOverlayCenter}>
-          <View style={styles.inputModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: "#ef4444" }]}>
-                Xác nhận xóa
-              </Text>
-              <TouchableOpacity onPress={() => setDeleteConfirmModal(false)}>
-                <X color="#64748b" size={24} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.deleteMsg}>
-              Bạn đang xóa túi{" "}
-              <Text style={{ fontWeight: "bold" }}>"{catToDelete?.name}"</Text>.
-              Hành động này sẽ hoàn trả{" "}
-              <Text style={{ fontWeight: "bold", color: "#10b981" }}>
-                {formatCurrency(catToDelete?.budget || 0)} đ
-              </Text>{" "}
-              vào số dư chưa phân bổ.
-            </Text>
-
-            <TouchableOpacity
-              style={[
-                styles.confirmBtn,
-                {
-                  backgroundColor: "#ef4444",
-                  marginTop: 16,
-                },
-              ]}
-              onPress={handleFinalDelete}
-            >
-              <Text style={styles.confirmBtnText}>Xác nhận</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
       {/* Modal: Thêm danh mục */}
       <Modal
@@ -1152,11 +648,6 @@ const BudgetScreen = () => {
               autoFocus
               onSubmitEditing={handleAddCategory}
             />
-
-            <Text style={styles.typeLabel}>
-              Kiểu danh mục:{" "}
-              {newCatType === "direct" ? "Không cần nạp" : "Cần nạp tiền"}
-            </Text>
 
             <TouchableOpacity
               style={styles.confirmBtn}

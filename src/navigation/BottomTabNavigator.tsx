@@ -4,14 +4,12 @@ import { BottomTabParamList } from "./types";
 import HomeScreen from "../screens/HomeScreen";
 import StatisticsScreen from "../screens/StatisticsScreen";
 import SettingsScreen from "../screens/SettingsScreen";
-import SavingScreen from "../screens/SavingScreen";
 import BudgetScreen from "../screens/BudgetScreen";
 import FundScreen from "../screens/FundScreen";
+import { useLanguage } from "../i18n/LanguageContext";
 import {
-  Home,
   PieChart,
   Settings,
-  PiggyBank,
   Layers,
   Wallet,
   HouseHeart,
@@ -20,18 +18,20 @@ import {
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 const BottomTabNavigator = () => {
+  const { t } = useLanguage();
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#d946ef",
+        tabBarActiveTintColor: "#7c3aed",
         tabBarInactiveTintColor: "#64748b",
         tabBarStyle: {
-          backgroundColor: "#ffffff",
           borderTopWidth: 1,
           borderTopColor: "#f1f5f9",
-          paddingBottom: 5,
-          paddingTop: 5,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
         },
       }}
     >
@@ -39,16 +39,17 @@ const BottomTabNavigator = () => {
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarLabel: "Trang chủ",
-          tabBarIcon: ({ color, size }) => <HouseHeart color={color} size={size} />,
-
+          tabBarLabel: t("nav.diary"),
+          tabBarIcon: ({ color, size }) => (
+            <HouseHeart color={color} size={size} />
+          ),
         }}
       />
       <Tab.Screen
         name="Budget"
         component={BudgetScreen}
         options={{
-          tabBarLabel: "Chia Tiền",
+          tabBarLabel: t("nav.spending"),
           tabBarIcon: ({ color, size }) => <Layers color={color} size={size} />,
         }}
       />
@@ -56,7 +57,7 @@ const BottomTabNavigator = () => {
         name="Statistics"
         component={StatisticsScreen}
         options={{
-          tabBarLabel: "Thống kê",
+          tabBarLabel: t("nav.stats"),
           tabBarIcon: ({ color, size }) => (
             <PieChart color={color} size={size} />
           ),
@@ -66,25 +67,16 @@ const BottomTabNavigator = () => {
         name="Funds"
         component={FundScreen}
         options={{
-          tabBarLabel: "Quỹ",
+          tabBarLabel: t("nav.funds"),
           tabBarIcon: ({ color, size }) => <Wallet color={color} size={size} />,
         }}
       />
-      <Tab.Screen
-        name="Savings"
-        component={SavingScreen}
-        options={{
-          tabBarLabel: "Tiết kiệm",
-          tabBarIcon: ({ color, size }) => (
-            <PiggyBank color={color} size={size} />
-          ),
-        }}
-      />
+
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}
         options={{
-          tabBarLabel: "Cài đặt",
+          tabBarLabel: t("nav.settings"),
           tabBarIcon: ({ color, size }) => (
             <Settings color={color} size={size} />
           ),

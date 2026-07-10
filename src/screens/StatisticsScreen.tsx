@@ -908,56 +908,27 @@ const StatisticsScreen = () => {
       } else {
         const cat = cats.find((b) => b.name === catName);
         if (cat) {
-          const isDirect = cat.type === "direct";
-          if (isDirect) {
-            // Chi trực tiếp: kiểm tra unallocated balance
-            const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
-            const unallocated = Math.max(0, p.initialBalance - totalAllocated);
-            if (diff > unallocated) {
-              Alert.alert(
-                "Lỗi",
-                "Số dư chưa phân bổ không đủ để thực hiện sửa đổi này.",
-              );
-              return;
-            }
-            // Cập nhật spent và initialBalance
-            const updatedCats = cats.map((b) =>
-              b.name === catName ? { ...b, spent: (b.spent || 0) + diff } : b,
+          // Chi trực tiếp: kiểm tra unallocated balance (số dư khả dụng)
+          const unallocated = p.initialBalance;
+          if (diff > unallocated) {
+            Alert.alert(
+              "Lỗi",
+              "Số dư chưa phân bổ không đủ để thực hiện sửa đổi này.",
             );
-            await storage.saveCategoryBudgets(updatedCats);
-            await storage.saveUserProfile({
-              ...p,
-              initialBalance: p.initialBalance - diff,
-            });
-          } else {
-            // Chi nạp tiền (recharge): kiểm tra cat.budget
-            if (diff > cat.budget) {
-              Alert.alert(
-                "Lỗi",
-                `Ngân sách danh mục "${catName}" không đủ. Còn lại: ${formatCurrency(cat.budget)} đ.`,
-              );
-              return;
-            }
-            // Cập nhật budget, spent và initialBalance
-            const updatedCats = cats.map((b) =>
-              b.name === catName
-                ? {
-                    ...b,
-                    budget: b.budget - diff,
-                    spent: (b.spent || 0) + diff,
-                  }
-                : b,
-            );
-            await storage.saveCategoryBudgets(updatedCats);
-            await storage.saveUserProfile({
-              ...p,
-              initialBalance: p.initialBalance - diff,
-            });
+            return;
           }
+          // Cập nhật spent và initialBalance
+          const updatedCats = cats.map((b) =>
+            b.name === catName ? { ...b, spent: (b.spent || 0) + diff } : b,
+          );
+          await storage.saveCategoryBudgets(updatedCats);
+          await storage.saveUserProfile({
+            ...p,
+            initialBalance: p.initialBalance - diff,
+          });
         } else {
           // Danh mục đã bị xóa: chỉ trừ/cộng vào initialBalance (coi như unallocated)
-          const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
-          const unallocated = Math.max(0, p.initialBalance - totalAllocated);
+          const unallocated = p.initialBalance;
           if (diff > unallocated) {
             Alert.alert(
               "Lỗi",
