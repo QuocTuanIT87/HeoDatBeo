@@ -93,6 +93,30 @@ export const styles = StyleSheet.create({
         paddingHorizontal: 32,
     },
 
+    totalAssetsCard: {
+        backgroundColor: "rgba(12, 35, 64, 0.05)",
+        borderWidth: 1.5,
+        borderColor: "rgba(12, 35, 64, 0.1)",
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        alignItems: "center",
+        marginTop: 14,
+        minWidth: 200,
+    },
+    totalAssetsLabel: {
+        fontSize: 11,
+        fontWeight: "700",
+        color: "#64748b",
+        letterSpacing: 0.5,
+        marginBottom: 2,
+    },
+    totalAssetsValue: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: "#0c2340",
+    },
+
     socialStrip: {
         flexDirection: "row",
         gap: 14,

@@ -37,11 +37,13 @@ import {
 } from "lucide-react-native";
 import Keypad from "../components/Keypad";
 import { BarChart } from "react-native-gifted-charts";
-import { EXPENSE_ICONS, getIncomeIconSource } from "./HomeScreen";
+import { EXPENSE_ICONS, getIncomeIconSource } from "./MoneyDiaryScreen";
 import CustomPieChart from "../components/CustomPieChart";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { styles } from "../styles/StatisticsScreen";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -166,7 +168,7 @@ const TransactionCard = React.memo(
 const cardStyles = StyleSheet.create({
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 12,
+    borderRadius: 0,
     padding: 16,
     elevation: 1,
     shadowColor: "#000",
@@ -199,7 +201,7 @@ const cardStyles = StyleSheet.create({
     backgroundColor: "#f1f5f9",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 0,
     alignSelf: "flex-start",
   },
   cardAmount: {
@@ -365,7 +367,7 @@ const renderHistoryBody = (bodyStr: string) => {
               style={{
                 backgroundColor: "#f1f5f9",
                 padding: 12,
-                borderRadius: 8,
+                borderRadius: 0,
                 marginTop: 12,
                 flexDirection: "column",
                 gap: 6,
@@ -399,7 +401,7 @@ const renderHistoryBody = (bodyStr: string) => {
               style={{
                 backgroundColor: "#f1f5f9",
                 padding: 12,
-                borderRadius: 8,
+                borderRadius: 0,
                 marginTop: 12,
               }}
             >
@@ -449,6 +451,9 @@ const renderHistoryBody = (bodyStr: string) => {
 };
 
 const StatisticsScreen = () => {
+  const insets = useSafeAreaInsets();
+  const bottomTabBarHeight = 64 + Math.max(insets.bottom, 12);
+  const { t } = useLanguage();
   const isFocused = useIsFocused();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -1303,6 +1308,7 @@ const StatisticsScreen = () => {
           )}
         </View>
         <ScrollView
+          showsVerticalScrollIndicator={false}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 10 }}
@@ -1382,6 +1388,7 @@ const StatisticsScreen = () => {
 
       <View style={styles.filterSection}>
         <ScrollView
+          showsVerticalScrollIndicator={false}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.periodFilters}
@@ -1389,13 +1396,13 @@ const StatisticsScreen = () => {
           {(["day", "month", "year", "custom", "all"] as FilterPeriod[]).map(
             (p) => {
               let label = "";
-              if (p === "day") label = "Hôm nay";
+              if (p === "day") label = t("stats.today");
               else if (p === "month")
-                label = period === "month" ? getMonthBadgeLabel() : "Tháng";
+                label = period === "month" ? getMonthBadgeLabel() : t("stats.month");
               else if (p === "year")
-                label = period === "year" ? getYearBadgeLabel() : "Năm";
-              else if (p === "custom") label = "Tùy chỉnh";
-              else if (p === "all") label = "Tất cả";
+                label = period === "year" ? getYearBadgeLabel() : t("stats.year");
+              else if (p === "custom") label = t("stats.custom");
+              else if (p === "all") label = t("stats.all");
               return (
                 <TouchableOpacity
                   key={p}
@@ -1425,7 +1432,7 @@ const StatisticsScreen = () => {
 
         {period === "custom" && (
           <View style={styles.customDateContainer}>
-            <Text style={styles.dateLabel}>Từ:</Text>
+            <Text style={styles.dateLabel}>{t("stats.from")}</Text>
             <TouchableOpacity
               style={styles.dateBtn}
               onPress={() => setShowPicker("start")}
@@ -1435,7 +1442,7 @@ const StatisticsScreen = () => {
               </Text>
             </TouchableOpacity>
 
-            <Text style={styles.dateLabel}>Đến:</Text>
+            <Text style={styles.dateLabel}>{t("stats.to")}</Text>
             <TouchableOpacity
               style={styles.dateBtn}
               onPress={() => setShowPicker("end")}
@@ -1458,7 +1465,7 @@ const StatisticsScreen = () => {
                 type === "all" && styles.typeTabTextActive,
               ]}
             >
-              Tất cả
+              {t("stats.all")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -1474,7 +1481,7 @@ const StatisticsScreen = () => {
                 type === "expense" && styles.typeTabTextActive,
               ]}
             >
-              Chi Tiền
+              {t("stats.expenseTitle")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -1490,12 +1497,13 @@ const StatisticsScreen = () => {
                 type === "income" && styles.typeTabTextActive,
               ]}
             >
-              Thu Tiền
+              {t("stats.incomeTitle")}
             </Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView
+          showsVerticalScrollIndicator={false}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoryFilters}
@@ -1513,7 +1521,7 @@ const StatisticsScreen = () => {
                 categoryFilter === "all" && styles.categoryTextActive,
               ]}
             >
-              Tất cả
+              {t("stats.all")}
             </Text>
           </TouchableOpacity>
           {getFilterCategories().map((cat) => (
@@ -1544,6 +1552,7 @@ const StatisticsScreen = () => {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={5}
@@ -1562,7 +1571,7 @@ const StatisticsScreen = () => {
       />
 
       {type === "all" ? (
-        <View style={styles.summaryContainer}>
+        <View style={[styles.summaryContainer, { paddingBottom: bottomTabBarHeight + 12 }]}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabelBold}>Tổng thu:</Text>
             <Text style={styles.summaryIncome}>
@@ -1577,7 +1586,7 @@ const StatisticsScreen = () => {
           </View>
         </View>
       ) : displayTotal !== null ? (
-        <View style={styles.summaryContainer}>
+        <View style={[styles.summaryContainer, { paddingBottom: bottomTabBarHeight + 12 }]}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabelBold}>Tổng:</Text>
             <Text
@@ -1740,7 +1749,7 @@ const StatisticsScreen = () => {
                 style={{
                   padding: 8,
                   backgroundColor: "#f1f5f9",
-                  borderRadius: 8,
+                  borderRadius: 0,
                 }}
               >
                 <Text style={{ color: "#0f172a", fontWeight: "bold" }}>
@@ -1753,7 +1762,7 @@ const StatisticsScreen = () => {
             <View style={{
               flexDirection: 'row',
               backgroundColor: '#f1f5f9',
-              borderRadius: 12,
+              borderRadius: 0,
               padding: 4,
               marginHorizontal: 16,
               marginTop: 12,
@@ -1770,7 +1779,7 @@ const StatisticsScreen = () => {
                       flex: 1,
                       paddingVertical: 10,
                       alignItems: 'center',
-                      borderRadius: 8,
+                      borderRadius: 0,
                       backgroundColor: isActive ? '#3b82f6' : 'transparent',
                       shadowColor: isActive ? '#3b82f6' : 'transparent',
                       shadowOffset: { width: 0, height: 2 },
@@ -1873,7 +1882,7 @@ const StatisticsScreen = () => {
                     <View
                       style={{
                         backgroundColor: "#f8fafc",
-                        borderRadius: 16,
+                        borderRadius: 0,
                         padding: 16,
                         marginBottom: 16,
                         borderWidth: 1,
@@ -1941,7 +1950,7 @@ const StatisticsScreen = () => {
                 style={{
                   padding: 8,
                   backgroundColor: "#f1f5f9",
-                  borderRadius: 8,
+                  borderRadius: 0,
                 }}
               >
                 <Text style={{ color: "#0f172a", fontWeight: "bold" }}>

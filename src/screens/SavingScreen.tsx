@@ -20,6 +20,7 @@ import {
   ArrowDownCircle,
   RotateCcw,
   Bitcoin,
+  ArrowLeft,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import {
@@ -302,6 +303,13 @@ const SavingScreen = () => {
       <View style={styles.header}>
         {/* Top bar: Avatar + năm + actions */}
         <View style={styles.headerTopBar}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backBtn}
+            activeOpacity={0.8}
+          >
+            <ArrowLeft color="#ffffff" size={20} />
+          </TouchableOpacity>
           <View style={styles.profileSection}></View>
 
           <View

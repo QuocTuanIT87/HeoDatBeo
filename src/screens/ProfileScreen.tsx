@@ -15,6 +15,7 @@ import {
 import { Alert } from "../components/CustomAlert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
+import { useLanguage } from "../i18n/LanguageContext";
 import * as DocumentPicker from "expo-document-picker";
 import { Paths } from "expo-file-system";
 import { copyAsync, deleteAsync } from "expo-file-system/legacy";
@@ -35,6 +36,7 @@ import {
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { UserProfile } from "../types";
+import { formatCurrency } from "../utils/format";
 import { getStreakLevel, getStreakLevelImage, getStreakLevelInfo } from "../utils/streak";
 import { MASCOT_LIST } from "../utils/mascot";
 import { NAVY, styles } from "../styles/ProfileScreen";
@@ -50,8 +52,10 @@ const SOCIAL_ICONS = {
 const ProfileScreen = () => {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
+  const { t } = useLanguage();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [totalBalance, setTotalBalance] = useState<number>(0);
   const [isEditModalVisible, setEditModalVisible] = useState(false);
   const [joinDateDisplay, setJoinDateDisplay] = useState("");
   const [daysSinceJoin, setDaysSinceJoin] = useState<number | null>(null);
@@ -228,9 +232,41 @@ const ProfileScreen = () => {
               (todayZero.getTime() - joinDZero.getTime()) /
                 (1000 * 60 * 60 * 24),
             ) + 1;
-          setDaysSinceJoin(diff);
         }
       }
+    }
+
+    if (p) {
+      // Calculate savings balance
+      let calcSaving = 0;
+      try {
+        const txs = await storage.getTransactions();
+        txs.forEach((t) => {
+          if (
+            t.categoryId === "system_tiet_kiem" ||
+            t.categoryId === "system_rut_tiet_kiem"
+          ) {
+            if (t.type === "expense" && t.categoryId === "system_tiet_kiem") {
+              calcSaving += t.amount;
+            } else if (
+              t.type === "income" &&
+              t.categoryId === "system_rut_tiet_kiem"
+            ) {
+              calcSaving -= t.amount;
+            }
+          }
+        });
+      } catch (e) {
+        console.error("Failed to load transactions for saving balance in ProfileScreen", e);
+      }
+
+      // Calculate custom funds total
+      let customFundsTotal = 0;
+      if (p.customFunds) {
+        customFundsTotal = p.customFunds.reduce((sum, f) => sum + f.balance, 0);
+      }
+
+      setTotalBalance(p.initialBalance + calcSaving + customFundsTotal);
     }
   };
 
@@ -456,6 +492,14 @@ const ProfileScreen = () => {
             </View>
           ) : null}
 
+          {/* Total Assets Card */}
+          <View style={styles.totalAssetsCard}>
+            <Text style={styles.totalAssetsLabel}>TỔNG TÀI SẢN</Text>
+            <Text style={styles.totalAssetsValue}>
+              {formatCurrency(totalBalance)} đ
+            </Text>
+          </View>
+
           {/* Social icons decoration */}
           {hasSocial ? (
             <View style={styles.socialStrip}>
@@ -580,7 +624,7 @@ const ProfileScreen = () => {
         profile?.education ||
         profile?.hobby ? (
           <View style={styles.infoCard}>
-            <Text style={styles.infoCardTitle}>Thông tin chi tiết</Text>
+            <Text style={styles.infoCardTitle}>{t("profile.detailInfo")}</Text>
 
             {profile?.gender ? (
               <View style={styles.infoRow}>
@@ -590,7 +634,7 @@ const ProfileScreen = () => {
                   <User color="#0891b2" size={16} />
                 </View>
                 <View style={styles.infoTexts}>
-                  <Text style={styles.infoLabel}>Giới tính</Text>
+                  <Text style={styles.infoLabel}>{t("profile.genderLabel")}</Text>
                   <Text style={styles.infoValue}>{profile.gender}</Text>
                 </View>
               </View>
@@ -604,7 +648,7 @@ const ProfileScreen = () => {
                   <Calendar color="#7c3aed" size={16} />
                 </View>
                 <View style={styles.infoTexts}>
-                  <Text style={styles.infoLabel}>Ngày sinh</Text>
+                  <Text style={styles.infoLabel}>{t("profile.birthdayLabel")}</Text>
                   <Text style={styles.infoValue}>{profile.birthday}</Text>
                 </View>
               </View>
@@ -618,7 +662,7 @@ const ProfileScreen = () => {
                   <Briefcase color={NAVY} size={16} />
                 </View>
                 <View style={styles.infoTexts}>
-                  <Text style={styles.infoLabel}>Công việc</Text>
+                  <Text style={styles.infoLabel}>{t("profile.jobLabel")}</Text>
                   <Text style={styles.infoValue}>{profile.job}</Text>
                 </View>
               </View>
@@ -632,7 +676,7 @@ const ProfileScreen = () => {
                   <GraduationCap color="#16a34a" size={16} />
                 </View>
                 <View style={styles.infoTexts}>
-                  <Text style={styles.infoLabel}>Học vấn</Text>
+                  <Text style={styles.infoLabel}>{t("profile.educationLabel")}</Text>
                   <Text style={styles.infoValue}>{profile.education}</Text>
                 </View>
               </View>
@@ -646,7 +690,7 @@ const ProfileScreen = () => {
                   <Heart color="#e11d48" size={16} />
                 </View>
                 <View style={styles.infoTexts}>
-                  <Text style={styles.infoLabel}>Sở thích</Text>
+                  <Text style={styles.infoLabel}>{t("profile.hobbyLabel")}</Text>
                   <Text style={styles.infoValue}>{profile.hobby}</Text>
                 </View>
               </View>

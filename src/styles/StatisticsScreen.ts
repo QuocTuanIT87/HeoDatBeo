@@ -25,7 +25,7 @@ export const styles = StyleSheet.create({
     chartButton: {
         padding: 8,
         backgroundColor: "#eff6ff",
-        borderRadius: 8,
+        borderRadius: 0,
     },
     barChartContainer: {
         backgroundColor: "#ffffff",
@@ -95,7 +95,7 @@ export const styles = StyleSheet.create({
         justifyContent: "center",
         backgroundColor: "#eff6ff",
         paddingVertical: 12,
-        borderRadius: 12,
+        borderRadius: 0,
         gap: 8,
     },
     openBarChartBtnText: {
@@ -116,7 +116,7 @@ export const styles = StyleSheet.create({
     periodBadge: {
         paddingHorizontal: 16,
         paddingVertical: 8,
-        borderRadius: 20,
+        borderRadius: 0,
         backgroundColor: "#f1f5f9",
     },
     periodBadgeActive: {
@@ -144,7 +144,7 @@ export const styles = StyleSheet.create({
         backgroundColor: "#f1f5f9",
         paddingHorizontal: 12,
         paddingVertical: 8,
-        borderRadius: 8,
+        borderRadius: 0,
         borderWidth: 1,
         borderColor: "#e2e8f0",
     },
@@ -162,7 +162,7 @@ export const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 10,
         alignItems: "center",
-        borderRadius: 8,
+        borderRadius: 0,
         backgroundColor: "#f1f5f9",
     },
     typeTabActive: { backgroundColor: "#3b82f6" },
@@ -183,7 +183,7 @@ export const styles = StyleSheet.create({
     categoryBadge: {
         paddingHorizontal: 14,
         paddingVertical: 6,
-        borderRadius: 16,
+        borderRadius: 0,
         borderWidth: 1,
         borderColor: "#e2e8f0",
         backgroundColor: "#ffffff",
@@ -207,7 +207,7 @@ export const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: "#ffffff",
-        borderRadius: 12,
+        borderRadius: 0,
         padding: 16,
         elevation: 1,
         shadowColor: "#000",
@@ -330,7 +330,7 @@ export const styles = StyleSheet.create({
     deletedCatBadge: {
         paddingHorizontal: 14,
         paddingVertical: 6,
-        borderRadius: 16,
+        borderRadius: 0,
         borderWidth: 1,
         borderColor: "#fb923c",
         backgroundColor: "#fff7ed",
@@ -357,7 +357,6 @@ export const styles = StyleSheet.create({
     },
     modalBox: {
         backgroundColor: "#ffffff",
-        borderRadius: 16,
         width: "100%",
         maxHeight: 420,
         overflow: "hidden",
@@ -384,7 +383,6 @@ export const styles = StyleSheet.create({
     // Options Modal Styles
     optionsBox: {
         backgroundColor: "#ffffff",
-        borderRadius: 20,
         width: "80%",
         padding: 20,
         alignItems: "center",
@@ -473,7 +471,7 @@ export const styles = StyleSheet.create({
         backgroundColor: "#f8fafc",
         borderWidth: 2,
         borderColor: "#e2e8f0",
-        borderRadius: 16,
+        borderRadius: 0,
         padding: 20,
         fontSize: 24,
         fontWeight: "bold",
@@ -492,7 +490,7 @@ export const styles = StyleSheet.create({
         margin: 20,
         backgroundColor: "#7c3aed",
         paddingVertical: 16,
-        borderRadius: 16,
+        borderRadius: 0,
         alignItems: "center",
     },
     editConfirmBtnText: {
@@ -581,7 +579,7 @@ export const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: "#f8fafc",
-        borderRadius: 10,
+        borderRadius: 0,
         marginTop: 8,
         borderWidth: 1,
         borderColor: "#e2e8f0",

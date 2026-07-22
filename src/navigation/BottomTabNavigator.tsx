@@ -1,7 +1,7 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { BottomTabParamList } from "./types";
-import HomeScreen from "../screens/HomeScreen";
+import MoneyDiaryScreen from "../screens/MoneyDiaryScreen";
 import StatisticsScreen from "../screens/StatisticsScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import BudgetScreen from "../screens/BudgetScreen";
@@ -12,8 +12,8 @@ import {
   Settings,
   Layers,
   Wallet,
-  HouseHeart,
 } from "lucide-react-native";
+import CustomTabBar from "../components/CustomTabBar";
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
@@ -22,29 +22,13 @@ const BottomTabNavigator = () => {
 
   return (
     <Tab.Navigator
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: "#7c3aed",
-        tabBarInactiveTintColor: "#64748b",
-        tabBarStyle: {
-          borderTopWidth: 1,
-          borderTopColor: "#f1f5f9",
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
+        tabBarInactiveTintColor: "#cbd5e1",
       }}
     >
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{
-          tabBarLabel: t("nav.diary"),
-          tabBarIcon: ({ color, size }) => (
-            <HouseHeart color={color} size={size} />
-          ),
-        }}
-      />
       <Tab.Screen
         name="Budget"
         component={BudgetScreen}
@@ -64,6 +48,13 @@ const BottomTabNavigator = () => {
         }}
       />
       <Tab.Screen
+        name="Home"
+        component={MoneyDiaryScreen}
+        options={{
+          tabBarLabel: () => null,
+        }}
+      />
+      <Tab.Screen
         name="Funds"
         component={FundScreen}
         options={{
@@ -71,7 +62,6 @@ const BottomTabNavigator = () => {
           tabBarIcon: ({ color, size }) => <Wallet color={color} size={size} />,
         }}
       />
-
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}

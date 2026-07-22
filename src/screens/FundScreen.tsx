@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Alert } from "../components/CustomAlert";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useLanguage } from "../i18n/LanguageContext";
 import {
@@ -26,6 +27,7 @@ import {
   RotateCcw,
   HelpCircle,
   Settings,
+  Sparkles,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { UserProfile, Transaction, CategoryBudget, CustomFund } from "../types";
@@ -33,6 +35,7 @@ import { BottomTabParamList } from "../navigation/types";
 import Keypad from "../components/Keypad";
 import { styles } from "../styles/FundScreen";
 import { Archive } from "lucide-react-native/icons";
+import { getStreakLevel, getStreakLevelInfo } from "../utils/streak";
 
 const FUND_ICONS: Record<string, any> = {
   default: require("../../assets/fund_icon/default.png"),
@@ -57,6 +60,18 @@ const FundScreen = () => {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const bottomTabBarHeight = 64 + Math.max(insets.bottom, 12);
+
+  const getGreeting = () => {
+    const hr = new Date().getHours();
+    if (hr < 5) return t("home.greeting.early") || "Chào sáng sớm 🌅";
+    if (hr < 12) return t("home.greeting.morning") || "Xin chào buổi sáng ☀️";
+    if (hr < 13) return t("home.greeting.noon") || "Xin chào buổi trưa 🌞";
+    if (hr < 18) return t("home.greeting.afternoon") || "Xin chào buổi chiều 🌤️";
+    if (hr < 22) return t("home.greeting.evening") || "Xin chào buổi tối 🌙";
+    return t("home.greeting.night") || "Xin chào đêm khuya 🌃";
+  };
 
   const handleShowTotalFundInfo = () => {
     Alert.normal(
@@ -547,21 +562,6 @@ const FundScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        {/* Top bar with User Profile and history action */}
-        <View style={styles.headerTopBar}>
-          <View style={styles.profileSection}></View>
-
-          <View style={styles.headerActions}>
-            {/* <TouchableOpacity
-              onPress={() => navigation.navigate("FundHistory" as any)}
-              style={styles.actionBtn}
-              activeOpacity={0.85}
-            >
-              <History color="#ffffff" size={20} />
-            </TouchableOpacity> */}
-          </View>
-        </View>
-
         {/* Bank Card / Account card */}
         <View style={styles.bankCard}>
           <View style={styles.cardHeader}>
@@ -589,7 +589,9 @@ const FundScreen = () => {
 
           <View style={styles.cardMiddle}>
             <View style={styles.cardAccountLabelContainer}>
-              <Text style={styles.cardAccountLabel}>{t("funds.totalFunds")}</Text>
+              <Text style={styles.cardAccountLabel}>
+                {t("funds.totalFunds")}
+              </Text>
               <TouchableOpacity
                 onPress={handleShowTotalFundInfo}
                 style={styles.helpIconTouch}
@@ -601,7 +603,9 @@ const FundScreen = () => {
             </View>
             <View style={styles.row}>
               <Text style={styles.cardBalanceAmount}>
-                {showAmount ? `${formatCurrency(totalBalance)} ${t("common.currencySymbol")}` : `•••••• ${t("common.currencySymbol")}`}
+                {showAmount
+                  ? `${formatCurrency(totalBalance)} ${t("common.currencySymbol")}`
+                  : `•••••• ${t("common.currencySymbol")}`}
               </Text>
               <TouchableOpacity
                 onPress={() => setShowAmount(!showAmount)}
@@ -620,6 +624,7 @@ const FundScreen = () => {
       </View>
 
       <ScrollView
+          showsVerticalScrollIndicator={false}
         style={styles.body}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
@@ -654,7 +659,9 @@ const FundScreen = () => {
             <Text style={styles.fundBalance}>
               {showAmount ? formatCurrency(savingBalance) : "***"}
             </Text>
-            <Text style={styles.currencyLabel}>{t("common.currencySymbol")}</Text>
+            <Text style={styles.currencyLabel}>
+              {t("common.currencySymbol")}
+            </Text>
           </View>
         </TouchableOpacity>
 
@@ -736,7 +743,7 @@ const FundScreen = () => {
           </View>
         )}
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: bottomTabBarHeight + 36 }} />
       </ScrollView>
 
       {/* Modal Thêm Quỹ */}

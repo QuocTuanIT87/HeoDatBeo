@@ -54,6 +54,7 @@ import {
   Globe,
 } from "lucide-react-native";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UserProfile, CategoryBudget, IncomeCategory } from "../types";
 import { EXPENSE_ICONS } from "./HomeScreen";
 import { scheduleTestNotification } from "../utils/notifications";
@@ -142,6 +143,8 @@ import {
 } from "lucide-react-native/icons";
 
 const SettingsScreen = () => {
+  const insets = useSafeAreaInsets();
+  const bottomTabBarHeight = 64 + Math.max(insets.bottom, 12);
   const navigation = useNavigation();
   const isFocused = useIsFocused();
 
@@ -1058,7 +1061,8 @@ const SettingsScreen = () => {
         <Text style={styles.headerTitle}>{t("settings.title")}</Text>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.body}>
+      <ScrollView
+          showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.body}>
         <TouchableOpacity
           style={styles.card}
           onPress={() => setLangModalVisible(true)}
@@ -1069,7 +1073,11 @@ const SettingsScreen = () => {
           <View style={styles.cardContent}>
             <Text style={styles.cardTitle}>{t("settings.language")}</Text>
             <Text style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
-              {language === "vi" ? "Tiếng Việt" : language === "en" ? "English" : "Deutsch"}
+              {language === "vi"
+                ? "Tiếng Việt"
+                : language === "en"
+                  ? "English"
+                  : "Deutsch"}
             </Text>
           </View>
         </TouchableOpacity>
@@ -1082,7 +1090,7 @@ const SettingsScreen = () => {
             <ShieldUser color="#a855f7" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Thông tin cá nhân</Text>
+            <Text style={styles.cardTitle}>{t("settings.personalInfo")}</Text>
           </View>
         </TouchableOpacity>
 
@@ -1094,7 +1102,9 @@ const SettingsScreen = () => {
             <BanknoteArrowUp color="#d97706" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Danh mục thu nhập</Text>
+            <Text style={styles.cardTitle}>
+              {t("settings.incomeCategories")}
+            </Text>
           </View>
         </TouchableOpacity>
 
@@ -1106,7 +1116,7 @@ const SettingsScreen = () => {
             <Bitcoin color="#d97706" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Quản lý vàng</Text>
+            <Text style={styles.cardTitle}>{t("settings.goldManagement")}</Text>
           </View>
         </TouchableOpacity>
 
@@ -1118,7 +1128,7 @@ const SettingsScreen = () => {
             <SettingsIcon color="#0284c7" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Cài đặt nhập liệu</Text>
+            <Text style={styles.cardTitle}>{t("settings.inputSettings")}</Text>
           </View>
         </TouchableOpacity>
 
@@ -1130,7 +1140,7 @@ const SettingsScreen = () => {
             <BookOpen color="#16a34a" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Hướng dẫn sử dụng</Text>
+            <Text style={styles.cardTitle}>{t("settings.userGuide")}</Text>
           </View>
         </TouchableOpacity>
 
@@ -1142,7 +1152,7 @@ const SettingsScreen = () => {
             <Cloud color="#0891b2" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Sao lưu dữ liệu - Trực tuyến</Text>
+            <Text style={styles.cardTitle}>{t("settings.onlineBackup")}</Text>
             {isGoogleSignedIn && (
               <Text style={{ fontSize: 12, color: "#0891b2", marginTop: 2 }}>
                 Đã liên kết tài khoản
@@ -1159,7 +1169,7 @@ const SettingsScreen = () => {
             <Database color="#4f46e5" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Sao lưu dữ liệu - Ngoại tuyến</Text>
+            <Text style={styles.cardTitle}>{t("settings.offlineBackup")}</Text>
           </View>
         </TouchableOpacity>
 
@@ -1171,7 +1181,9 @@ const SettingsScreen = () => {
             <PencilLine color="#16a34a" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Gợi ý ghi chú</Text>
+            <Text style={styles.cardTitle}>
+              {t("settings.noteSuggestions")}
+            </Text>
           </View>
         </TouchableOpacity>
 
@@ -1183,7 +1195,7 @@ const SettingsScreen = () => {
             <ChartNoAxesCombined color="#0891b2" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Xuất báo cáo năm</Text>
+            <Text style={styles.cardTitle}>{t("settings.yearlyReport")}</Text>
           </View>
         </TouchableOpacity>
 
@@ -1192,26 +1204,30 @@ const SettingsScreen = () => {
             <FileX color="#dc2626" size={18} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Khôi phục cài đặt gốc</Text>
+            <Text style={styles.cardTitle}>{t("settings.factoryReset")}</Text>
           </View>
         </TouchableOpacity>
       </ScrollView>
 
       {/* Footer cố định phía dưới */}
-      <View style={styles.footerInfo}>
+      <View
+        style={[styles.footerInfo, { paddingBottom: bottomTabBarHeight + 12 }]}
+      >
         <View style={styles.versionRow}>
           <Text style={styles.versionText}>
-            Phiên bản hiện tại : {VERSION_HISTORY[0]?.version}
+            {t("settings.currentVersion", {
+              version: VERSION_HISTORY[0]?.version,
+            })}
           </Text>
           <Text style={styles.versionSeparator}>|</Text>
           <TouchableOpacity onPress={() => setHistoryModalVisible(true)}>
             <Text style={styles.versionHistoryBtn}>
-              Lịch sử phiên bản ({VERSION_HISTORY.length})
+              {t("settings.versionHistory", { count: VERSION_HISTORY.length })}
             </Text>
           </TouchableOpacity>
         </View>
         <Text style={styles.authorText}>
-          Ứng dụng được phát triển bởi{" "}
+          {t("settings.developedBy")}{" "}
           <Text style={styles.authorHighlight}>SatsBoy87</Text>
         </Text>
       </View>
@@ -1588,14 +1604,18 @@ const SettingsScreen = () => {
         <View style={styles.modalOverlayCenter}>
           <View style={styles.settingsModalBox}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Cài đặt hệ thống</Text>
+              <Text style={styles.modalTitle}>
+                {t("settings.inputSettings")}
+              </Text>
               <TouchableOpacity onPress={() => setSettingsModalVisible(false)}>
                 <X color="#0f172a" size={24} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.settingItem}>
-              <Text style={styles.settingSectionTitle}>Kiểu nhập giá tiền</Text>
+              <Text style={styles.settingSectionTitle}>
+                {t("settings.inputMethodType")}
+              </Text>
               <View style={styles.settingGroup}>
                 <TouchableOpacity
                   style={[
@@ -1612,10 +1632,10 @@ const SettingsScreen = () => {
                         styles.settingOptionTextActive,
                     ]}
                   >
-                    Chọn mệnh giá (Mặc định)
+                    {t("settings.selectDenomination")}
                   </Text>
                   <Text style={styles.settingOptionDesc}>
-                    Sử dụng bàn phím số có sẵn các mệnh giá để nhập nhanh.
+                    {t("settings.selectDenominationDesc")}
                   </Text>
                 </TouchableOpacity>
 
@@ -1634,10 +1654,10 @@ const SettingsScreen = () => {
                         styles.settingOptionTextActive,
                     ]}
                   >
-                    Nhập tay
+                    {t("settings.manualInput")}
                   </Text>
                   <Text style={styles.settingOptionDesc}>
-                    Sử dụng bàn phím hệ thống để nhập chính xác số tiền.
+                    {t("settings.manualInputDesc")}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1647,7 +1667,9 @@ const SettingsScreen = () => {
               style={styles.closeSettingsBtn}
               onPress={() => setSettingsModalVisible(false)}
             >
-              <Text style={styles.closeSettingsBtnText}>Đóng</Text>
+              <Text style={styles.closeSettingsBtnText}>
+                {t("common.close")}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1987,7 +2009,9 @@ const SettingsScreen = () => {
         <View style={styles.modalOverlayCenter}>
           <View style={styles.settingsModalBox}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t("settings.selectLanguage")}</Text>
+              <Text style={styles.modalTitle}>
+                {t("settings.selectLanguage")}
+              </Text>
               <TouchableOpacity onPress={() => setLangModalVisible(false)}>
                 <X color="#0f172a" size={24} />
               </TouchableOpacity>
@@ -2061,7 +2085,9 @@ const SettingsScreen = () => {
               style={styles.closeSettingsBtn}
               onPress={() => setLangModalVisible(false)}
             >
-              <Text style={styles.closeSettingsBtnText}>{t("common.close")}</Text>
+              <Text style={styles.closeSettingsBtnText}>
+                {t("common.close")}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

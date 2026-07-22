@@ -70,7 +70,6 @@ export const styles = StyleSheet.create({
     },
     bankCard: {
         backgroundColor: "#1e293b",
-        borderRadius: 18,
         padding: 20,
         borderWidth: 1,
         borderColor: "rgba(255,255,255,0.1)",
@@ -100,7 +99,6 @@ export const styles = StyleSheet.create({
     cardChip: {
         width: 32,
         height: 24,
-        borderRadius: 4,
         backgroundColor: "#f59e0b",
         opacity: 0.8,
         marginLeft: 10
@@ -123,7 +121,6 @@ export const styles = StyleSheet.create({
     cardStats: {
         flexDirection: "row",
         backgroundColor: "rgba(255,255,255,0.07)",
-        borderRadius: 12,
         padding: 12,
         alignItems: "center",
     },
@@ -157,7 +154,7 @@ export const styles = StyleSheet.create({
     headerSubtitle: { fontSize: 13, color: "#fdf4ff", opacity: 0.7, marginTop: 4 },
     unallocatedBox: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
     unallocatedAmount: { color: "#ffffff", fontSize: 32, fontWeight: "bold", marginLeft: 10 },
-    headerCards: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 20, padding: 16, alignItems: "center" },
+    headerCards: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.15)", padding: 16, alignItems: "center" },
     headerCard: { flex: 1 },
     headerDivider: { width: 1, height: 35, backgroundColor: "rgba(255,255,255,0.3)", marginHorizontal: 12 },
     headerCardLabel: { color: "#ede9fe", fontSize: 13, marginBottom: 4 },
@@ -172,7 +169,6 @@ export const styles = StyleSheet.create({
     tabContainer: {
         flexDirection: "row",
         backgroundColor: "#ffffff",
-        borderRadius: 16,
         padding: 6,
         elevation: 4,
         shadowColor: "#000",
@@ -184,7 +180,6 @@ export const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 12,
         alignItems: "center",
-        borderRadius: 12,
     },
     tabActive: {
         backgroundColor: "#7c3aed",
@@ -211,13 +206,11 @@ export const styles = StyleSheet.create({
         backgroundColor: "#f5f3ff",
         paddingHorizontal: 12,
         paddingVertical: 8,
-        borderRadius: 10,
         gap: 4,
     },
     addCatText: { color: "#7c3aed", fontWeight: "bold", fontSize: 13 },
     emptyBox: {
         backgroundColor: "#ffffff",
-        borderRadius: 20,
         padding: 40,
         alignItems: "center",
         borderWidth: 1,
@@ -233,7 +226,6 @@ export const styles = StyleSheet.create({
     },
     catCard: {
         backgroundColor: "#ffffff",
-        borderRadius: 20,
         marginBottom: 14,
         flexDirection: "row",
         alignItems: "center",
@@ -255,10 +247,9 @@ export const styles = StyleSheet.create({
     progressTrack: {
         height: 8,
         backgroundColor: "#f1f5f9",
-        borderRadius: 4,
         overflow: "hidden",
     },
-    progressFill: { height: "100%", borderRadius: 4 },
+    progressFill: { height: "100%" },
     progressLabelRow: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -274,7 +265,6 @@ export const styles = StyleSheet.create({
     },
     modalContent: {
         backgroundColor: "#ffffff",
-        borderRadius: 24,
         padding: 24,
         paddingBottom: 40,
         paddingTop: 90,
@@ -289,7 +279,6 @@ export const styles = StyleSheet.create({
     allocTabs: {
         flexDirection: "row",
         backgroundColor: "#f1f5f9",
-        borderRadius: 12,
         padding: 4,
         marginBottom: 20,
     },
@@ -297,7 +286,6 @@ export const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 10,
         alignItems: "center",
-        borderRadius: 10,
     },
     allocTabActiveDeposit: { backgroundColor: "#10b981" },
     allocTabActiveWithdraw: { backgroundColor: "#ef4444" },
@@ -307,7 +295,6 @@ export const styles = StyleSheet.create({
     modalHighlight: { color: "#0f172a", fontWeight: "bold" },
     amountDisplayModal: {
         backgroundColor: "#f8fafc",
-        borderRadius: 16,
         padding: 20,
         alignItems: "center",
         flexDirection: "row",
@@ -332,7 +319,6 @@ export const styles = StyleSheet.create({
     actionConfirmBtn: {
         flex: 1,
         height: 54,
-        borderRadius: 16,
         alignItems: "center",
         justifyContent: "center",
     },
@@ -358,7 +344,6 @@ export const styles = StyleSheet.create({
     confirmBtn: {
         backgroundColor: "#7c3aed",
         paddingVertical: 16,
-        borderRadius: 16,
         alignItems: "center",
         marginTop: 24,
     },
@@ -371,7 +356,6 @@ export const styles = StyleSheet.create({
     },
     inputModalContent: {
         backgroundColor: "#ffffff",
-        borderRadius: 24,
         padding: 24,
         width: "100%",
         elevation: 20,
@@ -379,7 +363,6 @@ export const styles = StyleSheet.create({
     textInput: {
         borderWidth: 1.5,
         borderColor: "#e2e8f0",
-        borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 14,
         fontSize: 16,
@@ -399,7 +382,6 @@ export const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 12,
         alignItems: "center",
-        borderRadius: 10,
         backgroundColor: "#f1f5f9",
         borderWidth: 1,
         borderColor: "#e2e8f0",
@@ -425,7 +407,6 @@ export const styles = StyleSheet.create({
     warningBox: {
         backgroundColor: "#fff7ed",
         padding: 12,
-        borderRadius: 12,
         marginBottom: 16,
         borderWidth: 1,
         borderColor: "#fed7aa",
@@ -445,7 +426,6 @@ export const styles = StyleSheet.create({
         marginBottom: 12,
         backgroundColor: "#fef2f2",
         padding: 10,
-        borderRadius: 8,
         textAlign: "center",
         borderStyle: "dashed",
         borderWidth: 1,
@@ -455,7 +435,6 @@ export const styles = StyleSheet.create({
         backgroundColor: "#eff6ff",
         paddingVertical: 4,
         paddingHorizontal: 12,
-        borderRadius: 12,
         marginBottom: 16,
         borderWidth: 1,
         borderColor: "#bfdbfe",
@@ -492,7 +471,6 @@ export const styles = StyleSheet.create({
         backgroundColor: "#f8fafc",
         borderWidth: 2,
         borderColor: "#e2e8f0",
-        borderRadius: 16,
         padding: 20,
         fontSize: 24,
         fontWeight: "bold",
@@ -502,7 +480,6 @@ export const styles = StyleSheet.create({
     catIconContainer: {
         width: 44,
         height: 44,
-        borderRadius: 12,
         backgroundColor: "#f5f3ff",
         justifyContent: "center",
         alignItems: "center",
@@ -515,7 +492,6 @@ export const styles = StyleSheet.create({
     },
     iconModalContent: {
         backgroundColor: "#ffffff",
-        borderRadius: 24,
         padding: 24,
         width: "100%",
         maxHeight: "80%",
@@ -537,7 +513,6 @@ export const styles = StyleSheet.create({
     iconGridItem: {
         width: "22%",
         aspectRatio: 1,
-        borderRadius: 16,
         borderWidth: 1.5,
         borderColor: "#e2e8f0",
         backgroundColor: "#f8fafc",
@@ -561,5 +536,72 @@ export const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-    }
+    },
+    headerActions: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    actionBtn: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: "rgba(255, 255, 255, 0.1)",
+        justifyContent: "center",
+        alignItems: "center",
+        position: "relative",
+    },
+    actionBadge: {
+        position: "absolute",
+        top: 8,
+        right: 8,
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: "#ef4444",
+    },
+    streakHeaderChip: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        marginRight: 8,
+    },
+    streakHeaderTxt: {
+        color: "#ffffff",
+        fontWeight: "bold",
+        fontSize: 14,
+    },
+    cardMiddle: {
+        marginBottom: 18,
+    },
+    cardAccountLabel: {
+        color: "#94a3b8",
+        fontSize: 10,
+        letterSpacing: 0.5,
+    },
+    accountNumberContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginTop: 2,
+    },
+    cardAccountNumber: {
+        color: "#ffffff",
+        fontSize: 17,
+        fontWeight: "bold",
+        letterSpacing: 1.5,
+    },
+    copyBtn: {
+        padding: 4,
+    },
+    cardBottom: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "flex-end",
+    },
+    cardEyeBtn: {
+        padding: 6,
+        backgroundColor: "rgba(255, 255, 255, 0.1)",
+    },
 });

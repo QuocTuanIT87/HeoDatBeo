@@ -18,7 +18,7 @@ import {
   FolderOpen,
 } from "lucide-react-native";
 import { UserProfile, CategoryBudget, Transaction } from "../types";
-import { EXPENSE_ICONS, getIncomeIconSource } from "./HomeScreen";
+import { EXPENSE_ICONS, getIncomeIconSource } from "./MoneyDiaryScreen";
 import { isCategoryIdMatch, resolveCategoryName } from "../utils/category";
 import { formatCurrency } from "../utils/format";
 import { styles } from "../styles/DeletedCategoriesScreen";

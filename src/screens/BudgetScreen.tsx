@@ -23,6 +23,7 @@ import {
   HelpCircle,
   PencilLine,
   Settings,
+  Sparkles,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { CategoryBudget, UserProfile } from "../types";
@@ -33,6 +34,8 @@ import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { styles } from "../styles/BudgetScreen";
 import { Archive } from "lucide-react-native/icons";
 import { useLanguage } from "../i18n/LanguageContext";
+import { getStreakLevel, getStreakLevelInfo } from "../utils/streak";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const EXPENSE_ICONS: Record<string, any> = {
   badminton: require("../../assets/expense_icon/badminton.png"),
@@ -113,6 +116,18 @@ const BudgetScreen = () => {
   const isFocused = useIsFocused();
   const navigation = useNavigation<any>();
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const bottomTabBarHeight = 64 + Math.max(insets.bottom, 12);
+
+  const getGreeting = () => {
+    const hr = new Date().getHours();
+    if (hr < 5) return t("home.greeting.early") || "Chào sáng sớm 🌅";
+    if (hr < 12) return t("home.greeting.morning") || "Xin chào buổi sáng ☀️";
+    if (hr < 13) return t("home.greeting.noon") || "Xin chào buổi trưa 🌞";
+    if (hr < 18) return t("home.greeting.afternoon") || "Xin chào buổi chiều 🌤️";
+    if (hr < 22) return t("home.greeting.evening") || "Xin chào buổi tối 🌙";
+    return t("home.greeting.night") || "Xin chào đêm khuya 🌃";
+  };
 
   const handleShowTotalFundInfo = () => {
     Alert.normal(
@@ -510,9 +525,71 @@ const BudgetScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        {/* Top bar */}
+        {/* Top bar with User Profile and quick settings/bell */}
         <View style={styles.headerTopBar}>
-          <View style={styles.profileSection}></View>
+          <View style={styles.profileSection}>
+            <View style={styles.avatarContainer}>
+              {profile?.avatar ? (
+                <Image
+                  source={{ uri: profile.avatar }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {profile?.name ? profile.name.charAt(0).toUpperCase() : "U"}
+                </Text>
+              )}
+              <View style={styles.avatarStatus} />
+            </View>
+            <View style={styles.profileTextWrapper}>
+              <Text style={styles.greetingLabel}>{getGreeting()}</Text>
+              <Text style={styles.profileName} numberOfLines={1}>
+                {profile?.name || "Người dùng"}
+              </Text>
+            </View>
+          </View>
+
+          {profile?.streakCount ? (
+            <TouchableOpacity
+              onPress={() => {
+                const currentStreak = profile.streakCount || 0;
+                const level = getStreakLevel(currentStreak);
+                const levelInfo = getStreakLevelInfo(level);
+                Alert.alert(
+                  "Chuỗi giữ lửa 🔥",
+                  `Bạn đang duy trì chuỗi ${currentStreak} ngày giữ lửa!\nCấp độ: ${levelInfo.name}\n${levelInfo.description}\nHãy tiếp tục ghi chép giao dịch mỗi ngày để thăng cấp nhé.`,
+                );
+              }}
+              style={styles.streakHeaderChip}
+              activeOpacity={0.8}
+            >
+              <Image
+                source={require("../../assets/series/icon-series.gif")}
+                style={{ width: 36, height: 36, resizeMode: "contain" }}
+              />
+              <Text style={styles.streakHeaderTxt}>{profile.streakCount}</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Guide" as never)}
+              style={styles.actionBtn}
+              activeOpacity={0.85}
+            >
+              <Sparkles color="#ffffff" size={20} />
+              <View style={styles.actionBadge} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                navigation.navigate("Settings" as never);
+              }}
+              style={styles.actionBtn}
+              activeOpacity={0.85}
+            >
+              <Settings color="#ffffff" size={20} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Bank Card */}
@@ -587,6 +664,7 @@ const BudgetScreen = () => {
       </View>
 
       <ScrollView
+          showsVerticalScrollIndicator={false}
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
       >
@@ -621,7 +699,7 @@ const BudgetScreen = () => {
               .map((cat) => renderCategoryItem(cat))}
           </View>
         )}
-        <View style={{ height: 40 }} />
+        <View style={{ height: bottomTabBarHeight + 16 }} />
       </ScrollView>
 
       {/* Modal: Thêm danh mục */}
