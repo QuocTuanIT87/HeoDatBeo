@@ -16,8 +16,10 @@ import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { ArrowLeft, Share2 } from "lucide-react-native";
 import { exportYearlyPdfReport } from "../utils/pdfReport";
 import { styles } from "../styles/YearlyReportScreen";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const YearlyReportScreen = () => {
+  const { t } = useLanguage();
   const isFocused = useIsFocused();
   const navigation = useNavigation();
 
@@ -75,7 +77,7 @@ const YearlyReportScreen = () => {
       }
     } catch (e) {
       console.error(e);
-      Alert.alert("Lỗi", "Không thể tải dữ liệu báo cáo.");
+      Alert.alert(t("common.error"), t("yearlyReport.loadError"));
     } finally {
       setIsLoadingData(false);
     }
@@ -87,7 +89,7 @@ const YearlyReportScreen = () => {
       await exportYearlyPdfReport(selectedYear);
     } catch (e: any) {
       console.error(e);
-      Alert.alert("Lỗi", e.message || "Không thể xuất file PDF báo cáo năm.");
+      Alert.alert(t("common.error"), e.message || t("yearlyReport.exportPdfError"));
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -96,16 +98,17 @@ const YearlyReportScreen = () => {
   // Helper to sort category totals with "Khác" at the very bottom
   const prepareCategoryEntries = (totals: Record<string, number>): [string, number][] => {
     const entries = Object.entries(totals);
-    const nonKhacEntries = entries.filter(([cat]) => cat !== "Khác");
+    const khacKey = t("systemCategories.other");
+    const nonKhacEntries = entries.filter(([cat]) => cat !== khacKey && cat !== "Khác");
     nonKhacEntries.sort((a, b) => b[1] - a[1]);
-    const khacAmount = totals["Khác"] || 0;
-    return [...nonKhacEntries, ["Khác", khacAmount]];
+    const khacAmount = totals[khacKey] || totals["Khác"] || 0;
+    return [...nonKhacEntries, [khacKey, khacAmount]];
   };
 
   // Helper to extract category details (notes and amounts)
   const getCategoryDetails = (txs: Transaction[], categoryName: string, type: "income" | "expense") => {
     const catTxs = txs.filter(
-      (tx) => tx.type === type && resolveCategoryName(tx, profile, categoryBudgets) === categoryName
+      (tx) => tx.type === type && resolveCategoryName(tx, profile, categoryBudgets, t) === categoryName
     );
     if (catTxs.length === 0) return null;
 
@@ -172,7 +175,7 @@ const YearlyReportScreen = () => {
       yearlyIncome += tx.amount;
     }
 
-    const catName = resolveCategoryName(tx, profile, categoryBudgets);
+    const catName = resolveCategoryName(tx, profile, categoryBudgets, t);
     if (isExpense) {
       yearlyExpenseCategoryTotals[catName] = (yearlyExpenseCategoryTotals[catName] || 0) + tx.amount;
     } else {
@@ -198,7 +201,7 @@ const YearlyReportScreen = () => {
         >
           <ArrowLeft color="#0f172a" size={20} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Báo cáo năm</Text>
+        <Text style={styles.headerTitle}>{t("yearlyReport.title")}</Text>
         <TouchableOpacity
           onPress={handleExportPdf}
           style={styles.exportButton}
@@ -212,7 +215,7 @@ const YearlyReportScreen = () => {
       {isGeneratingPdf && (
         <View style={styles.pdfLoadingOverlay}>
           <ActivityIndicator size="large" color="#f43f5e" />
-          <Text style={styles.pdfLoadingText}>Đang tạo PDF báo cáo...</Text>
+          <Text style={styles.pdfLoadingText}>{t("yearlyReport.generatingPdf")}</Text>
         </View>
       )}
 
@@ -253,51 +256,51 @@ const YearlyReportScreen = () => {
         </View>
       ) : yearTxs.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Không có dữ liệu giao dịch cho năm {selectedYear}.</Text>
+          <Text style={styles.emptyText}>{t("yearlyReport.empty", { year: String(selectedYear) })}</Text>
         </View>
       ) : (
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
           {/* Banner in PDF design */}
           <View style={styles.pdfLikeBanner}>
-            <Text style={styles.appTitle}>🐷 Ứng Dụng Quản Lý Chi Tiêu Heo Đất Béo 🐷</Text>
-            <Text style={styles.reportTitle}>Báo Cáo Tài Chính Năm {selectedYear}</Text>
+            <Text style={styles.appTitle}>{t("yearlyReport.appBannerTitle")}</Text>
+            <Text style={styles.reportTitle}>{t("yearlyReport.reportBannerTitle", { year: String(selectedYear) })}</Text>
             <Text style={styles.metaText}>
-              Báo cáo hiển thị theo format định dạng xuất file PDF
+              {t("yearlyReport.pdfMeta")}
             </Text>
           </View>
 
           {/* Section Summary Row */}
-          <Text style={styles.sectionTitle}>TỔNG HỢP CẢ NĂM {selectedYear}</Text>
+          <Text style={styles.sectionTitle}>{t("yearlyReport.yearlySummary", { year: String(selectedYear) })}</Text>
           <View style={styles.summaryGrid}>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Tổng Thu Nhập</Text>
+              <Text style={styles.summaryLabel}>{t("yearlyReport.totalIncome")}</Text>
               <Text style={[styles.summaryValue, styles.valueIncome]}>
-                +{formatCurrency(yearlyIncome)} đ
+                +{formatCurrency(yearlyIncome)} {t("common.currencySymbol")}
               </Text>
             </View>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Tổng Chi Tiêu</Text>
+              <Text style={styles.summaryLabel}>{t("yearlyReport.totalExpense")}</Text>
               <Text style={[styles.summaryValue, styles.valueExpense]}>
-                -{formatCurrency(yearlyExpense)} đ
+                -{formatCurrency(yearlyExpense)} {t("common.currencySymbol")}
               </Text>
             </View>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Tích Lũy Ròng</Text>
+              <Text style={styles.summaryLabel}>{t("yearlyReport.netSavings")}</Text>
               <Text style={[styles.summaryValue, netColorStyle]}>
-                {netSign}{formatCurrency(yearlyNet)} đ
+                {netSign}{formatCurrency(yearlyNet)} {t("common.currencySymbol")}
               </Text>
             </View>
           </View>
 
           {/* Income categories table card */}
           <View style={styles.tableCard}>
-            <Text style={[styles.tableTitle, styles.valueIncome]}>🟢 Thu Nhập Theo Danh Mục</Text>
+            <Text style={[styles.tableTitle, styles.valueIncome]}>{t("yearlyReport.incomeByCategory")}</Text>
             <View style={styles.tableHeader}>
-              <Text style={styles.tableHeaderText}>Danh mục</Text>
-              <Text style={styles.tableHeaderText}>Tổng thu</Text>
+              <Text style={styles.tableHeaderText}>{t("yearlyReport.categoryCol")}</Text>
+              <Text style={styles.tableHeaderText}>{t("yearlyReport.totalIncomeCol")}</Text>
             </View>
             {sortedYearlyIncomes.length === 0 || yearlyIncome === 0 ? (
-              <Text style={styles.noDataText}>Không có dữ liệu thu nhập</Text>
+              <Text style={styles.noDataText}>{t("yearlyReport.noIncomeData")}</Text>
             ) : (
               sortedYearlyIncomes.map(([cat, amount]) => {
                 if (amount === 0) return null;
@@ -309,28 +312,28 @@ const YearlyReportScreen = () => {
                         <Text style={styles.categoryName}>{cat}</Text>
                       </View>
                       <Text style={[styles.categoryAmount, styles.valueIncome]}>
-                        +{formatCurrency(amount)} đ
+                        +{formatCurrency(amount)} {t("common.currencySymbol")}
                       </Text>
                     </View>
                     {/* Render Category Details if any notes exist */}
                     {details && (
                       <View style={styles.detailsContainer}>
-                        <Text style={styles.detailsTitle}>Chi tiết ghi chú:</Text>
+                        <Text style={styles.detailsTitle}>{t("yearlyReport.noteDetailsTitle")}</Text>
                         {details.sortedNotes.map(([note, noteAmt]) => (
                           <View key={note} style={styles.detailItem}>
                             <Text style={styles.detailBullet}>•</Text>
                             <Text style={styles.detailText}>{note}</Text>
                             <Text style={[styles.detailAmount, styles.valueIncome]}>
-                              +{formatCurrency(noteAmt)} đ
+                              +{formatCurrency(noteAmt)} {t("common.currencySymbol")}
                             </Text>
                           </View>
                         ))}
                         {details.noNoteTotal > 0 && (
                           <View style={styles.detailItem}>
                             <Text style={styles.detailBullet}>•</Text>
-                            <Text style={styles.detailText}>Không ghi chú</Text>
+                            <Text style={styles.detailText}>{t("yearlyReport.noNoteText")}</Text>
                             <Text style={[styles.detailAmount, styles.valueIncome]}>
-                              +{formatCurrency(details.noNoteTotal)} đ
+                              +{formatCurrency(details.noNoteTotal)} {t("common.currencySymbol")}
                             </Text>
                           </View>
                         )}
@@ -344,13 +347,13 @@ const YearlyReportScreen = () => {
 
           {/* Expense categories table card */}
           <View style={styles.tableCard}>
-            <Text style={[styles.tableTitle, styles.valueExpense]}>🔴 Chi Tiêu Theo Danh Mục</Text>
+            <Text style={[styles.tableTitle, styles.valueExpense]}>{t("yearlyReport.expenseByCategory")}</Text>
             <View style={styles.tableHeader}>
-              <Text style={styles.tableHeaderText}>Danh mục</Text>
-              <Text style={styles.tableHeaderText}>Tổng chi</Text>
+              <Text style={styles.tableHeaderText}>{t("yearlyReport.categoryCol")}</Text>
+              <Text style={styles.tableHeaderText}>{t("yearlyReport.totalExpenseCol")}</Text>
             </View>
             {sortedYearlyExpenses.length === 0 || yearlyExpense === 0 ? (
-              <Text style={styles.noDataText}>Không có dữ liệu chi tiêu</Text>
+              <Text style={styles.noDataText}>{t("yearlyReport.noExpenseData")}</Text>
             ) : (
               sortedYearlyExpenses.map(([cat, amount]) => {
                 if (amount === 0) return null;
@@ -362,28 +365,28 @@ const YearlyReportScreen = () => {
                         <Text style={styles.categoryName}>{cat}</Text>
                       </View>
                       <Text style={[styles.categoryAmount, styles.valueExpense]}>
-                        -{formatCurrency(amount)} đ
+                        -{formatCurrency(amount)} {t("common.currencySymbol")}
                       </Text>
                     </View>
                     {/* Render Category Details if any notes exist */}
                     {details && (
                       <View style={styles.detailsContainer}>
-                        <Text style={styles.detailsTitle}>Chi tiết ghi chú:</Text>
+                        <Text style={styles.detailsTitle}>{t("yearlyReport.noteDetailsTitle")}</Text>
                         {details.sortedNotes.map(([note, noteAmt]) => (
                           <View key={note} style={styles.detailItem}>
                             <Text style={styles.detailBullet}>•</Text>
                             <Text style={styles.detailText}>{note}</Text>
                             <Text style={[styles.detailAmount, styles.valueExpense]}>
-                              -{formatCurrency(noteAmt)} đ
+                              -{formatCurrency(noteAmt)} {t("common.currencySymbol")}
                             </Text>
                           </View>
                         ))}
                         {details.noNoteTotal > 0 && (
                           <View style={styles.detailItem}>
                             <Text style={styles.detailBullet}>•</Text>
-                            <Text style={styles.detailText}>Không ghi chú</Text>
+                            <Text style={styles.detailText}>{t("yearlyReport.noNoteText")}</Text>
                             <Text style={[styles.detailAmount, styles.valueExpense]}>
-                              -{formatCurrency(details.noNoteTotal)} đ
+                              -{formatCurrency(details.noNoteTotal)} {t("common.currencySymbol")}
                             </Text>
                           </View>
                         )}
@@ -414,7 +417,7 @@ const YearlyReportScreen = () => {
                 mIncome += tx.amount;
               }
 
-              const catName = resolveCategoryName(tx, profile, categoryBudgets);
+              const catName = resolveCategoryName(tx, profile, categoryBudgets, t);
               if (isExpense) {
                 mExpenseCategoryTotals[catName] = (mExpenseCategoryTotals[catName] || 0) + tx.amount;
               } else {
@@ -433,39 +436,39 @@ const YearlyReportScreen = () => {
 
             return (
               <View key={m} style={styles.monthSection}>
-                <Text style={styles.monthTitle}>Tháng {monthStr}/{selectedYear}</Text>
+                <Text style={styles.monthTitle}>{t("yearlyReport.monthTitle", { month: `${monthStr}/${selectedYear}` })}</Text>
 
                 {/* Monthly Summary Cards */}
                 <View style={styles.summaryGrid}>
                   <View style={styles.summaryCard}>
-                    <Text style={styles.summaryLabel}>Thu Tháng</Text>
+                    <Text style={styles.summaryLabel}>{t("yearlyReport.totalIncome")}</Text>
                     <Text style={[styles.summaryValue, styles.valueIncome]}>
-                      +{formatCurrency(mIncome)} đ
+                      +{formatCurrency(mIncome)} {t("common.currencySymbol")}
                     </Text>
                   </View>
                   <View style={styles.summaryCard}>
-                    <Text style={styles.summaryLabel}>Chi Tháng</Text>
+                    <Text style={styles.summaryLabel}>{t("yearlyReport.totalExpense")}</Text>
                     <Text style={[styles.summaryValue, styles.valueExpense]}>
-                      -{formatCurrency(mExpense)} đ
+                      -{formatCurrency(mExpense)} {t("common.currencySymbol")}
                     </Text>
                   </View>
                   <View style={styles.summaryCard}>
-                    <Text style={styles.summaryLabel}>Thặng Dư</Text>
+                    <Text style={styles.summaryLabel}>{t("yearlyReport.netLabel")}</Text>
                     <Text style={[styles.summaryValue, mNetColorStyle]}>
-                      {mNetSign}{formatCurrency(mNet)} đ
+                      {mNetSign}{formatCurrency(mNet)} {t("common.currencySymbol")}
                     </Text>
                   </View>
                 </View>
 
                 {/* Monthly Income Categories */}
                 <View style={styles.monthTableCard}>
-                  <Text style={[styles.monthTableTitle, styles.valueIncome]}>🟢 Thu Nhập Theo Danh Mục</Text>
+                  <Text style={[styles.monthTableTitle, styles.valueIncome]}>{t("yearlyReport.incomeByCategory")}</Text>
                   <View style={styles.tableHeader}>
-                    <Text style={styles.tableHeaderText}>Danh mục</Text>
-                    <Text style={styles.tableHeaderText}>Tổng thu</Text>
+                    <Text style={styles.tableHeaderText}>{t("yearlyReport.categoryCol")}</Text>
+                    <Text style={styles.tableHeaderText}>{t("yearlyReport.totalIncomeCol")}</Text>
                   </View>
                   {sortedMIncomes.length === 0 || mIncome === 0 ? (
-                    <Text style={styles.noDataText}>Không có thu nhập</Text>
+                    <Text style={styles.noDataText}>{t("yearlyReport.noIncomeData")}</Text>
                   ) : (
                     sortedMIncomes.map(([cat, amount]) => {
                       if (amount === 0) return null;
@@ -477,27 +480,27 @@ const YearlyReportScreen = () => {
                               <Text style={styles.categoryName}>{cat}</Text>
                             </View>
                             <Text style={[styles.categoryAmount, styles.valueIncome]}>
-                              +{formatCurrency(amount)} đ
+                              +{formatCurrency(amount)} {t("common.currencySymbol")}
                             </Text>
                           </View>
                           {details && (
                             <View style={styles.detailsContainer}>
-                              <Text style={styles.detailsTitle}>Chi tiết ghi chú:</Text>
+                              <Text style={styles.detailsTitle}>{t("yearlyReport.noteDetailsTitle")}</Text>
                               {details.sortedNotes.map(([note, noteAmt]) => (
                                 <View key={note} style={styles.detailItem}>
                                   <Text style={styles.detailBullet}>•</Text>
                                   <Text style={styles.detailText}>{note}</Text>
                                   <Text style={[styles.detailAmount, styles.valueIncome]}>
-                                    +{formatCurrency(noteAmt)} đ
+                                    +{formatCurrency(noteAmt)} {t("common.currencySymbol")}
                                   </Text>
                                 </View>
                               ))}
                               {details.noNoteTotal > 0 && (
                                 <View style={styles.detailItem}>
                                   <Text style={styles.detailBullet}>•</Text>
-                                  <Text style={styles.detailText}>Không ghi chú</Text>
+                                  <Text style={styles.detailText}>{t("yearlyReport.noNoteText")}</Text>
                                   <Text style={[styles.detailAmount, styles.valueIncome]}>
-                                    +{formatCurrency(details.noNoteTotal)} đ
+                                    +{formatCurrency(details.noNoteTotal)} {t("common.currencySymbol")}
                                   </Text>
                                 </View>
                               )}
@@ -511,13 +514,13 @@ const YearlyReportScreen = () => {
 
                 {/* Monthly Expense Categories */}
                 <View style={styles.monthTableCard}>
-                  <Text style={[styles.monthTableTitle, styles.valueExpense]}>🔴 Chi Tiêu Theo Danh Mục</Text>
+                  <Text style={[styles.monthTableTitle, styles.valueExpense]}>{t("yearlyReport.expenseByCategory")}</Text>
                   <View style={styles.tableHeader}>
-                    <Text style={styles.tableHeaderText}>Danh mục</Text>
-                    <Text style={styles.tableHeaderText}>Tổng chi</Text>
+                    <Text style={styles.tableHeaderText}>{t("yearlyReport.categoryCol")}</Text>
+                    <Text style={styles.tableHeaderText}>{t("yearlyReport.totalExpenseCol")}</Text>
                   </View>
                   {sortedMExpenses.length === 0 || mExpense === 0 ? (
-                    <Text style={styles.noDataText}>Không có chi tiêu</Text>
+                    <Text style={styles.noDataText}>{t("yearlyReport.noExpenseData")}</Text>
                   ) : (
                     sortedMExpenses.map(([cat, amount]) => {
                       if (amount === 0) return null;
@@ -529,27 +532,27 @@ const YearlyReportScreen = () => {
                               <Text style={styles.categoryName}>{cat}</Text>
                             </View>
                             <Text style={[styles.categoryAmount, styles.valueExpense]}>
-                              -{formatCurrency(amount)} đ
+                              -{formatCurrency(amount)} {t("common.currencySymbol")}
                             </Text>
                           </View>
                           {details && (
                             <View style={styles.detailsContainer}>
-                              <Text style={styles.detailsTitle}>Chi tiết ghi chú:</Text>
+                              <Text style={styles.detailsTitle}>{t("yearlyReport.noteDetailsTitle")}</Text>
                               {details.sortedNotes.map(([note, noteAmt]) => (
                                 <View key={note} style={styles.detailItem}>
                                   <Text style={styles.detailBullet}>•</Text>
                                   <Text style={styles.detailText}>{note}</Text>
                                   <Text style={[styles.detailAmount, styles.valueExpense]}>
-                                    -{formatCurrency(noteAmt)} đ
+                                    -{formatCurrency(noteAmt)} {t("common.currencySymbol")}
                                   </Text>
                                 </View>
                               ))}
                               {details.noNoteTotal > 0 && (
                                 <View style={styles.detailItem}>
                                   <Text style={styles.detailBullet}>•</Text>
-                                  <Text style={styles.detailText}>Không ghi chú</Text>
+                                  <Text style={styles.detailText}>{t("yearlyReport.noNoteText")}</Text>
                                   <Text style={[styles.detailAmount, styles.valueExpense]}>
-                                    -{formatCurrency(details.noNoteTotal)} đ
+                                    -{formatCurrency(details.noNoteTotal)} {t("common.currencySymbol")}
                                   </Text>
                                 </View>
                               )}

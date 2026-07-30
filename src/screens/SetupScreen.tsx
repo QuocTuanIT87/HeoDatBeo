@@ -24,8 +24,10 @@ import {
   getAccessToken,
 } from "../utils/googleDrive";
 import { styles } from "../styles/SetupScreen";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const SetupScreen = () => {
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [balanceStr, setBalanceStr] = useState("");
   const [isRestoring, setIsRestoring] = useState(false);
@@ -61,11 +63,11 @@ const SetupScreen = () => {
 
   const handleShowBalanceInfo = () => {
     Alert.normal(
-      "Số dư hiện hành",
+      t("home.availableBalance"),
       "Tổng số dư hiện tại bạn đang có (bao gồm tiền mặt, tài khoản ngân hàng, ví điện tử...).\n\nSố tiền này sẽ được dùng làm số dư ban đầu, làm cơ sở để bạn ghi chép, theo dõi và phân chia vào các quỹ chi tiêu sau này.",
       [
         {
-          text: "Đã hiểu",
+          text: t("common.understood"),
           style: "cancel",
         },
       ]
@@ -74,15 +76,13 @@ const SetupScreen = () => {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập tên của bạn");
+      Alert.alert(t("common.error"), t("setup.nameRequired"));
       return;
     }
 
-    // allow negative initial balance if people are in debt?
-    // standard numeric parse
     const balance = parseInt(balanceStr.replace(/[^0-9-]/g, ""), 10);
     if (isNaN(balance)) {
-      Alert.alert("Lỗi", "Vui lòng nhập số dư hợp lệ");
+      Alert.alert(t("common.error"), t("setup.invalidBalance"));
       return;
     }
 
@@ -99,7 +99,6 @@ const SetupScreen = () => {
     });
 
     if (success) {
-      // Create initial balance transaction
       const initialTransaction = {
         id: Date.now().toString(),
         type: "income" as const,
@@ -110,7 +109,6 @@ const SetupScreen = () => {
       };
       await storage.saveTransaction(initialTransaction);
 
-      // Navigate and reset to MainApp
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
@@ -118,7 +116,7 @@ const SetupScreen = () => {
         }),
       );
     } else {
-      Alert.alert("Lỗi", "Không thể lưu dữ liệu, vui lòng thử lại.");
+      Alert.alert(t("common.error"), t("setup.saveError"));
     }
   };
 
@@ -138,7 +136,7 @@ const SetupScreen = () => {
 
         const success = await storage.importData(fileContent);
         if (success) {
-          Alert.alert("Thành công", "Dữ liệu đã được phục hồi.");
+          Alert.alert(t("common.success"), t("setup.restoreSuccess"));
           navigation.dispatch(
             CommonActions.reset({
               index: 0,
@@ -147,8 +145,8 @@ const SetupScreen = () => {
           );
         } else {
           Alert.alert(
-            "Lỗi",
-            "Dữ liệu không hợp lệ hoặc đã xảy ra lỗi trong quá trình phục hồi.",
+            t("common.error"),
+            t("setup.restoreError"),
           );
           setIsRestoring(false);
         }
@@ -157,7 +155,7 @@ const SetupScreen = () => {
       }
     } catch (e) {
       console.error(e);
-      Alert.alert("Lỗi", "Không thể nhập dữ liệu.");
+      Alert.alert(t("common.error"), t("setup.restoreError"));
       setIsRestoring(false);
     }
   };
@@ -175,7 +173,7 @@ const SetupScreen = () => {
           setGoogleUserEmail(userInfoAny.user.email);
           signedIn = true;
         } else {
-          Alert.alert("Lỗi đăng nhập", signInRes.error || "Không thể đăng nhập Google.");
+          Alert.alert(t("common.error"), signInRes.error || "Không thể đăng nhập Google.");
           setIsRestoring(false);
           return;
         }
@@ -185,7 +183,7 @@ const SetupScreen = () => {
       if (res.success && res.content) {
         const success = await storage.importData(res.content);
         if (success) {
-          Alert.alert("Thành công", "Dữ liệu đã được phục hồi từ Google Drive.");
+          Alert.alert(t("common.success"), t("setup.restoreSuccess"));
           await storage.setGoogleDriveAutoBackupEnabled(true);
           const backupTime = res.timestamp || Date.now();
           await storage.setGoogleDriveLastBackupTimestamp(backupTime);
@@ -198,15 +196,15 @@ const SetupScreen = () => {
           );
         } else {
           Alert.alert(
-            "Lỗi phục hồi",
-            "Dữ liệu không hợp lệ hoặc đã xảy ra lỗi trong quá trình phục hồi."
+            t("common.error"),
+            t("setup.restoreError")
           );
         }
       } else {
-        Alert.alert("Lỗi khôi phục", res.message);
+        Alert.alert(t("common.error"), res.message);
       }
     } catch (e: any) {
-      Alert.alert("Lỗi", e.message || String(e));
+      Alert.alert(t("common.error"), e.message || String(e));
     } finally {
       setIsRestoring(false);
     }
@@ -218,12 +216,12 @@ const SetupScreen = () => {
       if (res.success) {
         setIsGoogleSignedIn(false);
         setGoogleUserEmail(null);
-        Alert.alert("Thành công", "Đã hủy liên kết tài khoản Google.");
+        Alert.alert(t("common.success"), "Đã hủy liên kết tài khoản Google.");
       } else {
-        Alert.alert("Lỗi", "Không thể đăng xuất.");
+        Alert.alert(t("common.error"), "Không thể đăng xuất.");
       }
     } catch (e: any) {
-      Alert.alert("Lỗi", e.message || String(e));
+      Alert.alert(t("common.error"), e.message || String(e));
     }
   };
 
@@ -244,40 +242,40 @@ const SetupScreen = () => {
             source={require("../../assets/savepig.jpg")}
             style={{ width: 140, height: 140, borderRadius: 80 }}
           />
-          <Text style={styles.title}>Chào mừng đến với</Text>
+          <Text style={styles.title}>{t("setup.welcome")}</Text>
           <Text style={styles.appName}>Heo Đất Béo</Text>
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.label}>Tên của bạn</Text>
+          <Text style={styles.label}>{t("setup.nameLabel")}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Nhập tên của bạn"
+            placeholder={t("setup.namePlaceholder")}
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
           />
 
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8, gap: 6 }}>
-            <Text style={[styles.label, { marginBottom: 0 }]}>Số dư hiện hành (VNĐ)</Text>
+            <Text style={[styles.label, { marginBottom: 0 }]}>{t("setup.balanceLabel")}</Text>
             <TouchableOpacity onPress={handleShowBalanceInfo} activeOpacity={0.7}>
               <HelpCircle size={18} color="#0fb5b1" />
             </TouchableOpacity>
           </View>
           <TextInput
             style={styles.input}
-            placeholder="Ví dụ: 5,000,000"
+            placeholder={t("setup.balancePlaceholder")}
             value={formatMoneyInput(balanceStr)}
             onChangeText={setBalanceStr}
             keyboardType="numeric"
           />
 
           <TouchableOpacity style={styles.button} onPress={handleSave}>
-            <Text style={styles.buttonText}>Bắt đầu</Text>
+            <Text style={styles.buttonText}>{t("setup.submit")}</Text>
           </TouchableOpacity>
 
           <View style={styles.importContainer}>
-            <Text style={styles.importText}>Đã có dữ liệu sẵn?</Text>
+            <Text style={styles.importText}>{t("setup.restoreHeader")}</Text>
             <TouchableOpacity
               style={[styles.importButton, isRestoring && { flexDirection: "row", gap: 8 }]}
               onPress={() => setShowRestoreOptions(true)}
@@ -285,7 +283,7 @@ const SetupScreen = () => {
             >
               {isRestoring && <ActivityIndicator size="small" color="#0fb5b1" />}
               <Text style={styles.importButtonText}>
-                {isRestoring ? "Đang khôi phục..." : "Khôi phục dữ liệu"}
+                {isRestoring ? t("common.loading") : t("settings.backupRestore")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -301,7 +299,7 @@ const SetupScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Khôi phục dữ liệu</Text>
+              <Text style={styles.modalTitle}>{t("settings.backupRestore")}</Text>
               <TouchableOpacity onPress={() => setShowRestoreOptions(false)}>
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
@@ -315,7 +313,7 @@ const SetupScreen = () => {
               }}
               disabled={isRestoring}
             >
-              <Text style={styles.modalOptionButtonText}>Khôi phục dữ liệu - Ngoại tuyến</Text>
+              <Text style={styles.modalOptionButtonText}>{t("setup.restoreFile")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -327,7 +325,7 @@ const SetupScreen = () => {
               disabled={isRestoring}
             >
               <Text style={[styles.modalOptionButtonText, { color: "#ffffff" }]}>
-                {isRestoring ? "Đang khôi phục..." : "Khôi phục dữ liệu - Trực tuyến"}
+                {isRestoring ? t("common.loading") : t("setup.restoreDrive")}
               </Text>
             </TouchableOpacity>
 

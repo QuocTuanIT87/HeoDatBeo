@@ -56,7 +56,7 @@ import {
 import { useLanguage } from "../i18n/LanguageContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UserProfile, CategoryBudget, IncomeCategory } from "../types";
-import { EXPENSE_ICONS } from "./HomeScreen";
+import { EXPENSE_ICONS } from "./MoneyDiaryScreen";
 import { scheduleTestNotification } from "../utils/notifications";
 import { styles } from "../styles/SettingsScreen";
 import { isCategoryIdMatch, isProhibitedCategoryName } from "../utils/category";
@@ -223,7 +223,7 @@ const SettingsScreen = () => {
     const trimmed = newNoteText.trim();
     if (!trimmed) return;
     if (suggestedNotes.includes(trimmed)) {
-      Alert.alert("Lỗi", "Ghi chú này đã tồn tại trong gợi ý.");
+      Alert.alert(t("common.error"), t("settings.noteDuplicateError"));
       return;
     }
     await storage.addSuggestedNote(notesTab, trimmed);
@@ -233,12 +233,12 @@ const SettingsScreen = () => {
 
   const handleDeleteNote = async (note: string) => {
     Alert.alert(
-      "Xác nhận xóa",
-      `Bạn có chắc muốn xóa ghi chú gợi ý này?\n"${note}"`,
+      t("common.warning"),
+      `${t("settings.confirmDeleteNote")}\n"${note}"`,
       [
-        { text: "Hủy", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Xóa",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             await storage.deleteSuggestedNote(notesTab, note);
@@ -308,17 +308,17 @@ const SettingsScreen = () => {
         setLastBackupStatus(lastStatus);
 
         Alert.alert(
-          "Thành công",
-          `Đã liên kết tài khoản Google: ${userInfoAny.user.email}`,
+          t("common.success"),
+          `${t("settings.googleLoginSuccess")} ${userInfoAny.user.email}`,
         );
       } else {
         Alert.alert(
-          "Lỗi đăng nhập",
-          res.error || "Không thể đăng nhập Google.",
+          t("settings.googleLoginError"),
+          res.error || t("settings.googleLoginErrorMsg"),
         );
       }
     } catch (e: any) {
-      Alert.alert("Lỗi", e.message || String(e));
+      Alert.alert(t("common.error"), e.message || t("settings.generalError"));
     } finally {
       setIsLoggingIn(false);
     }
@@ -326,12 +326,12 @@ const SettingsScreen = () => {
 
   const handleGoogleLogout = async () => {
     Alert.alert(
-      "Đăng xuất",
-      "Bạn có chắc muốn đăng xuất và hủy liên kết Google Drive?",
+      t("settings.confirmLogout"),
+      t("settings.confirmLogoutMsg"),
       [
-        { text: "Hủy", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Đăng xuất",
+          text: t("settings.logoutBtn"),
           style: "destructive",
           onPress: async () => {
             const res = await signOutGoogle();
@@ -341,8 +341,8 @@ const SettingsScreen = () => {
               setIsAutoBackupEnabled(false);
               await storage.setGoogleDriveAutoBackupEnabled(false);
               Alert.alert(
-                "Đăng xuất thành công",
-                "Đã hủy liên kết Google Drive.",
+                t("settings.logoutSuccess"),
+                t("settings.logoutSuccessMsg"),
               );
             }
           },
@@ -354,8 +354,8 @@ const SettingsScreen = () => {
   const handleToggleAutoBackup = async (value: boolean) => {
     if (!isGoogleSignedIn) {
       Alert.alert(
-        "Yêu cầu đăng nhập",
-        "Bạn cần liên kết tài khoản Google trước.",
+        t("settings.loginRequired"),
+        t("settings.loginRequiredMsg"),
       );
       return;
     }
@@ -387,12 +387,12 @@ const SettingsScreen = () => {
       setLastBackupStatus(res.success ? "success" : "failed");
 
       if (res.success) {
-        Alert.alert("Thành công", "Đã sao lưu dữ liệu lên Google Drive.");
+        Alert.alert(t("common.success"), t("settings.backupSuccess"));
       } else {
-        Alert.alert("Lỗi sao lưu", res.message);
+        Alert.alert(t("settings.backupError"), res.message);
       }
     } catch (e: any) {
-      Alert.alert("Lỗi", e.message || String(e));
+      Alert.alert(t("common.error"), e.message || t("settings.generalError"));
     } finally {
       setIsBackingUp(false);
     }
@@ -401,8 +401,8 @@ const SettingsScreen = () => {
   const handleRestoreFromGoogleDrive = async () => {
     if (!isGoogleSignedIn) {
       Alert.alert(
-        "Yêu cầu đăng nhập",
-        "Bạn cần liên kết tài khoản Google trước.",
+        t("settings.loginRequired"),
+        t("settings.loginRequiredMsg"),
       );
       return;
     }
@@ -413,8 +413,8 @@ const SettingsScreen = () => {
       const detailsRes = await getLatestBackupDetailsOnGoogleDrive();
       if (!detailsRes.success || !detailsRes.name || !detailsRes.timestamp) {
         Alert.alert(
-          "Không tìm thấy bản sao lưu",
-          detailsRes.message || "Không thể lấy thông tin bản sao lưu.",
+          t("settings.backupNotFound"),
+          detailsRes.message || t("settings.backupNotFoundMsg"),
         );
         setIsRestoring(false);
         return;
@@ -428,17 +428,17 @@ const SettingsScreen = () => {
       const hh = String(date.getHours()).padStart(2, "0");
       const min = String(date.getMinutes()).padStart(2, "0");
       const ss = String(date.getSeconds()).padStart(2, "0");
-      const formattedTime = `${dd}/${mm}/${yyyy} lúc ${hh}:${min}:${ss}`;
+      const formattedTime = `${dd}/${mm}/${yyyy} ${t("settings.atTime")} ${hh}:${min}:${ss}`;
 
       setIsRestoring(false); // Tắt spinner để hiển thị hộp thoại xác nhận
 
       Alert.alert(
-        "Khôi phục dữ liệu",
-        `Tìm thấy bản sao lưu gần nhất trên Google Drive:\n📁 Tên file: ${detailsRes.name}\n⏰ Thời gian: ${formattedTime}\n\nDữ liệu hiện tại trên thiết bị sẽ bị ghi đè và thay thế hoàn toàn.`,
+        t("settings.restoreConfirmTitle"),
+        t("settings.restoreConfirmMsg").replace("{name}", detailsRes.name!).replace("{time}", formattedTime),
         [
-          { text: "Hủy bỏ", style: "cancel" },
+          { text: t("settings.restoreCancelBtn"), style: "cancel" },
           {
-            text: "Xác nhận",
+            text: t("settings.restoreConfirmBtn"),
             style: "destructive",
             onPress: async () => {
               setIsRestoring(true);
@@ -454,21 +454,21 @@ const SettingsScreen = () => {
                     setLastBackupTimestamp(backupTime);
                     setLastBackupStatus("success");
                     Alert.alert(
-                      "Thành công",
-                      "Dữ liệu đã được phục hồi từ Google Drive. Vui lòng mở lại ứng dụng hoặc chuyển màn hình để làm mới.",
+                      t("common.success"),
+                      t("settings.restoreSuccess"),
                     );
                     loadProfile();
                   } else {
                     Alert.alert(
-                      "Lỗi phục hồi",
-                      "Dữ liệu không hợp lệ hoặc đã xảy ra lỗi trong quá trình phục hồi.",
+                      t("settings.restoreError"),
+                      t("settings.restoreErrorMsg"),
                     );
                   }
                 } else {
-                  Alert.alert("Lỗi khôi phục", res.message);
+                  Alert.alert(t("settings.restoreGenericError"), res.message);
                 }
               } catch (e: any) {
-                Alert.alert("Lỗi", e.message || String(e));
+                Alert.alert(t("common.error"), e.message || t("settings.generalError"));
               } finally {
                 setIsRestoring(false);
               }
@@ -477,13 +477,13 @@ const SettingsScreen = () => {
         ],
       );
     } catch (e: any) {
-      Alert.alert("Lỗi", e.message || String(e));
+      Alert.alert(t("common.error"), e.message || t("settings.generalError"));
       setIsRestoring(false);
     }
   };
 
   const formatLastBackupTime = (ts: number) => {
-    if (!ts || ts === 0) return "Chưa từng sao lưu";
+    if (!ts || ts === 0) return t("settings.neverBackedUp");
     const date = new Date(ts);
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, "0");
@@ -491,7 +491,7 @@ const SettingsScreen = () => {
     const hh = String(date.getHours()).padStart(2, "0");
     const min = String(date.getMinutes()).padStart(2, "0");
     const ss = String(date.getSeconds()).padStart(2, "0");
-    return `${dd}/${mm}/${yyyy} lúc ${hh}:${min}:${ss}`;
+    return `${dd}/${mm}/${yyyy} ${t("settings.atTime")} ${hh}:${min}:${ss}`;
   };
 
   const loadProfile = async () => {
@@ -509,7 +509,7 @@ const SettingsScreen = () => {
       const dataStr = await storage.exportData();
       const baseDir = Paths.document?.uri || Paths.cache?.uri;
       if (!baseDir) {
-        Alert.alert("Lỗi", "Không thể truy cập hệ thống file.");
+        Alert.alert(t("common.error"), t("settings.exportFileError"));
         return;
       }
       const fileUri =
@@ -520,17 +520,17 @@ const SettingsScreen = () => {
       if (isAvailable) {
         await Sharing.shareAsync(fileUri, {
           mimeType: "text/plain",
-          dialogTitle: "Lưu hoặc chia sẻ dữ liệu sao lưu",
+          dialogTitle: t("settings.backupSuccess"),
         });
       } else {
         Alert.alert(
-          "Lỗi",
-          "Tính năng chia sẻ không khả dụng trên thiết bị này.",
+          t("common.error"),
+          t("settings.exportShareError"),
         );
       }
     } catch (e) {
       console.error(e);
-      Alert.alert("Lỗi", "Không thể xuất dữ liệu.");
+      Alert.alert(t("common.error"), t("settings.exportError"));
     }
   };
 
@@ -549,31 +549,31 @@ const SettingsScreen = () => {
         const success = await storage.importData(fileContent);
         if (success) {
           Alert.alert(
-            "Thành công",
-            "Dữ liệu đã được phục hồi. Vui lòng mở lại ứng dụng hoặc chuyển màn hình để làm mới.",
+            t("common.success"),
+            t("settings.importSuccess"),
           );
           loadProfile();
         } else {
           Alert.alert(
-            "Lỗi",
-            "Dữ liệu không hợp lệ hoặc đã xảy ra lỗi trong quá trình phục hồi.",
+            t("common.error"),
+            t("settings.importError"),
           );
         }
       }
     } catch (e) {
       console.error(e);
-      Alert.alert("Lỗi", "Không thể nhập dữ liệu.");
+      Alert.alert(t("common.error"), t("settings.importGenericError"));
     }
   };
 
   const handleReset = () => {
     Alert.alert(
-      "Cảnh báo nguy hiểm",
-      "Bạn có chắc chắn muốn xóa toàn bộ dữ liệu? (Bao gồm số dư và lịch sử thu chi. Việc này không thể hoàn tác).",
+      t("settings.resetWarning"),
+      t("settings.resetWarningMsg"),
       [
-        { text: "Hủy bỏ", style: "cancel" },
+        { text: t("settings.resetCancelBtn"), style: "cancel" },
         {
-          text: "Xóa",
+          text: t("settings.resetBtn"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -593,7 +593,7 @@ const SettingsScreen = () => {
                 }),
               );
             } else {
-              Alert.alert("Lỗi", "Không thể xóa dữ liệu.");
+              Alert.alert(t("common.error"), t("settings.resetError"));
             }
           },
         },
@@ -607,8 +607,8 @@ const SettingsScreen = () => {
 
     if (isProhibitedCategoryName(trimmedName)) {
       Alert.alert(
-        "Lỗi",
-        `Tên danh mục "${trimmedName}" đã được hệ thống sử dụng. Vui lòng chọn tên khác.`,
+        t("common.error"),
+        t("settings.categoryProhibitedError").replace("{name}", trimmedName),
       );
       return;
     }
@@ -623,7 +623,7 @@ const SettingsScreen = () => {
         );
       });
       if (isActiveExisting) {
-        Alert.alert("Lỗi", "Danh mục này đã tồn tại.");
+        Alert.alert(t("common.error"), t("settings.categoryDuplicateError"));
         return;
       }
 
@@ -653,8 +653,8 @@ const SettingsScreen = () => {
           setNewCategoryName("");
           setCategoryModalVisible(true);
           Alert.alert(
-            "Thành công",
-            `Đã khôi phục danh mục thu nhập "${trimmedName}".`,
+            t("common.success"),
+            t("settings.categoryRestored").replace("{name}", trimmedName),
           );
         }
         return;
@@ -671,8 +671,8 @@ const SettingsScreen = () => {
       setIconModalVisible(true);
     } else {
       Alert.alert(
-        "Thông tin",
-        "Vui lòng vào màn hình 'Chia Tiền' để tạo danh mục chi tiêu mới.",
+        t("settings.categoryExpenseInfo"),
+        t("settings.categoryExpenseInfoMsg"),
       );
     }
   };
@@ -791,7 +791,7 @@ const SettingsScreen = () => {
       catName === "Số dư đầu tiên" ||
       catName === "Khác"
     ) {
-      Alert.alert("Cảnh báo", "Không thể xóa danh mục hệ thống này.");
+      Alert.alert(t("common.warning"), t("settings.categorySystemError"));
       return;
     }
 
@@ -800,10 +800,10 @@ const SettingsScreen = () => {
       (t) => t.categoryId && catId && isCategoryIdMatch(t.categoryId, catId),
     );
 
-    Alert.alert("Xác nhận xóa", `Bạn có chắc muốn xóa danh mục "${catName}"?`, [
-      { text: "Hủy", style: "cancel" },
+    Alert.alert(t("common.warning"), t("settings.confirmDeleteCategory").replace("{name}", catName), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Xóa",
+        text: t("common.delete"),
         style: "destructive",
         onPress: async () => {
           if (activeCategoryTab === "income") {
@@ -880,7 +880,7 @@ const SettingsScreen = () => {
       catName === "Số dư đầu tiên" ||
       catName === "Khác"
     ) {
-      Alert.alert("Lỗi", "Không thể đổi tên danh mục hệ thống.");
+      Alert.alert(t("common.error"), t("settings.categoryRenameSystemError"));
       return;
     }
     setRenameTarget({ id: catId, name: catName, type: activeCategoryTab });
@@ -893,7 +893,7 @@ const SettingsScreen = () => {
     if (!trimmedNewName || !profile || !renameTarget) return;
 
     if (isProhibitedCategoryName(trimmedNewName)) {
-      Alert.alert("Lỗi", "Tên danh mục này trùng với tên danh mục hệ thống.");
+      Alert.alert(t("common.error"), t("settings.categoryRenameProhibited"));
       return;
     }
 
@@ -908,7 +908,7 @@ const SettingsScreen = () => {
             c.name === trimmedNewName,
       );
       if (isConflicting) {
-        Alert.alert("Lỗi", "Tên danh mục này đã tồn tại.");
+        Alert.alert(t("common.error"), t("settings.categoryRenameDuplicate"));
         return;
       }
 
@@ -952,7 +952,7 @@ const SettingsScreen = () => {
           b.name === trimmedNewName,
       );
       if (isConflicting) {
-        Alert.alert("Lỗi", "Tên danh mục này đã tồn tại.");
+        Alert.alert(t("common.error"), t("settings.categoryRenameDuplicate"));
         return;
       }
 
@@ -971,7 +971,7 @@ const SettingsScreen = () => {
     setRenameModalVisible(false);
     setRenameTarget(null);
     setRenameInputText("");
-    Alert.alert("Thành công", "Đã đổi tên danh mục.");
+    Alert.alert(t("common.success"), t("settings.renameSuccess"));
   };
 
   const handleUpdateInputMethod = async (method: "keypad" | "manual") => {
@@ -1242,13 +1242,13 @@ const SettingsScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>📜 Lịch sử phiên bản</Text>
+              <Text style={styles.modalTitle}>📜 {t("settings.versionHistoryTitle")}</Text>
               <TouchableOpacity onPress={() => setHistoryModalVisible(false)}>
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
             </View>
             <Text style={styles.modalTitleSub}>
-              {VERSION_HISTORY.length} phiên bản
+              {VERSION_HISTORY.length} {t("settings.versionsCount")}
             </Text>
 
             <ScrollView

@@ -38,7 +38,7 @@ import { storage } from "../store/storage";
 import { UserProfile } from "../types";
 import { formatCurrency } from "../utils/format";
 import { getStreakLevel, getStreakLevelImage, getStreakLevelInfo } from "../utils/streak";
-import { MASCOT_LIST } from "../utils/mascot";
+import { MASCOT_LIST, getMascotImage } from "../utils/mascot";
 import { NAVY, styles } from "../styles/ProfileScreen";
 
 const SOCIAL_ICONS = {
@@ -60,9 +60,12 @@ const ProfileScreen = () => {
   const [joinDateDisplay, setJoinDateDisplay] = useState("");
   const [daysSinceJoin, setDaysSinceJoin] = useState<number | null>(null);
   const [isMascotModalVisible, setMascotModalVisible] = useState(false);
+  const [isMascotPreviewModalVisible, setIsMascotPreviewModalVisible] = useState(false);
   const [qrModal, setQrModal] = useState<{ visible: boolean; url: string; label: string }>(
     { visible: false, url: "", label: "" }
   );
+
+  const activeMascot = MASCOT_LIST.find((m) => m.key === profile?.mascot) || MASCOT_LIST[0];
 
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
@@ -310,7 +313,7 @@ const ProfileScreen = () => {
   const handleSaveProfile = async () => {
     if (!profile) return;
     if (!editName.trim()) {
-      Alert.alert("Lỗi", "Họ và tên không được để trống.");
+      Alert.alert(t("common.error"), t("profile.nameRequired"));
       return;
     }
 
@@ -357,7 +360,7 @@ const ProfileScreen = () => {
       setProfile(updatedProfile);
       setEditModalVisible(false);
     } else {
-      Alert.alert("Lỗi", "Không thể lưu thông tin.");
+      Alert.alert(t("common.error"), t("profile.saveError"));
     }
   };
 
@@ -380,19 +383,19 @@ const ProfileScreen = () => {
       }
     } catch (e) {
       console.error(e);
-      Alert.alert("Lỗi", "Không thể mở thư viện ảnh.");
+      Alert.alert(t("common.error"), t("profile.openGalleryError"));
     }
   };
 
   const handleDeleteHistoryImage = async (uriToDelete: string) => {
     if (!profile) return;
     Alert.alert(
-      "Xác nhận xóa",
-      "Bạn có chắc chắn muốn xóa ảnh này khỏi lịch sử không?",
+      t("common.warning"),
+      t("profile.confirmDeleteAvatar"),
       [
-        { text: "Hủy", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Xóa",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             if (uriToDelete.startsWith("file://")) {
@@ -441,7 +444,7 @@ const ProfileScreen = () => {
         >
           <ArrowLeft color="#fff" size={22} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Hồ sơ cá nhân</Text>
+        <Text style={styles.headerTitle}>{t("profile.title")}</Text>
         <TouchableOpacity onPress={openEditModal} style={styles.headerBtn}>
           <Pencil color="#fff" size={20} />
         </TouchableOpacity>
@@ -487,16 +490,31 @@ const ProfileScreen = () => {
           {daysSinceJoin !== null ? (
             <View style={styles.daysBadge}>
               <Text style={styles.daysBadgeText}>
-                🗓 Đã tham gia {daysSinceJoin.toLocaleString("vi-VN")} ngày
+                {t("profile.daysBadge", { days: daysSinceJoin.toLocaleString("vi-VN") })}
               </Text>
             </View>
           ) : null}
 
+          {/* Active Mascot Badge */}
+          <TouchableOpacity
+            style={styles.mascotBadge}
+            onPress={() => setMascotModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Image
+              source={getMascotImage(profile?.mascot)}
+              style={styles.mascotBadgeImg}
+            />
+            <Text style={styles.mascotBadgeText}>
+              {t("profile.mascotBadgeLabel", { name: activeMascot.name })} 🐾
+            </Text>
+          </TouchableOpacity>
+
           {/* Total Assets Card */}
           <View style={styles.totalAssetsCard}>
-            <Text style={styles.totalAssetsLabel}>TỔNG TÀI SẢN</Text>
+            <Text style={styles.totalAssetsLabel}>{t("profile.totalAssets")}</Text>
             <Text style={styles.totalAssetsValue}>
-              {formatCurrency(totalBalance)} đ
+              {formatCurrency(totalBalance)} {t("common.currencySymbol")}
             </Text>
           </View>
 
@@ -547,6 +565,42 @@ const ProfileScreen = () => {
           ) : null}
         </View>
 
+        {/* ── Mascot Card (Linh vật đồng hành) ── */}
+        <View style={styles.mascotCardSection}>
+          <View style={styles.mascotCardHeader}>
+            <View style={styles.mascotTitleGroup}>
+              <Text style={styles.mascotCardTitle}>🐾 {t("profile.companionMascot")}</Text>
+            </View>
+          </View>
+
+          <View style={styles.mascotCardBody}>
+            <TouchableOpacity
+              onPress={() => setIsMascotPreviewModalVisible(true)}
+              activeOpacity={0.85}
+              style={styles.mascotImgContainer}
+            >
+              <Image
+                source={getMascotImage(profile?.mascot)}
+                style={styles.mascotMainImg}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+            <View style={styles.mascotInfoContainer}>
+              <View style={styles.mascotNameRow}>
+                <Text style={styles.mascotMainName}>{activeMascot.name}</Text>
+                <View style={styles.activeTag}>
+                  <Text style={styles.activeTagTxt}>{t("profile.currentlyUsed")}</Text>
+                </View>
+              </View>
+              <Text style={styles.mascotDescTxt}>
+                {profile?.mascotLastChanged
+                  ? t("profile.lastChanged", { date: formatDateVN(new Date(profile.mascotLastChanged)) })
+                  : t("profile.defaultCompanionDesc")}
+              </Text>
+            </View>
+          </View>
+        </View>
+
         {/* ── Streak Card (Hành trình giữ chuỗi) ── */}
         <View style={styles.streakCard}>
           <View style={styles.streakHeader}>
@@ -572,11 +626,11 @@ const ProfileScreen = () => {
             />
             
             <Text style={styles.streakLevelNameTxt}>
-              {getStreakLevelInfo(getStreakLevel(profile?.streakCount || 0)).name}
+              {getStreakLevelInfo(getStreakLevel(profile?.streakCount || 0), t).name}
             </Text>
             
             <Text style={styles.streakLevelDescriptionTxt}>
-              {getStreakLevelInfo(getStreakLevel(profile?.streakCount || 0)).description}
+              {getStreakLevelInfo(getStreakLevel(profile?.streakCount || 0), t).description}
             </Text>
 
             <Text style={styles.streakDaysTxt}>
@@ -763,11 +817,11 @@ const ProfileScreen = () => {
                   </View>
                 </TouchableOpacity>
                 <Text style={styles.modalAvatarHint}>
-                  Chạm để đổi ảnh đại diện
+                  {t("profile.tapToChangeAvatar")}
                 </Text>
                 <TextInput
                   style={styles.modalUrlInput}
-                  placeholder="Hoặc dán link URL ảnh..."
+                  placeholder={t("profile.orPasteUrl")}
                   placeholderTextColor="#94a3b8"
                   value={editAvatar}
                   onChangeText={setEditAvatar}
@@ -775,7 +829,7 @@ const ProfileScreen = () => {
                 {profile?.avatarHistory && profile.avatarHistory.length > 0 && (
                   <View style={styles.historySection}>
                     <Text style={styles.historyTitle}>
-                      Ảnh đã dùng trước đây:
+                      {t("profile.previousAvatars")}
                     </Text>
                     <ScrollView
                       horizontal
@@ -804,33 +858,33 @@ const ProfileScreen = () => {
               </View>
 
               {/* Group 1 */}
-              <Text style={styles.groupLabel}>Thông tin cơ bản</Text>
+              <Text style={styles.groupLabel}>{t("profile.basicInfo")}</Text>
 
               <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Họ và tên *</Text>
+                <Text style={styles.fieldLabel}>{t("profile.fullName")} *</Text>
                 <TextInput
                   style={styles.fieldInput}
-                  placeholder="Nhập họ và tên..."
+                  placeholder={t("profile.fullNamePlaceholder")}
                   placeholderTextColor="#94a3b8"
                   value={editName}
                   onChangeText={setEditName}
                 />
               </View>
               <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Biệt danh</Text>
+                <Text style={styles.fieldLabel}>{t("profile.editNickname")}</Text>
                 <TextInput
                   style={styles.fieldInput}
-                  placeholder="@username..."
+                  placeholder={t("profile.placeholderNickname")}
                   placeholderTextColor="#94a3b8"
                   value={editNickname}
                   onChangeText={setEditNickname}
                 />
               </View>
               <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Giới thiệu (Bio)</Text>
+                <Text style={styles.fieldLabel}>{t("profile.bioLabel")}</Text>
                 <TextInput
                   style={[styles.fieldInput, styles.fieldArea]}
-                  placeholder="Viết vài dòng về bản thân..."
+                  placeholder={t("profile.bioPlaceholder")}
                   placeholderTextColor="#94a3b8"
                   value={editBio}
                   onChangeText={setEditBio}
@@ -841,24 +895,28 @@ const ProfileScreen = () => {
 
               {/* Giới tính + Ngày sinh */}
               <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Giới tính</Text>
+                <Text style={styles.fieldLabel}>{t("profile.genderLabel")}</Text>
                 <View style={styles.genderRow}>
-                  {["Nam", "Nữ", "Riêng tư"].map((g) => (
+                  {[
+                    { key: "Nam", label: t("profile.genderMale") },
+                    { key: "Nữ", label: t("profile.genderFemale") },
+                    { key: "Riêng tư", label: t("profile.genderPrivate") },
+                  ].map(({ key, label }) => (
                     <TouchableOpacity
-                      key={g}
+                      key={key}
                       style={[
                         styles.genderBtn,
-                        editGender === g && styles.genderBtnOn,
+                        editGender === key && styles.genderBtnOn,
                       ]}
-                      onPress={() => setEditGender(g)}
+                      onPress={() => setEditGender(key)}
                     >
                       <Text
                         style={[
                           styles.genderBtnTxt,
-                          editGender === g && styles.genderBtnTxtOn,
+                          editGender === key && styles.genderBtnTxtOn,
                         ]}
                       >
-                        {g}
+                        {label}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -868,7 +926,7 @@ const ProfileScreen = () => {
               <View style={styles.rowPair}>
                 {/* Ngày sinh — date picker */}
                 <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.fieldLabel}>Ngày sinh</Text>
+                  <Text style={styles.fieldLabel}>{t("profile.birthdayLabel")}</Text>
                   <TouchableOpacity
                     style={styles.datePickerBtn}
                     onPress={() => setShowDatePicker(true)}
@@ -881,7 +939,7 @@ const ProfileScreen = () => {
                         !editBirthday && { color: "#94a3b8" },
                       ]}
                     >
-                      {editBirthday || "Chọn ngày sinh"}
+                      {editBirthday || t("profile.selectBirthday")}
                     </Text>
                   </TouchableOpacity>
                   {showDatePicker && (
@@ -909,7 +967,7 @@ const ProfileScreen = () => {
 
                 {/* Ngày tham gia — read-only */}
                 <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.fieldLabel}>Tham gia từ</Text>
+                  <Text style={styles.fieldLabel}>{t("profile.joinedFrom")}</Text>
                   <View style={styles.readonlyField}>
                     <Lock color="#94a3b8" size={14} />
                     <Text style={styles.readonlyTxt}>
@@ -917,39 +975,39 @@ const ProfileScreen = () => {
                     </Text>
                   </View>
                   <Text style={styles.readonlyHint}>
-                    Tự động từ giao dịch đầu tiên
+                    {t("profile.autoFromFirstTx")}
                   </Text>
                 </View>
               </View>
 
               {/* Group 2 */}
-              <Text style={styles.groupLabel}>Công việc & Học vấn</Text>
+              <Text style={styles.groupLabel}>{t("profile.workAndEducation")}</Text>
 
               <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Công việc</Text>
+                <Text style={styles.fieldLabel}>{t("profile.jobLabel")}</Text>
                 <TextInput
                   style={styles.fieldInput}
-                  placeholder="Nghề nghiệp hiện tại..."
+                  placeholder={t("profile.jobPlaceholder")}
                   placeholderTextColor="#94a3b8"
                   value={editJob}
                   onChangeText={setEditJob}
                 />
               </View>
               <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Học vấn</Text>
+                <Text style={styles.fieldLabel}>{t("profile.educationLabel")}</Text>
                 <TextInput
                   style={styles.fieldInput}
-                  placeholder="Trường / Trình độ..."
+                  placeholder={t("profile.educationPlaceholder")}
                   placeholderTextColor="#94a3b8"
                   value={editEducation}
                   onChangeText={setEditEducation}
                 />
               </View>
               <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Sở thích</Text>
+                <Text style={styles.fieldLabel}>{t("profile.hobbyLabel")}</Text>
                 <TextInput
                   style={styles.fieldInput}
-                  placeholder="Đọc sách, du lịch..."
+                  placeholder={t("profile.hobbyPlaceholder")}
                   placeholderTextColor="#94a3b8"
                   value={editHobby}
                   onChangeText={setEditHobby}
@@ -957,7 +1015,7 @@ const ProfileScreen = () => {
               </View>
 
               {/* Group 3 */}
-              <Text style={styles.groupLabel}>Mạng xã hội</Text>
+              <Text style={styles.groupLabel}>{t("profile.socialMedia")}</Text>
 
               {[
                 {
@@ -1056,7 +1114,7 @@ const ProfileScreen = () => {
                 }}
               >
                 <Text style={styles.previewActionTxt}>
-                  Dùng làm ảnh đại diện
+                  {t("profile.useAsAvatar")}
                 </Text>
               </TouchableOpacity>
 
@@ -1068,7 +1126,7 @@ const ProfileScreen = () => {
                   }
                 }}
               >
-                <Text style={styles.previewActionTxt}>Xóa ảnh này</Text>
+                <Text style={styles.previewActionTxt}>{t("profile.deleteThisPhoto")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1151,6 +1209,71 @@ const ProfileScreen = () => {
               }}
             >
               Quét để kết bạn
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Fullscreen Mascot Preview Modal */}
+      <Modal
+        visible={isMascotPreviewModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsMascotPreviewModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.85)",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+          }}
+          activeOpacity={1}
+          onPress={() => setIsMascotPreviewModalVisible(false)}
+        >
+          <View
+            style={{
+              backgroundColor: "transparent",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
+              maxWidth: 360,
+            }}
+            onStartShouldSetResponder={() => true}
+          >
+            <TouchableOpacity
+              style={{
+                position: "absolute",
+                top: -40,
+                right: 0,
+                zIndex: 1,
+                padding: 8,
+                backgroundColor: "rgba(255,255,255,0.2)",
+                borderRadius: 20,
+              }}
+              onPress={() => setIsMascotPreviewModalVisible(false)}
+            >
+              <X color="#ffffff" size={24} />
+            </TouchableOpacity>
+
+            <Image
+              source={getMascotImage(profile?.mascot)}
+              style={{ width: 280, height: 280, resizeMode: "contain", marginVertical: 12 }}
+            />
+
+            <Text
+              style={{
+                fontSize: 24,
+                fontWeight: "800",
+                color: "#ffffff",
+                marginTop: 12,
+                textShadowColor: "rgba(0,0,0,0.5)",
+                textShadowOffset: { width: 0, height: 2 },
+                textShadowRadius: 4,
+              }}
+            >
+              {activeMascot.name}
             </Text>
           </View>
         </TouchableOpacity>

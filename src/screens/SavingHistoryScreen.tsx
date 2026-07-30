@@ -14,8 +14,10 @@ import { resolveCategoryName } from "../utils/category";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { ArrowLeft, Trash2, Trophy, Clock } from "lucide-react-native";
 import { styles } from "../styles/SavingHistoryScreen";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const SavingHistoryScreen = () => {
+  const { t } = useLanguage();
   const isFocused = useIsFocused();
   const navigation = useNavigation();
 
@@ -54,7 +56,7 @@ const SavingHistoryScreen = () => {
     const elapsed = Date.now() - tx.timestamp;
     if (elapsed > THREE_DAYS_MS) {
       Alert.alert(
-        "Không thể xóa",
+        t("common.error"),
         "Giao dịch nạp/rút tiết kiệm đã quá 3 ngày, không thể xóa.",
       );
       return;
@@ -69,7 +71,7 @@ const SavingHistoryScreen = () => {
         const unallocated = p.initialBalance - totalAllocated;
         if (tx.amount > unallocated) {
           Alert.alert(
-            "Không thể xóa",
+            t("common.error"),
             "Số tiền này đã được sử dụng hoặc phân bổ vào các Quỹ.",
           );
           return;
@@ -78,17 +80,17 @@ const SavingHistoryScreen = () => {
     }
 
     Alert.alert(
-      "Xác nhận xóa",
-      "Bạn có chắc chắn muốn xóa giao dịch này không?",
+      t("common.warning"),
+      t("stats.confirmDelete"),
       [
-        { text: "Hủy", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Xóa",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             const success = await storage.deleteTransaction(tx.id);
             if (!success) {
-              Alert.alert("Lỗi", "Không thể xóa giao dịch.");
+              Alert.alert(t("common.error"), "Không thể xóa giao dịch.");
               return;
             }
 
@@ -121,20 +123,20 @@ const SavingHistoryScreen = () => {
     return (
       <View key={item.year} style={styles.goalCard}>
         <View style={styles.goalHeader}>
-          <Text style={styles.goalYear}>Năm {item.year}</Text>
+          <Text style={styles.goalYear}>{t("savings.target", { year: String(item.year) })}</Text>
           <Trophy color={percent >= 100 ? "#f59e0b" : "#94a3b8"} size={20} />
         </View>
         <View style={styles.goalBody}>
           <View style={styles.goalStat}>
-            <Text style={styles.goalStatLabel}>Mục tiêu</Text>
+            <Text style={styles.goalStatLabel}>{t("savingHistory.targetTarget", { amount: "" })}</Text>
             <Text style={styles.goalStatValue}>
-              {formatCurrency(item.target)} đ
+              {formatCurrency(item.target)} {t("common.currencySymbol")}
             </Text>
           </View>
           <View style={styles.goalStat}>
-            <Text style={styles.goalStatLabel}>Đạt được</Text>
+            <Text style={styles.goalStatLabel}>{t("savings.achieved")}</Text>
             <Text style={[styles.goalStatValue, { color: "#10b981" }]}>
-              {formatCurrency(item.achieved)} đ
+              {formatCurrency(item.achieved)} {t("common.currencySymbol")}
             </Text>
           </View>
         </View>
@@ -150,7 +152,7 @@ const SavingHistoryScreen = () => {
           />
         </View>
         <Text style={styles.goalFooter}>
-          Hoàn thành {formatPercent(percent)}% mục tiêu năm
+          {formatPercent(percent)}%
         </Text>
       </View>
     );
@@ -171,10 +173,7 @@ const SavingHistoryScreen = () => {
       <View style={styles.card}>
         <View style={styles.cardRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.cardCategory}>{resolveCategoryName(item, null, [])}</Text>
-            {/* {item.note ? (
-              <Text style={styles.cardName}>{item.note}</Text>
-            ) : null} */}
+            <Text style={styles.cardCategory}>{resolveCategoryName(item, null, [], t)}</Text>
           </View>
           <Text
             style={[
@@ -183,7 +182,7 @@ const SavingHistoryScreen = () => {
             ]}
           >
             {isDeposit ? "+" : "-"}
-            {formatCurrency(item.amount)} đ
+            {formatCurrency(item.amount)} {t("common.currencySymbol")}
           </Text>
         </View>
         <View style={styles.cardFooter}>
@@ -210,7 +209,7 @@ const SavingHistoryScreen = () => {
         >
           <ArrowLeft color="#ffffff" size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Quá trình tiết kiệm</Text>
+        <Text style={styles.headerTitle}>{t("savingHistory.headerTitle")}</Text>
       </View>
 
       <View style={styles.tabBar}>
@@ -222,7 +221,7 @@ const SavingHistoryScreen = () => {
           <Text
             style={[styles.tabText, tab === "goals" && styles.tabTextActive]}
           >
-            Mục tiêu năm
+            {t("savingHistory.targetTab")}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -233,7 +232,7 @@ const SavingHistoryScreen = () => {
           <Text
             style={[styles.tabText, tab === "logs" && styles.tabTextActive]}
           >
-            Lịch sử Nạp/Rút
+            {t("savingHistory.logTab")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -243,7 +242,7 @@ const SavingHistoryScreen = () => {
           {goalHistory.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>
-                Chưa có lịch sử mục tiêu năm trước.
+                {t("savingHistory.emptyTargets")}
               </Text>
             </View>
           ) : (
@@ -265,7 +264,7 @@ const SavingHistoryScreen = () => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>
-                Chưa có lịch sử nạp/rút tiết kiệm.
+                {t("savingHistory.emptyLogs")}
               </Text>
             </View>
           }

@@ -259,14 +259,12 @@ const BudgetScreen = () => {
     }
   };
 
-
-
   const handleAddCategory = async () => {
     const name = newCatName.trim();
     if (!name) return;
 
     if (isProhibitedCategoryName(name)) {
-      Alert.alert("Lỗi", "Tên danh mục này đã được sử dụng hệ thống.");
+      Alert.alert(t("common.error"), "Tên danh mục này đã được sử dụng hệ thống.");
       return;
     }
 
@@ -276,7 +274,7 @@ const BudgetScreen = () => {
         (b.deleteAt === null || b.deleteAt === undefined) && b.name === name,
     );
     if (activeExists) {
-      Alert.alert("Lỗi", "Danh mục này đã tồn tại.");
+      Alert.alert(t("common.error"), "Danh mục này đã tồn tại.");
       return;
     }
 
@@ -292,7 +290,7 @@ const BudgetScreen = () => {
         await loadData();
         setNewCatName("");
         setAddCatModalVisible(false);
-        Alert.alert("Thành công", `Đã khôi phục danh mục chi tiêu "${name}".`);
+        Alert.alert(t("common.success"), t("deletedCategories.restoreSuccess", { name }));
       }
       return;
     }
@@ -353,18 +351,18 @@ const BudgetScreen = () => {
   };
 
   const handleOpenDeleteConfirm = async (cat: CategoryBudget) => {
-    const txs = await storage.getTransactions();
+const txs = await storage.getTransactions();
     const hasTx = txs.some(
       (t) => t.categoryId && cat.id && isCategoryIdMatch(t.categoryId, cat.id),
     );
 
     Alert.alert(
-      "Xác nhận xóa",
-      `Bạn có chắc chắn muốn xóa danh mục "${cat.name}"?`,
+      t("common.warning"),
+      t("budget.confirmDelete", { name: cat.name }),
       [
-        { text: "Hủy", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Xóa",
+          text: t("common.delete"),
           style: "destructive",
           onPress: () => executeDeletion(cat, hasTx),
         },
@@ -391,7 +389,7 @@ const BudgetScreen = () => {
     const success = await storage.saveCategoryBudgets(updated);
     if (success) {
       await loadData();
-      Alert.alert("Thành công", `Đã xóa danh mục "${cat.name}".`);
+      Alert.alert(t("common.success"), t("budget.categoryDeleted", { name: cat.name }));
     }
   };
 
@@ -404,7 +402,7 @@ const BudgetScreen = () => {
       cat.name === "Số dư đầu tiên" ||
       cat.name === "Khác"
     ) {
-      Alert.alert("Lỗi", "Không thể đổi tên danh mục hệ thống.");
+      Alert.alert(t("common.error"), t("budget.cannotRenameSystemCategory"));
       return;
     }
     setRenameTarget(cat);
@@ -417,7 +415,7 @@ const BudgetScreen = () => {
     if (!trimmedNewName || !renameTarget) return;
 
     if (isProhibitedCategoryName(trimmedNewName)) {
-      Alert.alert("Lỗi", "Tên danh mục này trùng với tên danh mục hệ thống.");
+      Alert.alert(t("common.error"), t("budget.prohibitedCategoryName"));
       return;
     }
 
@@ -430,11 +428,10 @@ const BudgetScreen = () => {
         b.name === trimmedNewName,
     );
     if (isConflicting) {
-      Alert.alert("Lỗi", "Tên danh mục này đã tồn tại.");
+      Alert.alert(t("common.error"), t("budget.categoryNameExists"));
       return;
     }
 
-    // Ensure target has an ID just in case
     const targetId =
       renameTarget.id ||
       "expense_" +
@@ -456,9 +453,9 @@ const BudgetScreen = () => {
       setRenameModalVisible(false);
       setRenameTarget(null);
       setRenameInputText("");
-      Alert.alert("Thành công", "Đã đổi tên danh mục.");
+      Alert.alert(t("common.success"), t("profile.updateSuccess"));
     } else {
-      Alert.alert("Lỗi", "Không thể lưu thay đổi.");
+      Alert.alert(t("common.error"), t("common.error"));
     }
   };
 
@@ -554,10 +551,14 @@ const BudgetScreen = () => {
               onPress={() => {
                 const currentStreak = profile.streakCount || 0;
                 const level = getStreakLevel(currentStreak);
-                const levelInfo = getStreakLevelInfo(level);
+                const levelInfo = getStreakLevelInfo(level, t);
                 Alert.alert(
-                  "Chuỗi giữ lửa 🔥",
-                  `Bạn đang duy trì chuỗi ${currentStreak} ngày giữ lửa!\nCấp độ: ${levelInfo.name}\n${levelInfo.description}\nHãy tiếp tục ghi chép giao dịch mỗi ngày để thăng cấp nhé.`,
+                  t("streak.alertTitle"),
+                  t("streak.alertBody", {
+                    count: currentStreak,
+                    name: levelInfo.name,
+                    desc: levelInfo.description,
+                  }),
                 );
               }}
               style={styles.streakHeaderChip}
@@ -664,7 +665,7 @@ const BudgetScreen = () => {
       </View>
 
       <ScrollView
-          showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={false}
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
       >
@@ -712,14 +713,14 @@ const BudgetScreen = () => {
         <View style={styles.modalOverlayCenter}>
           <View style={styles.inputModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Thêm danh mục chi tiêu</Text>
+              <Text style={styles.modalTitle}>{t("budget.addTitle")}</Text>
               <TouchableOpacity onPress={() => setAddCatModalVisible(false)}>
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
             </View>
             <TextInput
               style={styles.textInput}
-              placeholder="Tên danh mục (vd: Ăn uống, Xăng xe...)"
+              placeholder={t("budget.addPlaceholder")}
               placeholderTextColor="#94a3b8"
               value={newCatName}
               onChangeText={setNewCatName}
@@ -731,7 +732,7 @@ const BudgetScreen = () => {
               style={styles.confirmBtn}
               onPress={handleAddCategory}
             >
-              <Text style={styles.confirmBtnText}>Tạo danh mục mới</Text>
+              <Text style={styles.confirmBtnText}>{t("budget.addSubmit")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -751,7 +752,7 @@ const BudgetScreen = () => {
         <View style={styles.modalOverlayCenter}>
           <View style={styles.iconModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chọn biểu tượng túi chi</Text>
+              <Text style={styles.modalTitle}>{t("budget.selectIconTitle")}</Text>
               <TouchableOpacity
                 onPress={() =>
                   handleSelectIcon(
@@ -765,8 +766,7 @@ const BudgetScreen = () => {
               </TouchableOpacity>
             </View>
             <Text style={styles.iconModalSubtitle}>
-              Chọn biểu tượng đại diện cho túi chi "
-              {pendingCategory?.name || editingCategory?.name}"
+              {t("budget.selectIconSubtitle", { name: pendingCategory?.name || editingCategory?.name || "" })}
             </Text>
 
             <ScrollView
@@ -803,7 +803,7 @@ const BudgetScreen = () => {
               }
             >
               <Text style={styles.confirmBtnText}>
-                {editingCategory ? "Hủy" : "Dùng biểu tượng mặc định"}
+                {editingCategory ? t("common.cancel") : t("budget.useDefaultIcon")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -820,19 +820,19 @@ const BudgetScreen = () => {
         <View style={styles.modalOverlayCenter}>
           <View style={styles.inputModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Đổi tên danh mục chi tiêu</Text>
+              <Text style={styles.modalTitle}>{t("budget.renameTitle")}</Text>
               <TouchableOpacity onPress={() => setRenameModalVisible(false)}>
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
             </View>
 
             <Text style={{ fontSize: 14, color: "#64748b", marginBottom: 12 }}>
-              Nhập tên mới cho danh mục "{renameTarget?.name}":
+              {t("budget.renameLabel", { name: renameTarget?.name || "" })}
             </Text>
 
             <TextInput
               style={styles.textInput}
-              placeholder="Nhập tên mới..."
+              placeholder={t("budget.renamePlaceholder")}
               value={renameInputText}
               onChangeText={setRenameInputText}
               onSubmitEditing={handleRenameConfirm}
@@ -847,13 +847,13 @@ const BudgetScreen = () => {
                 ]}
                 onPress={() => setRenameModalVisible(false)}
               >
-                <Text style={styles.confirmBtnText}>Hủy</Text>
+                <Text style={styles.confirmBtnText}>{t("common.cancel")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.confirmBtn, { flex: 1, marginTop: 0 }]}
                 onPress={handleRenameConfirm}
               >
-                <Text style={styles.confirmBtnText}>Lưu</Text>
+                <Text style={styles.confirmBtnText}>{t("common.save")}</Text>
               </TouchableOpacity>
             </View>
           </View>

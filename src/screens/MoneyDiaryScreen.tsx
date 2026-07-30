@@ -323,16 +323,16 @@ const MoneyDiaryScreen = () => {
         );
         if (amount > unallocated) {
           Alert.alert(
-            "Tiền chưa phân bổ không đủ",
-            `Danh mục "Khác" chi từ tiền chưa phân bổ. Bạn chỉ còn ${formatCurrency(unallocated)} đ.`,
+            t("diary.unallocatedInsufficientTitle"),
+            t("diary.unallocatedInsufficientMsg", { amount: formatCurrency(unallocated) + " " + t("common.currencySymbol") }),
           );
           return;
         }
       } else if (catBudget && (catBudget.type || "recharge") === "recharge") {
         if (amount > catBudget.budget) {
           Alert.alert(
-            "Ngân sách không đủ",
-            `Danh mục "${name}" chỉ còn ${formatCurrency(catBudget.budget)} đ.`,
+            t("diary.budgetInsufficientTitle"),
+            t("diary.budgetInsufficientMsg", { name, amount: formatCurrency(catBudget.budget) + " " + t("common.currencySymbol") }),
           );
           return;
         }
@@ -352,8 +352,8 @@ const MoneyDiaryScreen = () => {
   const handleConfirmNote = async () => {
     if (selectedCategoryNameForSave === "Khác" && !modalNoteInput.trim()) {
       Alert.alert(
-        "Yêu cầu nhập ghi chú",
-        "Bạn phải nhập ghi chú khi chọn danh mục Khác.",
+        t("diary.noteRequiredTitle"),
+        t("diary.noteRequiredMsg"),
       );
       return;
     }
@@ -397,8 +397,8 @@ const MoneyDiaryScreen = () => {
         if ((catBudget.type || "recharge") === "recharge") {
           if (amountToSave > catBudget.budget) {
             Alert.alert(
-              "Ngân sách không đủ",
-              `Danh mục "${chosenCategoryName}" chỉ còn ${formatCurrency(catBudget.budget)} đ.`,
+              t("diary.budgetInsufficientTitle"),
+              t("diary.budgetInsufficientMsg", { name: chosenCategoryName, amount: formatCurrency(catBudget.budget) + " " + t("common.currencySymbol") }),
             );
             return;
           }
@@ -431,8 +431,8 @@ const MoneyDiaryScreen = () => {
           );
           if (amountToSave > unallocated) {
             Alert.alert(
-              "Tiền chưa phân bổ không đủ",
-              `Danh mục này chi từ tiền chưa phân bổ. Bạn chỉ còn ${formatCurrency(unallocated)} đ.`,
+              t("diary.unallocatedInsufficientTitle"),
+              t("diary.unallocatedInsufficientMsg", { amount: formatCurrency(unallocated) + " " + t("common.currencySymbol") }),
             );
             return;
           }
@@ -462,8 +462,8 @@ const MoneyDiaryScreen = () => {
         );
         if (amountToSave > unallocated) {
           Alert.alert(
-            "Tiền chưa phân bổ không đủ",
-            `Bạn chỉ còn ${formatCurrency(unallocated)} đ chưa phân bổ.`,
+            t("diary.unallocatedInsufficientTitle"),
+            t("diary.unallocatedInsufficientMsg", { amount: formatCurrency(unallocated) + " " + t("common.currencySymbol") }),
           );
           return;
         }
@@ -515,11 +515,11 @@ const MoneyDiaryScreen = () => {
     await storage.saveTransaction(newTx);
 
     if (type === "expense") {
-      Alert.alert("Thành công", "Đã lưu khoản chi.");
+      Alert.alert(t("common.success"), "Đã lưu khoản chi.");
     } else {
       Alert.alert(
-        "Thành công",
-        'Đã lưu khoản thu. Vào màn hình "Chia Tiền" để phân bổ.',
+        t("common.success"),
+        'Đã lưu khoản thu. Vào màn hình "Chi Tiêu" để phân bổ.',
       );
     }
 
@@ -734,15 +734,15 @@ const MoneyDiaryScreen = () => {
                     <View>
                       <Text style={styles.customCatTitle}>
                         {type === "expense"
-                          ? "💸 Chọn danh mục chi"
-                          : "💰 Chọn nguồn thu"}
+                          ? t("diary.selectExpenseCategory")
+                          : t("diary.selectIncomeSource")}
                       </Text>
                       <Text style={styles.catPickerSubtitle}>
-                        Số tiền: {formatCurrency(amount)} đ
+                        {t("diary.amountLabel")}: {formatCurrency(amount)} {t("common.currencySymbol")}
                         {type === "expense" && (
                           <Text style={{ fontWeight: "600", color: "#7c3aed" }}>
                             {" "}
-                            • Chưa phân bổ: {formatCurrency(unallocated)} đ
+                            • {t("diary.unallocatedLabel")}: {formatCurrency(unallocated)} {t("common.currencySymbol")}
                           </Text>
                         )}
                       </Text>
@@ -864,19 +864,19 @@ const MoneyDiaryScreen = () => {
         <View style={styles.noteModalOverlay}>
           <View style={styles.noteModalContent}>
             <View style={styles.noteModalHeader}>
-              <Text style={styles.noteModalTitle}>📝 Ghi chú giao dịch</Text>
+              <Text style={styles.noteModalTitle}>{t("diary.noteModalTitle")}</Text>
               <TouchableOpacity onPress={() => setNoteModalVisible(false)}>
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
             </View>
 
             <Text style={styles.noteModalCategoryText}>
-              Danh mục: {selectedCategoryNameForSave} • Số tiền:{" "}
-              {formatCurrency(amount)} đ
+              {selectedCategoryNameForSave} • {t("diary.amountLabel")}:{" "}
+              {formatCurrency(amount)} {t("common.currencySymbol")}
             </Text>
 
             <Text style={styles.noteModalLabel}>
-              Nhập ghi chú:
+              {t("diary.inputNoteLabel")}
               {selectedCategoryNameForSave === "Khác" && (
                 <Text style={{ color: "#ef4444", fontWeight: "bold" }}> *</Text>
               )}
@@ -902,7 +902,7 @@ const MoneyDiaryScreen = () => {
                 style={styles.dateTimeBtn}
                 onPress={() => openDatePicker("date")}
               >
-                <Text style={styles.dateTimeBtnLabel}>Ngày:</Text>
+                <Text style={styles.dateTimeBtnLabel}>{t("diary.dateLabel")}</Text>
                 <Text style={styles.dateTimeBtnValue}>
                   {formatTxDate(txDate)}
                 </Text>
@@ -912,7 +912,7 @@ const MoneyDiaryScreen = () => {
                 style={styles.dateTimeBtn}
                 onPress={() => openDatePicker("time")}
               >
-                <Text style={styles.dateTimeBtnLabel}>Giờ:</Text>
+                <Text style={styles.dateTimeBtnLabel}>{t("diary.timeLabel")}</Text>
                 <Text style={styles.dateTimeBtnValue}>
                   {formatTxTime(txDate)}
                 </Text>
@@ -932,7 +932,7 @@ const MoneyDiaryScreen = () => {
             {/* Ghi chú gợi ý */}
             {suggestedNotes.length > 0 && (
               <View style={styles.suggestedContainer}>
-                <Text style={styles.suggestedLabel}>💡 Ghi chú gần đây:</Text>
+                <Text style={styles.suggestedLabel}>{t("diary.recentNotes")}</Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -959,13 +959,13 @@ const MoneyDiaryScreen = () => {
                   setCategoryPickerVisible(true);
                 }}
               >
-                <Text style={styles.noteModalCancelText}>← Quay lại</Text>
+                <Text style={styles.noteModalCancelText}>{t("diary.backBtn")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.noteModalConfirmBtn}
                 onPress={handleConfirmNote}
               >
-                <Text style={styles.noteModalConfirmText}>Lưu Giao Dịch</Text>
+                <Text style={styles.noteModalConfirmText}>{t("diary.saveTransaction")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -978,7 +978,7 @@ const MoneyDiaryScreen = () => {
           <View style={styles.manualInputModalContent}>
             <View style={styles.manualInputHeader}>
               <Text style={styles.manualInputTitle}>
-                Nhập Số Tiền Giao Dịch
+                {t("diary.manualInputTitle")}
               </Text>
               <TouchableOpacity
                 onPress={() => setManualInputModalVisible(false)}
@@ -1064,6 +1064,7 @@ const MoneyDiaryScreen = () => {
                 {
                   getStreakLevelInfo(
                     getStreakLevel(streakModalData?.count || 1),
+                    t,
                   ).name
                 }
               </Text>
@@ -1078,7 +1079,7 @@ const MoneyDiaryScreen = () => {
               }}
             >
               {
-                getStreakLevelInfo(getStreakLevel(streakModalData?.count || 1))
+                getStreakLevelInfo(getStreakLevel(streakModalData?.count || 1), t)
                   .description
               }
             </Text>

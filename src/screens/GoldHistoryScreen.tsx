@@ -35,17 +35,19 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { styles } from "../styles/GoldHistoryScreen";
+import { useLanguage } from "../i18n/LanguageContext";
 
 type GoldTab = "active" | "sales" | "all";
 
 const GoldHistoryScreen = () => {
+  const { t } = useLanguage();
   const isFocused = useIsFocused();
   const navigation = useNavigation();
 
   const handleShowHelp = () => {
     Alert.alert(
-      "Giao dịch Vàng",
-      "Đây là chức năng giúp bạn ghi chép và theo dõi các giao dịch mua, bán, và chuyển đổi vàng cá nhân.\n\nLưu ý: Trang này chỉ đóng vai trò ghi chép lịch sử tích lũy vàng. Số dư các quỹ, tiền tiết kiệm và tiền chưa phân bổ của bạn sẽ hoàn toàn không bị ảnh hưởng.",
+      t("gold.helpTitle"),
+      t("gold.helpMsg"),
     );
   };
 
@@ -236,22 +238,22 @@ const GoldHistoryScreen = () => {
   const handleBuySubmit = async () => {
     if (!buyGoldType.trim()) {
       Alert.alert(
-        "Lỗi",
-        "Vui lòng nhập loại vàng (ví dụ: SJC 9999, Nhẫn trơn PNJ,...).",
+        t("common.error"),
+        t("gold.enterTypePlaceholder"),
       );
       return;
     }
 
     const parsedQty = parseFloat(buyQty.replace(",", "."));
     if (isNaN(parsedQty) || parsedQty <= 0) {
-      Alert.alert("Lỗi", "Vui lòng nhập số lượng vàng hợp lệ.");
+      Alert.alert(t("common.error"), t("gold.invalidQuantity"));
       return;
     }
 
     if ((buyUnit === "phân" || buyUnit === "chỉ") && parsedQty > 9) {
       Alert.alert(
-        "Lỗi",
-        `Số lượng mua đối với ${buyUnit} không được vượt quá 9.`,
+        t("common.error"),
+        t("gold.invalidQuantity"),
       );
       return;
     }
@@ -259,8 +261,8 @@ const GoldHistoryScreen = () => {
     if (buyUnit === "chỉ" || buyUnit === "cây") {
       if (parsedQty < 0.5) {
         Alert.alert(
-          "Lỗi",
-          `Số lượng mua đối với ${buyUnit} phải từ 0.5 trở lên.`,
+          t("common.error"),
+          t("gold.invalidQuantity"),
         );
         return;
       }
@@ -269,8 +271,8 @@ const GoldHistoryScreen = () => {
         Math.abs(remainder) < 1e-9 || Math.abs(remainder - 0.5) < 1e-9;
       if (!isMultipleOfHalf) {
         Alert.alert(
-          "Lỗi",
-          `Số lượng mua đối với ${buyUnit} phải là bội số của 0.5 (ví dụ: 0.5, 1, 1.5, 2, ...).`,
+          t("common.error"),
+          t("gold.invalidQuantity"),
         );
         return;
       }
@@ -278,8 +280,8 @@ const GoldHistoryScreen = () => {
       const isInteger = Math.abs(parsedQty - Math.round(parsedQty)) < 1e-9;
       if (!isInteger) {
         Alert.alert(
-          "Lỗi",
-          "Số lượng mua đối với phân phải là số nguyên dương (ví dụ: 1, 2, 3, ...).",
+          t("common.error"),
+          t("gold.invalidQuantity"),
         );
         return;
       }
@@ -287,7 +289,7 @@ const GoldHistoryScreen = () => {
 
     const price = parseMoney(buyPrice);
     if (price <= 0) {
-      Alert.alert("Lỗi", "Vui lòng nhập lượng tiền mua hợp lệ.");
+      Alert.alert(t("common.error"), t("gold.invalidPrice"));
       return;
     }
 
@@ -311,12 +313,12 @@ const GoldHistoryScreen = () => {
 
     const success = await storage.saveGoldItem(newItem);
     if (success) {
-      Alert.alert("Thành công", "Đã lưu lại lịch sử mua vàng! 🪙");
+      Alert.alert(t("common.success"), t("gold.buySuccess"));
       setBuyVisible(false);
       resetBuyForm();
       loadData();
     } else {
-      Alert.alert("Lỗi", "Không thể lưu lịch sử mua vàng.");
+      Alert.alert(t("common.error"), t("gold.saveError"));
     }
   };
 
@@ -356,12 +358,12 @@ const GoldHistoryScreen = () => {
 
   const handleSellSubmit = async () => {
     if (selectedSellItems.length === 0) {
-      Alert.alert("Lỗi", "Vui lòng chọn ít nhất một miếng vàng để bán.");
+      Alert.alert(t("common.error"), t("gold.selectMinOne"));
       return;
     }
 
     if (sellInputPrice <= 0) {
-      Alert.alert("Lỗi", "Vui lòng nhập giá bán ra hợp lệ.");
+      Alert.alert(t("common.error"), t("gold.invalidPrice"));
       return;
     }
 
@@ -401,14 +403,14 @@ const GoldHistoryScreen = () => {
 
     if (successItems && successSale) {
       Alert.alert(
-        "Thành công",
-        `Đã hoàn tất bán vàng! Trạng thái: ${sellStatus} ${formatCurrency(Math.abs(sellDifference))} đ.`,
+        t("common.success"),
+        `${t("gold.sellSuccess")} Status: ${sellStatus} ${formatCurrency(Math.abs(sellDifference))} ${t("common.currencySymbol")}.`,
       );
       setSellVisible(false);
       resetSellForm();
       loadData();
     } else {
-      Alert.alert("Lỗi", "Đã xảy ra lỗi khi thực hiện bán vàng.");
+      Alert.alert(t("common.error"), t("gold.sellError"));
     }
   };
 
@@ -473,14 +475,14 @@ const GoldHistoryScreen = () => {
 
   const handleExchangeSubmit = async () => {
     if (selectedExchangeItems.length === 0) {
-      Alert.alert("Lỗi", "Vui lòng chọn ít nhất một miếng vàng để đổi.");
+      Alert.alert(t("common.error"), t("gold.selectMinOneExchange"));
       return;
     }
 
     if (selectedExchangeItems.length < 2) {
       Alert.alert(
-        "Lỗi",
-        "Vui lòng chọn từ 2 miếng vàng trở lên để thực hiện quy đổi.",
+        t("common.error"),
+        t("gold.selectMinTwoExchange"),
       );
       return;
     }
@@ -491,16 +493,16 @@ const GoldHistoryScreen = () => {
     );
     if (!allSameUnit) {
       Alert.alert(
-        "Lỗi",
-        "Vui lòng chọn các miếng vàng cùng đơn vị (phân hoặc chỉ) để quy đổi.",
+        t("common.error"),
+        t("gold.sameUnitRequired"),
       );
       return;
     }
 
     if (firstUnit === "cây") {
       Alert.alert(
-        "Lỗi",
-        "Cây vàng là đơn vị lớn nhất, không thể chọn để quy đổi.",
+        t("common.error"),
+        t("gold.cayIsMaxUnit"),
       );
       return;
     }
@@ -511,14 +513,13 @@ const GoldHistoryScreen = () => {
       0,
     );
 
-    const unitLabel = firstUnit === "phân" ? "phân" : "chỉ";
     const isDivisibleBy5 =
       Math.abs(totalRawQty % 5) < 1e-9 ||
       Math.abs((totalRawQty % 5) - 5) < 1e-9;
     if (!isDivisibleBy5) {
       Alert.alert(
-        "Lỗi",
-        `Tổng số lượng để quy đổi phải chia hết cho 5 (ví dụ: 5, 10, 15...). Hiện tại đang chọn tổng cộng ${totalRawQty} ${unitLabel}.`,
+        t("common.error"),
+        t("gold.divisibleBy5"),
       );
       return;
     }
@@ -571,14 +572,14 @@ const GoldHistoryScreen = () => {
 
     if (successItems && successNewItem) {
       Alert.alert(
-        "Thành công",
-        "Quy đổi vàng thành công! Miếng vàng mới đã được tích lũy. 🪙",
+        t("common.success"),
+        t("gold.exchangeSuccess"),
       );
       setExchangeVisible(false);
       resetExchangeForm();
       loadData();
     } else {
-      Alert.alert("Lỗi", "Đã xảy ra lỗi khi quy đổi vàng.");
+      Alert.alert(t("common.error"), t("gold.exchangeError"));
     }
   };
 
@@ -1554,7 +1555,7 @@ const GoldHistoryScreen = () => {
           </TouchableOpacity>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <TouchableOpacity activeOpacity={1} onPress={handleHeaderPress}>
-              <Text style={styles.headerTitle}>Giao Dịch Vàng</Text>
+              <Text style={styles.headerTitle}>{t("gold.title")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleShowHelp}
@@ -1580,13 +1581,13 @@ const GoldHistoryScreen = () => {
 
         {/* SUMMARY CARD */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>TỔNG VÀNG ĐANG TÍCH TRỮ</Text>
+          <Text style={styles.summaryTitle}>{t("gold.totalHolding")}</Text>
           <Text style={styles.summaryValue}>
             {showAmount ? formatGoldQty(totalActiveQtyInPhan) : "••••••"}
           </Text>
 
           <View style={{ marginBottom: 14 }}>
-            <Text style={styles.summaryTitle}>LỢI NHUẬN ĐÃ THU</Text>
+            <Text style={styles.summaryTitle}>{t("gold.totalRealizedProfit")}</Text>
             <Text
               style={{
                 fontSize: 24,
@@ -1596,23 +1597,23 @@ const GoldHistoryScreen = () => {
               }}
             >
               {showAmount
-                ? `${totalProfit >= 0 ? "+" : "-"}${formatCurrency(Math.abs(totalProfit))} đ`
-                : "•••••• đ"}
+                ? `${totalProfit >= 0 ? "+" : "-"}${formatCurrency(Math.abs(totalProfit))} ${t("common.currencySymbol")}`
+                : `•••••• ${t("common.currencySymbol")}`}
             </Text>
           </View>
           <View style={styles.summarySubRow}>
             <View>
-              <Text style={styles.summarySubLabel}>Tổng Vốn Đầu Tư</Text>
+              <Text style={styles.summarySubLabel}>{t("gold.totalSpent")}</Text>
               <Text style={styles.summarySubValue}>
                 {showAmount
-                  ? `${formatCurrency(totalActivePrice)} đ`
-                  : "•••••• đ"}
+                  ? `${formatCurrency(totalActivePrice)} ${t("common.currencySymbol")}`
+                  : `•••••• ${t("common.currencySymbol")}`}
               </Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
-              <Text style={styles.summarySubLabel}>Tổng số miếng</Text>
+              <Text style={styles.summarySubLabel}>{t("gold.quantityLabel")}</Text>
               <Text style={styles.summarySubValue}>
-                {showAmount ? `${activeItems.length} miếng` : "•••••• miếng"}
+                {showAmount ? `${activeItems.length}` : "••••••"}
               </Text>
             </View>
           </View>
@@ -1629,7 +1630,7 @@ const GoldHistoryScreen = () => {
           <Text
             style={[styles.tabText, tab === "active" && styles.tabTextActive]}
           >
-            Tích trữ
+            {t("gold.activeTab")}
           </Text>
         </TouchableOpacity>
 
@@ -1644,7 +1645,7 @@ const GoldHistoryScreen = () => {
           <Text
             style={[styles.tabText, tab === "sales" && styles.tabTextActive]}
           >
-            Lịch sử Bán
+            {t("gold.salesTab")}
           </Text>
         </TouchableOpacity>
 
@@ -1654,7 +1655,7 @@ const GoldHistoryScreen = () => {
         >
           <History color={tab === "all" ? "#d97706" : "#64748b"} size={16} />
           <Text style={[styles.tabText, tab === "all" && styles.tabTextActive]}>
-            Sổ tay
+            {t("gold.allTab")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1670,8 +1671,7 @@ const GoldHistoryScreen = () => {
             <View style={styles.emptyContainer}>
               <Coins color="#cbd5e1" size={48} />
               <Text style={styles.emptyText}>
-                Bạn chưa có miếng vàng tích trữ nào.{"\n"}Hãy nhấn "Mua vàng" để
-                bắt đầu tích lũy!
+                {t("gold.emptyActive")}
               </Text>
             </View>
           }
@@ -1687,7 +1687,7 @@ const GoldHistoryScreen = () => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <TrendingUp color="#cbd5e1" size={48} />
-              <Text style={styles.emptyText}>Chưa có lịch sử bán vàng.</Text>
+              <Text style={styles.emptyText}>{t("gold.emptySales")}</Text>
             </View>
           }
         />
@@ -1703,7 +1703,7 @@ const GoldHistoryScreen = () => {
             <View style={styles.emptyContainer}>
               <History color="#cbd5e1" size={48} />
               <Text style={styles.emptyText}>
-                Chưa có giao dịch mua/đổi vàng nào.
+                {t("gold.emptyActive")}
               </Text>
             </View>
           }
@@ -1722,14 +1722,14 @@ const GoldHistoryScreen = () => {
             activeOpacity={0.8}
           >
             <PlusCircle color="#ffffff" size={16} />
-            <Text style={styles.fabText}>Mua vàng</Text>
+            <Text style={styles.fabText}>{t("gold.buyGold")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.fabButton, styles.fabSell]}
             onPress={() => {
               if (activeItems.length === 0) {
-                Alert.alert("Thông báo", "Bạn không có vàng tích trữ để bán.");
+                Alert.alert(t("common.warning"), t("gold.emptyActive"));
                 return;
               }
               setSellDate(new Date());
@@ -1738,14 +1738,14 @@ const GoldHistoryScreen = () => {
             activeOpacity={0.8}
           >
             <TrendingUp color="#ffffff" size={16} />
-            <Text style={styles.fabText}>Bán vàng</Text>
+            <Text style={styles.fabText}>{t("gold.sellGold")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.fabButton, styles.fabExchange]}
             onPress={() => {
               if (activeItems.length === 0) {
-                Alert.alert("Thông báo", "Bạn không có vàng tích trữ để đổi.");
+                Alert.alert(t("common.warning"), t("gold.emptyActive"));
                 return;
               }
               setExchangeDate(new Date());
@@ -1754,7 +1754,7 @@ const GoldHistoryScreen = () => {
             activeOpacity={0.8}
           >
             <Scale color="#ffffff" size={16} />
-            <Text style={styles.fabText}>Đổi vàng</Text>
+            <Text style={styles.fabText}>{t("gold.sellGold")}</Text>
           </TouchableOpacity>
         </View>
       )}

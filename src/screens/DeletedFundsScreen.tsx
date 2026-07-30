@@ -21,6 +21,7 @@ import { UserProfile, CustomFund, Transaction } from "../types";
 import { resolveCategoryName } from "../utils/category";
 import { formatCurrency } from "../utils/format";
 import { styles } from "../styles/DeletedFundsScreen";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const FUND_ICONS: Record<string, any> = {
   default: require("../../assets/fund_icon/default.png"),
@@ -42,6 +43,7 @@ const FUND_ICONS: Record<string, any> = {
 };
 
 const DeletedFundsScreen = () => {
+  const { t } = useLanguage();
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const [loading, setLoading] = useState(true);
@@ -94,26 +96,25 @@ const DeletedFundsScreen = () => {
     const year = date.getFullYear();
     const hours = String(date.getHours()).padStart(2, "0");
     const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${day}/${month}/${year} lúc ${hours}:${minutes}`;
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
   };
 
   const handleRestoreFund = async (fundId: string, fundName: string) => {
     Alert.alert(
-      "Khôi phục Quỹ",
-      `Bạn có chắc chắn muốn khôi phục quỹ "${fundName}" không?`,
+      t("deletedFunds.restoreTitle"),
+      t("deletedFunds.restoreConfirm", { name: fundName }),
       [
-        { text: "Hủy", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Khôi phục",
+          text: t("common.confirm"),
           onPress: async () => {
             const p = await storage.getUserProfile();
             if (p && p.customFunds) {
-              // Kiểm tra xem trùng tên với quỹ đang hoạt động không
               const activeExists = p.customFunds.some(
                 (f) => (f.deleteAt === null || f.deleteAt === undefined) && f.name === fundName
               );
               if (activeExists) {
-                Alert.alert("Lỗi", `Đã có một quỹ hoạt động trùng tên "${fundName}". Không thể khôi phục.`);
+                Alert.alert(t("common.error"), t("deletedFunds.duplicateError", { name: fundName }));
                 return;
               }
 
@@ -123,10 +124,10 @@ const DeletedFundsScreen = () => {
               const updatedProfile = { ...p, customFunds: updated };
               const success = await storage.saveUserProfile(updatedProfile);
               if (success) {
-                Alert.alert("Thành công", `Đã khôi phục quỹ "${fundName}".`);
+                Alert.alert(t("common.success"), t("deletedFunds.restoreSuccess", { name: fundName }));
                 loadData();
               } else {
-                Alert.alert("Lỗi", "Không thể khôi phục quỹ.");
+                Alert.alert(t("common.error"), t("deletedFunds.restoreError"));
               }
             }
           },
@@ -161,7 +162,7 @@ const DeletedFundsScreen = () => {
             <View style={styles.categoryInfo}>
               <Text style={styles.categoryName}>{name}</Text>
               <Text style={styles.deletionDate}>
-                Xóa: {formatDeletionDate(item.deleteAt)}
+                {t("deletedCategories.deletedDate", { date: formatDeletionDate(item.deleteAt) })}
               </Text>
             </View>
           </TouchableOpacity>
@@ -169,7 +170,7 @@ const DeletedFundsScreen = () => {
           <View style={styles.cardRight}>
             <View style={styles.txCountBadge}>
               <Text style={styles.txCountText}>
-                {filteredTxs.length} gd
+                {t("deletedCategories.txBadge", { count: filteredTxs.length })}
               </Text>
             </View>
 
@@ -178,7 +179,7 @@ const DeletedFundsScreen = () => {
               onPress={() => handleRestoreFund(id, name)}
             >
               <RotateCcw size={14} color="#059669" />
-              <Text style={styles.restoreButtonText}>Khôi phục</Text>
+              <Text style={styles.restoreButtonText}>{t("deletedCategories.restoreTitle")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -197,11 +198,11 @@ const DeletedFundsScreen = () => {
         {isExpanded && (
           <View>
             <View style={styles.divider} />
-            <Text style={styles.txSectionTitle}>Giao dịch đã ghi nhận:</Text>
+            <Text style={styles.txSectionTitle}>{t("deletedCategories.recordedTxs")}</Text>
             <View style={styles.txList}>
               {filteredTxs.length === 0 ? (
                 <Text style={{ fontSize: 13, color: "#94a3b8", fontStyle: "italic" }}>
-                  Không tìm thấy giao dịch nào.
+                  {t("deletedCategories.noTxs")}
                 </Text>
               ) : (
                 filteredTxs.map((tx) => {
@@ -220,7 +221,7 @@ const DeletedFundsScreen = () => {
                     <View key={tx.id} style={styles.txItem}>
                       <View style={styles.txItemLeft}>
                         <Text style={styles.txName}>
-                          {isDeposit ? "Nạp tiền vào quỹ" : "Rút tiền từ quỹ"}
+                          {isDeposit ? t("systemCategories.fundDeposit") : t("systemCategories.fundWithdraw")}
                         </Text>
                         {tx.note && <Text style={styles.txNote}>{tx.note}</Text>}
                         <Text style={styles.txDate}>{dateStr}</Text>
@@ -232,7 +233,7 @@ const DeletedFundsScreen = () => {
                         ]}
                       >
                         {isDeposit ? "+" : "-"}
-                        {formatCurrency(tx.amount)} đ
+                        {formatCurrency(tx.amount)} {t("common.currencySymbol")}
                       </Text>
                     </View>
                   );
@@ -255,7 +256,7 @@ const DeletedFundsScreen = () => {
           >
             <ArrowLeft color="#0f172a" size={24} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Quỹ xoá gần đây</Text>
+          <Text style={styles.headerTitle}>{t("deletedFunds.title")}</Text>
         </View>
       </View>
 
@@ -273,7 +274,7 @@ const DeletedFundsScreen = () => {
             <View style={styles.emptyContainer}>
               <Wallet size={48} color="#cbd5e1" />
               <Text style={styles.emptyText}>
-                Không có quỹ nào bị xoá gần đây.
+                {t("deletedFunds.empty")}
               </Text>
             </View>
           }

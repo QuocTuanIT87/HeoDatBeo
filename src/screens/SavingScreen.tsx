@@ -35,8 +35,10 @@ import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { styles } from "../styles/SavingScreen";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const SavingScreen = () => {
+  const { t } = useLanguage();
   const isFocused = useIsFocused();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -187,7 +189,7 @@ const SavingScreen = () => {
   const handleSaveTarget = async () => {
     const numTarget = parseInt(targetInput.replace(/[^\d]/g, ""), 10);
     if (isNaN(numTarget) || numTarget <= 0) {
-      Alert.alert("Lỗi", "Vui lòng nhập mục tiêu hợp lệ.");
+      Alert.alert(t("common.error"), t("setup.invalidBalance"));
       return;
     }
 
@@ -202,7 +204,7 @@ const SavingScreen = () => {
       setProfile(updatedProfile);
       setIsEditingTarget(false);
       Alert.alert(
-        "Thành công",
+        t("common.success"),
         `Đã thiết lập mục tiêu tiết kiệm cho năm ${currentYear}.`,
       );
     }
@@ -211,7 +213,7 @@ const SavingScreen = () => {
   const executeTransaction = async () => {
     if (!profile?.savingTarget) {
       Alert.alert(
-        "Chưa có mục tiêu",
+        t("common.warning"),
         `Vui lòng đặt mục tiêu tiết kiệm cho năm ${currentYear} trước.`,
       );
       setIsEditingTarget(true);
@@ -219,13 +221,13 @@ const SavingScreen = () => {
     }
 
     if (amount < 1000) {
-      Alert.alert("Số tiền không đủ", "Vui lòng nhập số tiền ít nhất 1.000 đ.");
+      Alert.alert(t("common.error"), "Vui lòng nhập số tiền ít nhất 1.000 đ.");
       return;
     }
 
     if (type === "deposit" && amount > unallocated) {
       Alert.alert(
-        "Lỗi",
+        t("common.error"),
         `Số dư chưa phân bổ (${formatCurrency(unallocated)} đ) không đủ.`,
       );
       return;
@@ -233,16 +235,16 @@ const SavingScreen = () => {
 
     if (type === "withdraw") {
       if (amount > 500000) {
-        Alert.alert("Không thể rút", "Mỗi lần chỉ được rút tối đa 500.000 đ.");
+        Alert.alert(t("common.error"), "Mỗi lần chỉ được rút tối đa 500.000 đ.");
         return;
       }
       if (amount > savingBalance) {
-        Alert.alert("Lỗi", "Số dư tiết kiệm không đủ.");
+        Alert.alert(t("common.error"), "Số dư tiết kiệm không đủ.");
         return;
       }
       if (cooldownRemainingDays > 0) {
         Alert.alert(
-          "Chưa thể rút",
+          t("common.error"),
           `Vui lòng đợi thêm ${cooldownRemainingDays} ngày nữa.`,
         );
         return;
@@ -252,11 +254,11 @@ const SavingScreen = () => {
       const timeStr = `${nowTs.getHours().toString().padStart(2, "0")}:${nowTs.getMinutes().toString().padStart(2, "0")} - ${nowTs.getDate().toString().padStart(2, "0")}/${(nowTs.getMonth() + 1).toString().padStart(2, "0")}/${nowTs.getFullYear()}`;
 
       Alert.alert(
-        "Xác nhận rút tiền",
+        t("common.confirm"),
         `Bạn rút ${formatCurrency(amount)} đ từ Heo Đất vào lúc:\n${timeStr}.\n\nBạn có chắc chắn muốn rút không?`,
         [
-          { text: "Hủy bỏ", style: "cancel" },
-          { text: "Đồng ý rút", onPress: () => performExecution() },
+          { text: t("common.cancel"), style: "cancel" },
+          { text: t("common.confirm"), onPress: () => performExecution() },
         ],
       );
     } else {

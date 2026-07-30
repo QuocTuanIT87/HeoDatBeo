@@ -171,8 +171,21 @@ export const STREAK_LEVELS: Record<number, StreakLevelInfo> = {
   18: { name: "Thiên Đạo Tài Tôn", description: "Cảnh giới tối cao, thấu hiểu quy luật vận hành của tài phú và tài vận." }
 };
 
-export const getStreakLevelInfo = (level: number): StreakLevelInfo => {
+export const getStreakLevelInfo = (
+  level: number,
+  t?: (key: string) => string,
+): StreakLevelInfo => {
   const safeLevel = Math.max(1, Math.min(18, level));
+  if (t) {
+    const nameKey = `streak.level${safeLevel}Name`;
+    const descKey = `streak.level${safeLevel}Desc`;
+    const translatedName = t(nameKey);
+    const translatedDesc = t(descKey);
+    return {
+      name: translatedName !== nameKey ? translatedName : STREAK_LEVELS[safeLevel].name,
+      description: translatedDesc !== descKey ? translatedDesc : STREAK_LEVELS[safeLevel].description,
+    };
+  }
   return STREAK_LEVELS[safeLevel];
 };
 

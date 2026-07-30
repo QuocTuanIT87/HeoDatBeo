@@ -1092,40 +1092,40 @@ const StatisticsScreen = () => {
   const getMonthBadgeLabel = () => {
     if (selectedMonth) {
       const [y, m] = selectedMonth.split("-");
-      return `T${parseInt(m)}/${y}`;
+      return `${t("stats.month")} ${parseInt(m)}/${y}`;
     }
     const now = new Date();
-    return `T${now.getMonth() + 1}/${now.getFullYear()}`;
+    return `${t("stats.month")} ${now.getMonth() + 1}/${now.getFullYear()}`;
   };
 
   const getYearBadgeLabel = () => {
-    if (selectedYear) return `Năm ${selectedYear}`;
-    return `Năm ${new Date().getFullYear()}`;
+    if (selectedYear) return `${t("stats.year")} ${selectedYear}`;
+    return `${t("stats.year")} ${new Date().getFullYear()}`;
   };
 
   const getFilterDateText = () => {
     if (period === "day") {
-      return `Hôm nay (${formatDateShort(new Date())})`;
+      return `${t("stats.today")} (${formatDateShort(new Date())})`;
     } else if (period === "month") {
       const targetMonth =
         selectedMonth ||
         `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
       const [y, m] = targetMonth.split("-");
-      return `Tháng ${parseInt(m)}/${y}`;
+      return `${t("stats.month")} ${parseInt(m)}/${y}`;
     } else if (period === "year") {
       const targetYear = selectedYear ?? new Date().getFullYear();
-      return `Năm ${targetYear}`;
+      return `${t("stats.year")} ${targetYear}`;
     } else if (period === "custom") {
       return `${formatDateShort(customStartDate)} - ${formatDateShort(customEndDate)}`;
     } else {
-      return "Tất cả thời gian";
+      return t("stats.allTime");
     }
   };
 
   // Format tháng để hiển thị trong modal
   const formatMonthDisplay = (monthStr: string) => {
     const [y, m] = monthStr.split("-");
-    return `Tháng ${parseInt(m)} năm ${y}`;
+    return `${t("stats.month")} ${parseInt(m)} / ${y}`;
   };
 
   const getFilterCategories = () => {
@@ -1340,7 +1340,7 @@ const StatisticsScreen = () => {
       <View style={styles.header}>
         <View style={styles.headerRow}>
          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-           <Text style={styles.headerTitle}>Thống kê</Text>
+           <Text style={styles.headerTitle}>{t("stats.title")}</Text>
           <TouchableOpacity
               onPress={() => {
                 loadNotificationHistory();
@@ -1573,13 +1573,13 @@ const StatisticsScreen = () => {
       {type === "all" ? (
         <View style={[styles.summaryContainer, { paddingBottom: bottomTabBarHeight + 12 }]}>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabelBold}>Tổng thu:</Text>
+            <Text style={styles.summaryLabelBold}>{t("stats.totalIncome")}:</Text>
             <Text style={styles.summaryIncome}>
               +{formatCurrency(totalIncome)} đ
             </Text>
           </View>
           <View style={[styles.summaryRow, { marginBottom: 0 }]}>
-            <Text style={styles.summaryLabelBold}>Tổng chi:</Text>
+            <Text style={styles.summaryLabelBold}>{t("stats.totalExpense")}:</Text>
             <Text style={styles.summaryExpense}>
               -{formatCurrency(totalExpense)} đ
             </Text>
@@ -1588,7 +1588,7 @@ const StatisticsScreen = () => {
       ) : displayTotal !== null ? (
         <View style={[styles.summaryContainer, { paddingBottom: bottomTabBarHeight + 12 }]}>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabelBold}>Tổng:</Text>
+            <Text style={styles.summaryLabelBold}>{t("stats.total")}:</Text>
             <Text
               style={[
                 styles.summaryAmount,
@@ -1626,13 +1626,13 @@ const StatisticsScreen = () => {
         >
           <View style={styles.modalBox}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chọn tháng</Text>
+              <Text style={styles.modalTitle}>{t("stats.selectMonth")}</Text>
               <TouchableOpacity onPress={() => setShowMonthModal(false)}>
                 <X color="#64748b" size={20} />
               </TouchableOpacity>
             </View>
             {availableMonths.length === 0 ? (
-              <Text style={styles.modalEmpty}>Chưa có giao dịch nào</Text>
+              <Text style={styles.modalEmpty}>{t("stats.noTransactions")}</Text>
             ) : (
               <ScrollView
                 style={styles.modalScroll}
@@ -1685,13 +1685,13 @@ const StatisticsScreen = () => {
         >
           <View style={styles.modalBox}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chọn năm</Text>
+              <Text style={styles.modalTitle}>{t("stats.selectYear")}</Text>
               <TouchableOpacity onPress={() => setShowYearModal(false)}>
                 <X color="#64748b" size={20} />
               </TouchableOpacity>
             </View>
             {availableYears.length === 0 ? (
-              <Text style={styles.modalEmpty}>Chưa có giao dịch nào</Text>
+              <Text style={styles.modalEmpty}>{t("stats.noTransactions")}</Text>
             ) : (
               <ScrollView
                 style={styles.modalScroll}
@@ -1718,7 +1718,7 @@ const StatisticsScreen = () => {
                           isSelected && styles.modalItemTextActive,
                         ]}
                       >
-                        Năm {y}
+                        {t("stats.year")} {y}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -1743,7 +1743,7 @@ const StatisticsScreen = () => {
                 source={require("../../assets/common_icons/monitor.png")}
                 style={{ width: 24, height: 24, resizeMode: "contain" }}
               />
-              <Text style={styles.modalTitle}>Lịch sử báo cáo</Text>
+              <Text style={styles.modalTitle}>{t("stats.historyTitle")}</Text>
               <TouchableOpacity
                 onPress={() => setShowNotificationHistoryModal(false)}
                 style={{
@@ -1753,7 +1753,7 @@ const StatisticsScreen = () => {
                 }}
               >
                 <Text style={{ color: "#0f172a", fontWeight: "bold" }}>
-                  Đóng
+                  {t("common.close")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1770,7 +1770,7 @@ const StatisticsScreen = () => {
             }}>
               {(['day', 'month', 'year'] as const).map((tab) => {
                 const isActive = historyTab === tab;
-                const label = tab === 'day' ? 'Ngày' : tab === 'month' ? 'Tháng' : 'Năm';
+                const label = tab === 'day' ? t("stats.day") : tab === 'month' ? t("stats.month") : t("stats.year");
                 return (
                   <TouchableOpacity
                     key={tab}
@@ -1938,10 +1938,10 @@ const StatisticsScreen = () => {
           <View style={styles.pieModalBox}>
             <View style={styles.modalHeader}>
               <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={styles.modalTitle}>Cơ cấu Chi Tiền</Text>
-                <Text style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
-                  Thời gian lọc: {getFilterDateText()}
-                </Text>
+            <Text style={styles.modalTitle}>{t("stats.pieStructure")}</Text>
+            <Text style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
+              {t("stats.filterTime")}: {getFilterDateText()}
+            </Text>
               </View>
               <TouchableOpacity
                 onPress={() => {

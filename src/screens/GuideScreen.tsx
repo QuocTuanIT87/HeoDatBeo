@@ -29,8 +29,10 @@ import {
   Coins,
 } from "lucide-react-native";
 import { styles } from "../styles/GuideScreen";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const GuideScreen = () => {
+  const { t } = useLanguage();
   const navigation = useNavigation();
 
   return (
@@ -42,16 +44,14 @@ const GuideScreen = () => {
         >
           <ArrowLeft color="#ffffff" size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Hướng Dẫn Sử Dụng</Text>
+        <Text style={styles.headerTitle}>{t("guide.title")}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.introBox}>
           <Text style={styles.introText}>
-            Chào mừng bạn đến với Heo Đất Béo! Ứng dụng hoạt động theo nguyên
-            tắc "Phân bổ phong bì" (Envelope Budgeting). Bạn sẽ luôn biết rõ mỗi
-            đồng tiền của mình đang ở đâu và làm nhiệm vụ gì.
+            {t("guide.intro")}
           </Text>
         </View>
 

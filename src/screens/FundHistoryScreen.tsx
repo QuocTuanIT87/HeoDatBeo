@@ -7,6 +7,7 @@ import { resolveCategoryName } from "../utils/category";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { ArrowLeft, Wallet } from "lucide-react-native";
 import { styles } from "../styles/FundHistoryScreen";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const FUND_ICONS: Record<string, any> = {
   default: require("../../assets/fund_icon/default.png"),
@@ -28,6 +29,7 @@ const FUND_ICONS: Record<string, any> = {
 };
 
 const FundHistoryScreen = () => {
+  const { t } = useLanguage();
   const isFocused = useIsFocused();
   const navigation = useNavigation();
 
@@ -104,6 +106,19 @@ const FundHistoryScreen = () => {
     return FUND_ICONS["default"];
   };
 
+  const formatFundTxNote = (note?: string) => {
+    if (!note) return "";
+    if (note.startsWith("Rút từ ")) {
+      const fundName = note.substring(7);
+      return `${t("funds.withdrawFrom")} ${fundName}`;
+    }
+    if (note.startsWith("Nạp vào ")) {
+      const fundName = note.substring(8);
+      return `${t("funds.depositTo")} ${fundName}`;
+    }
+    return note;
+  };
+
   const renderLogItem = ({ item }: { item: Transaction }) => {
     const dateStr = new Date(item.timestamp).toLocaleString("vi-VN", {
       year: "numeric",
@@ -124,11 +139,11 @@ const FundHistoryScreen = () => {
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={styles.cardCategory}>
               {item.categoryId === "system_xoa_quy"
-                ? "Xóa quỹ"
-                : resolveCategoryName(item, profile, [])}
+                ? t("systemCategories.deleteFund")
+                : resolveCategoryName(item, profile, [], t)}
             </Text>
             {item.note ? (
-              <Text style={styles.cardName}>{item.note}</Text>
+              <Text style={styles.cardName}>{formatFundTxNote(item.note)}</Text>
             ) : null}
           </View>
           <Text
@@ -138,7 +153,7 @@ const FundHistoryScreen = () => {
             ]}
           >
             {isDeposit ? "+" : "-"}
-            {formatCurrency(item.amount)} đ
+            {formatCurrency(item.amount)} {t("common.currencySymbol")}
           </Text>
         </View>
         <View style={[styles.cardFooter, { paddingLeft: 56 }]}>
@@ -159,7 +174,7 @@ const FundHistoryScreen = () => {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Wallet color="#ffffff" size={24} />
-          <Text style={styles.headerTitle}>Lịch sử Quỹ</Text>
+          <Text style={styles.headerTitle}>{t("fundHistory.title")}</Text>
         </View>
       </View>
 
@@ -176,7 +191,7 @@ const FundHistoryScreen = () => {
         onEndReachedThreshold={0.5}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Chưa có lịch sử nạp/rút quỹ.</Text>
+            <Text style={styles.emptyText}>{t("fundHistory.empty")}</Text>
           </View>
         }
       />
