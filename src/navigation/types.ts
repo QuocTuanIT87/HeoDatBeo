@@ -5,13 +5,13 @@ export type BottomTabParamList = {
   Budget: undefined;
   Funds: undefined;
   Statistics: { openHistory?: boolean } | undefined;
-  Savings: undefined;
   Settings: undefined;
 };
 
 export type RootStackParamList = {
   Setup: undefined;
   MainApp: NavigatorScreenParams<BottomTabParamList>;
+  Savings: undefined;
   SavingHistory: undefined;
   FundHistory: undefined;
   Guide: undefined;

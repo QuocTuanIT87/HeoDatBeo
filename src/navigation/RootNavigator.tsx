@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { RootStackParamList } from "./types";
 import SetupScreen from "../screens/SetupScreen";
 import BottomTabNavigator from "./BottomTabNavigator";
+import SavingScreen from "../screens/SavingScreen";
 import SavingHistoryScreen from "../screens/SavingHistoryScreen";
 import FundHistoryScreen from "../screens/FundHistoryScreen";
 import GuideScreen from "../screens/GuideScreen";
@@ -47,6 +48,7 @@ const RootNavigator = () => {
     >
       <Stack.Screen name="Setup" component={SetupScreen} />
       <Stack.Screen name="MainApp" component={BottomTabNavigator} />
+      <Stack.Screen name="Savings" component={SavingScreen} />
       <Stack.Screen name="SavingHistory" component={SavingHistoryScreen} />
       <Stack.Screen name="FundHistory" component={FundHistoryScreen} />
       <Stack.Screen name="Guide" component={GuideScreen} />

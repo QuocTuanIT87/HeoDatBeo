@@ -11,7 +11,9 @@ import {
 } from "react-native";
 import { Alert } from "../components/CustomAlert";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { useLanguage } from "../i18n/LanguageContext";
 import {
   Wallet,
   PlusCircle,
@@ -25,6 +27,7 @@ import {
   RotateCcw,
   HelpCircle,
   Settings,
+  Sparkles,
 } from "lucide-react-native";
 import { storage } from "../store/storage";
 import { UserProfile, Transaction, CategoryBudget, CustomFund } from "../types";
@@ -32,6 +35,7 @@ import { BottomTabParamList } from "../navigation/types";
 import Keypad from "../components/Keypad";
 import { styles } from "../styles/FundScreen";
 import { Archive } from "lucide-react-native/icons";
+import { getStreakLevel, getStreakLevelInfo } from "../utils/streak";
 
 const FUND_ICONS: Record<string, any> = {
   default: require("../../assets/fund_icon/default.png"),
@@ -52,14 +56,22 @@ const FUND_ICONS: Record<string, any> = {
   "wedding-couple": require("../../assets/fund_icon/wedding-couple.png"),
 };
 
-type FundScreenNavigationProp = BottomTabNavigationProp<
-  BottomTabParamList,
-  "Funds"
->;
-
 const FundScreen = () => {
-  const navigation = useNavigation<FundScreenNavigationProp>();
+  const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
+  const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const bottomTabBarHeight = 64 + Math.max(insets.bottom, 12);
+
+  const getGreeting = () => {
+    const hr = new Date().getHours();
+    if (hr < 5) return t("home.greeting.early") || "Chào sáng sớm 🌅";
+    if (hr < 12) return t("home.greeting.morning") || "Xin chào buổi sáng ☀️";
+    if (hr < 13) return t("home.greeting.noon") || "Xin chào buổi trưa 🌞";
+    if (hr < 18) return t("home.greeting.afternoon") || "Xin chào buổi chiều 🌤️";
+    if (hr < 22) return t("home.greeting.evening") || "Xin chào buổi tối 🌙";
+    return t("home.greeting.night") || "Xin chào đêm khuya 🌃";
+  };
 
   const handleShowTotalFundInfo = () => {
     Alert.normal(
@@ -123,7 +135,7 @@ const FundScreen = () => {
   const handleRenameFundConfirm = async () => {
     const trimmedNewName = renameFundInputText.trim();
     if (trimmedNewName === "Quỹ" || trimmedNewName === "") {
-      Alert.alert("Lỗi", "Vui lòng nhập tên quỹ hợp lệ.");
+      Alert.alert(t("common.error"), t("funds.addPlaceholder"));
       return;
     }
     if (!profile || !renameFundTarget) return;
@@ -135,7 +147,7 @@ const FundScreen = () => {
         f.name === trimmedNewName,
     );
     if (activeExists) {
-      Alert.alert("Lỗi", "Tên quỹ này đã tồn tại.");
+      Alert.alert(t("common.error"), t("deletedFunds.duplicateError", { name: trimmedNewName }));
       return;
     }
 
@@ -175,7 +187,7 @@ const FundScreen = () => {
       setRenameFundTarget(null);
       setRenameFundInputText("");
       loadData();
-      Alert.alert("Thành công", "Đã đổi tên quỹ thành công.");
+      Alert.alert(t("common.success"), t("profile.updateSuccess"));
     }
   };
 
@@ -239,7 +251,7 @@ const FundScreen = () => {
           .filter((f) => f.deleteAt === null || f.deleteAt === undefined)
           .reduce((sum, f) => sum + f.balance, 0);
       }
-      setTotalBalance(allocated + calcSaving + customFundsTotal);
+      setTotalBalance(calcSaving + customFundsTotal);
     }
   };
 
@@ -534,14 +546,14 @@ const FundScreen = () => {
     setAllocModalVisible(false);
     loadData();
 
-    const actionLabel = txType === "deposit" ? "Nạp tiền" : "Rút tiền";
+    const actionLabel = txType === "deposit" ? t("funds.deposit") : t("funds.withdraw");
     const emoji = txType === "deposit" ? "✅" : "💸";
     Alert.alert(
-      `${emoji} ${actionLabel} thành công`,
-      `Đã ${actionLabel.toLowerCase()} ${formatCurrency(amount)} đ ${
+      `${emoji} ${actionLabel} ${t("common.success").toLowerCase()}`,
+      `${actionLabel} ${formatCurrency(amount)} ${t("common.currencySymbol")} ${
         txType === "deposit"
-          ? `vào ${selectedFund.name}`
-          : `từ ${selectedFund.name}`
+          ? `${t("funds.depositTo")} ${selectedFund.name}`
+          : `${t("funds.withdrawFrom")} ${selectedFund.name}`
       }.`,
       [{ text: "OK", style: "default" }],
     );
@@ -550,21 +562,6 @@ const FundScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        {/* Top bar with User Profile and history action */}
-        <View style={styles.headerTopBar}>
-          <View style={styles.profileSection}></View>
-
-          <View style={styles.headerActions}>
-            {/* <TouchableOpacity
-              onPress={() => navigation.navigate("FundHistory" as any)}
-              style={styles.actionBtn}
-              activeOpacity={0.85}
-            >
-              <History color="#ffffff" size={20} />
-            </TouchableOpacity> */}
-          </View>
-        </View>
-
         {/* Bank Card / Account card */}
         <View style={styles.bankCard}>
           <View style={styles.cardHeader}>
@@ -592,7 +589,9 @@ const FundScreen = () => {
 
           <View style={styles.cardMiddle}>
             <View style={styles.cardAccountLabelContainer}>
-              <Text style={styles.cardAccountLabel}>TỔNG TIỀN QUỸ</Text>
+              <Text style={styles.cardAccountLabel}>
+                {t("funds.totalFunds")}
+              </Text>
               <TouchableOpacity
                 onPress={handleShowTotalFundInfo}
                 style={styles.helpIconTouch}
@@ -604,7 +603,9 @@ const FundScreen = () => {
             </View>
             <View style={styles.row}>
               <Text style={styles.cardBalanceAmount}>
-                {showAmount ? `${formatCurrency(totalBalance)} đ` : "•••••• đ"}
+                {showAmount
+                  ? `${formatCurrency(totalBalance)} ${t("common.currencySymbol")}`
+                  : `•••••• ${t("common.currencySymbol")}`}
               </Text>
               <TouchableOpacity
                 onPress={() => setShowAmount(!showAmount)}
@@ -623,43 +624,15 @@ const FundScreen = () => {
       </View>
 
       <ScrollView
+          showsVerticalScrollIndicator={false}
         style={styles.body}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
       >
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Quỹ mặc định</Text>
+          <Text style={styles.sectionTitle}>{t("funds.title")}</Text>
         </View>
-
-        {/* Quỹ Tiêu Sài */}
-        <TouchableOpacity
-          style={styles.fundCard}
-          onPress={() => navigation.navigate("Budget")}
-        >
-          <TouchableOpacity
-            style={[styles.fundIcon, { backgroundColor: "#f3e8ff" }]}
-            onPress={() => openEditIconModal("spending", "Quỹ Tiêu Sài")}
-          >
-            <Image
-              source={
-                FUND_ICONS[profile?.spendingFundIcon || "spending"] ||
-                FUND_ICONS["spending"]
-              }
-              style={{ width: 28, height: 28, resizeMode: "contain" }}
-            />
-          </TouchableOpacity>
-          <View style={styles.fundInfo}>
-            <Text style={styles.fundName}>Quỹ Tiêu Sài</Text>
-            <Text style={styles.fundDesc}>Quản lý chi tiêu hằng ngày</Text>
-          </View>
-          <View style={styles.fundBalanceContainer}>
-            <Text style={styles.fundBalance}>
-              {showAmount ? formatCurrency(totalAllocated) : "***"}
-            </Text>
-            <Text style={styles.currencyLabel}>đ</Text>
-          </View>
-        </TouchableOpacity>
 
         {/* Quỹ Tiết Kiệm */}
         <TouchableOpacity
@@ -668,7 +641,7 @@ const FundScreen = () => {
         >
           <TouchableOpacity
             style={[styles.fundIcon, { backgroundColor: "#fef3c7" }]}
-            onPress={() => openEditIconModal("saving", "Quỹ Tiết Kiệm")}
+            onPress={() => openEditIconModal("saving", t("funds.savingFund"))}
           >
             <Image
               source={
@@ -679,28 +652,30 @@ const FundScreen = () => {
             />
           </TouchableOpacity>
           <View style={styles.fundInfo}>
-            <Text style={styles.fundName}>Quỹ Tiết Kiệm</Text>
-            <Text style={styles.fundDesc}>Tích lũy tương lai</Text>
+            <Text style={styles.fundName}>{t("funds.savingFund")}</Text>
+            <Text style={styles.fundDesc}>{t("funds.savingFundDesc")}</Text>
           </View>
           <View style={styles.fundBalanceContainer}>
             <Text style={styles.fundBalance}>
               {showAmount ? formatCurrency(savingBalance) : "***"}
             </Text>
-            <Text style={styles.currencyLabel}>đ</Text>
+            <Text style={styles.currencyLabel}>
+              {t("common.currencySymbol")}
+            </Text>
           </View>
         </TouchableOpacity>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Quỹ khác</Text>
+          <Text style={styles.sectionTitle}>{t("funds.otherTitle")}</Text>
           <TouchableOpacity
             style={styles.addFundBtn}
             onPress={() => {
-              setNewFundName("Quỹ ");
+              setNewFundName(t("funds.addPlaceholder"));
               setAddFundModalVisible(true);
             }}
           >
             <PlusCircle color="#3b82f6" size={20} />
-            <Text style={styles.addFundText}>Thêm mới</Text>
+            <Text style={styles.addFundText}>{t("funds.addFund")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -738,13 +713,15 @@ const FundScreen = () => {
               </TouchableOpacity>
               <View style={styles.fundInfo}>
                 <Text style={styles.fundName}>{fund.name}</Text>
-                <Text style={styles.fundDesc}>Nhấn để nạp/rút</Text>
+                <Text style={styles.fundDesc}>{t("funds.tapToDepositWithdraw")}</Text>
               </View>
               <View style={styles.fundBalanceContainer}>
                 <Text style={styles.fundBalance}>
                   {showAmount ? formatCurrency(fund.balance) : "***"}
                 </Text>
-                <Text style={styles.currencyLabel}>đ</Text>
+                <Text style={styles.currencyLabel}>
+                  {t("common.currencySymbol")}
+                </Text>
               </View>
               <TouchableOpacity
                 style={styles.deleteFundBtn}
@@ -768,7 +745,7 @@ const FundScreen = () => {
           </View>
         )}
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: bottomTabBarHeight + 36 }} />
       </ScrollView>
 
       {/* Modal Thêm Quỹ */}
@@ -781,14 +758,14 @@ const FundScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>Tạo Quỹ Mới</Text>
+              <Text style={styles.modalTitle}>{t("funds.addTitle")}</Text>
               <TouchableOpacity onPress={() => setAddFundModalVisible(false)}>
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
             </View>
             <TextInput
               style={styles.textInput}
-              placeholder="Tên quỹ (vd: Quỹ Đầu Tư...)"
+              placeholder={t("funds.addPlaceholder")}
               placeholderTextColor="#94a3b8"
               value={newFundName}
               onChangeText={handleFundNameChange}
@@ -797,7 +774,7 @@ const FundScreen = () => {
               onSubmitEditing={handleAddFund}
             />
             <TouchableOpacity style={styles.confirmBtn} onPress={handleAddFund}>
-              <Text style={styles.confirmBtnText}>Tạo Quỹ</Text>
+              <Text style={styles.confirmBtnText}>{t("funds.addSubmit")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -813,7 +790,7 @@ const FundScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>Đổi Tên Quỹ</Text>
+              <Text style={styles.modalTitle}>{t("funds.renameTitle")}</Text>
               <TouchableOpacity
                 onPress={() => setRenameFundModalVisible(false)}
               >
@@ -822,7 +799,7 @@ const FundScreen = () => {
             </View>
             <TextInput
               style={styles.textInput}
-              placeholder="Tên quỹ (vd: Quỹ Đầu Tư...)"
+              placeholder={t("funds.renamePlaceholder")}
               placeholderTextColor="#94a3b8"
               value={renameFundInputText}
               onChangeText={(text) => {
@@ -847,7 +824,7 @@ const FundScreen = () => {
               style={styles.confirmBtn}
               onPress={handleRenameFundConfirm}
             >
-              <Text style={styles.confirmBtnText}>Cập Nhật</Text>
+              <Text style={styles.confirmBtnText}>{t("common.save")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1068,13 +1045,13 @@ const FundScreen = () => {
         <View style={styles.modalOverlayCenter}>
           <View style={styles.iconModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chọn biểu tượng quỹ</Text>
+              <Text style={styles.modalTitle}>{t("funds.selectIconTitle")}</Text>
               <TouchableOpacity onPress={handleCancelIcon}>
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
             </View>
             <Text style={styles.iconModalSubtitle}>
-              Chọn biểu tượng đại diện cho quỹ "{pendingFund?.name}"
+              {t("funds.selectIconSubtitle", { name: pendingFund?.name || "" })}
             </Text>
 
             <ScrollView
@@ -1105,7 +1082,7 @@ const FundScreen = () => {
               onPress={handleCancelIcon}
             >
               <Text style={styles.confirmBtnText}>
-                {pendingFund?.id ? "Hủy" : "Tạo quỹ"}
+                {pendingFund?.id ? t("common.cancel") : t("funds.addSubmit")}
               </Text>
             </TouchableOpacity>
           </View>

@@ -1,5 +1,30 @@
 [
   {
+    "version": "30.07.2026",
+    "description": "- Cập nhật giao diện ngôn ngữ\n- Chỉnh sửa giao diện",
+    "order": 30
+  },
+  {
+    "version": "22.07.2026",
+    "description": "- Cập nhật giao diện ngôn ngữ\n- Chỉnh sửa giao diện",
+    "order": 29
+  },
+  {
+    "version": "20.07.2026",
+    "description": "- Cập nhật giao diện",
+    "order": 28
+  },
+  {
+    "version": "14.07.2026",
+    "description": "- Cập nhật giao diện",
+    "order": 27
+  },
+  {
+    "version": "10.07.2026",
+    "description": "- Cập nhật loại danh mục\n- Cập nhật Quỹ Tiêu Sài\n- Cập nhật điều hướng trang tiết kiệm\n- Cập nhật tên hiển thị các icon ở navigation bottom\n- Đa ngôn ngữ",
+    "order": 26
+  },
+  {
     "version": "28.06.2026",
     "description": "- Cập nhật ID lưu trữ",
     "order": 25
@@ -31,7 +56,7 @@
   },
   {
     "version": "09.06.2026",
-    "description": "- Cập nhật thông báo tổng hợp cuối ngày\n -Thêm chức năng xóa toàn bộ giao dịch vàng",
+    "description": "- Cập nhật thông báo tổng hợp cuối ngày\n- Thêm chức năng xóa toàn bộ giao dịch vàng",
     "order": 19
   },
   {

@@ -24,7 +24,7 @@ export const styles = StyleSheet.create({
     card: {
         backgroundColor: "#ffffff",
         padding: 12,
-        borderRadius: 16,
+        borderRadius: 0,
         flexDirection: "row",
         alignItems: "center",
         gap: 16,
@@ -92,7 +92,7 @@ export const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 10,
         alignItems: "center",
-        borderRadius: 8,
+        borderRadius: 0,
     },
     modalTabActiveExpense: {
         backgroundColor: "#ef4444",
@@ -117,7 +117,7 @@ export const styles = StyleSheet.create({
         flex: 1,
         borderWidth: 1,
         borderColor: "#cbd5e1",
-        borderRadius: 12,
+        borderRadius: 0,
         paddingHorizontal: 16,
         paddingVertical: 12,
         fontSize: 16,
@@ -125,7 +125,7 @@ export const styles = StyleSheet.create({
     },
     addCategoryBtn: {
         backgroundColor: "#3b82f6",
-        borderRadius: 12,
+        borderRadius: 0,
         width: 48,
         alignItems: "center",
         justifyContent: "center",
@@ -213,7 +213,7 @@ export const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#f8fafc",
         padding: 12,
-        borderRadius: 8,
+        borderRadius: 0,
         borderWidth: 1,
         borderColor: "#e2e8f0",
     },
@@ -245,7 +245,7 @@ export const styles = StyleSheet.create({
     settingOption: {
         backgroundColor: "#f8fafc",
         padding: 16,
-        borderRadius: 16,
+        borderRadius: 0,
         borderWidth: 1,
         borderColor: "#e2e8f0",
     },
@@ -295,7 +295,7 @@ export const styles = StyleSheet.create({
     closeSettingsBtn: {
         backgroundColor: "#f1f5f9",
         paddingVertical: 14,
-        borderRadius: 12,
+        borderRadius: 0,
         alignItems: "center",
         marginBottom: 46,
     },
@@ -341,7 +341,7 @@ export const styles = StyleSheet.create({
     iconGridItem: {
         width: "22%",
         aspectRatio: 1,
-        borderRadius: 16,
+        borderRadius: 0,
         borderWidth: 1.5,
         borderColor: "#e2e8f0",
         backgroundColor: "#f8fafc",
@@ -365,7 +365,7 @@ export const styles = StyleSheet.create({
     driveLoginBtn: {
         backgroundColor: "#0891b2",
         paddingVertical: 12,
-        borderRadius: 12,
+        borderRadius: 0,
         alignItems: "center",
         justifyContent: "center",
     },
@@ -377,7 +377,7 @@ export const styles = StyleSheet.create({
     driveLogoutBtn: {
         backgroundColor: "#fee2e2",
         paddingVertical: 12,
-        borderRadius: 12,
+        borderRadius: 0,
         alignItems: "center",
         justifyContent: "center",
         borderWidth: 1,
@@ -425,7 +425,7 @@ export const styles = StyleSheet.create({
     driveManualBtn: {
         backgroundColor: "#0891b2",
         paddingVertical: 14,
-        borderRadius: 12,
+        borderRadius: 0,
         alignItems: "center",
         justifyContent: "center",
     },
@@ -477,7 +477,7 @@ export const styles = StyleSheet.create({
     driveRestoreBtn: {
         backgroundColor: "#16a34a",
         paddingVertical: 14,
-        borderRadius: 12,
+        borderRadius: 0,
         alignItems: "center",
         justifyContent: "center",
     },
@@ -496,7 +496,7 @@ export const styles = StyleSheet.create({
     pdfYearItem: {
         paddingVertical: 10,
         paddingHorizontal: 20,
-        borderRadius: 12,
+        borderRadius: 0,
         borderWidth: 1.5,
         borderColor: "#cbd5e1",
         backgroundColor: "#f8fafc",
@@ -518,7 +518,7 @@ export const styles = StyleSheet.create({
     pdfExportBtn: {
         backgroundColor: "#f43f5e",
         paddingVertical: 14,
-        borderRadius: 12,
+        borderRadius: 0,
         alignItems: "center",
         marginTop: 10,
     },

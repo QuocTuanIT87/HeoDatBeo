@@ -18,6 +18,7 @@ import Svg, {
 } from "react-native-svg";
 import { formatCurrency } from "../utils/format";
 import { Maximize2, X } from "lucide-react-native";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -41,10 +42,11 @@ const CustomPieChart: React.FC<Props> = ({
   onSelectCategory,
   renderNoteDetails,
 }) => {
+  const { t } = useLanguage();
   const [showExpandedModal, setShowExpandedModal] = useState(false);
   const total = data.reduce((sum, item) => sum + item.population, 0);
   if (total === 0)
-    return <Text style={styles.emptyText}>Không có dữ liệu chi tiền</Text>;
+    return <Text style={styles.emptyText}>{t("customPieChart.empty")}</Text>;
 
   // > 10 mục → ẩn nhãn % trên biểu đồ (hiển thị trong danh sách), chọn 10 cách đều
   const hideChartLabels = data.length > 10;
@@ -323,7 +325,7 @@ const CustomPieChart: React.FC<Props> = ({
           (item) => item.baseCategory === "Khác" || item.name === "Khác",
         ).length > 0 && (
           <View style={styles.otherHeaderContainer}>
-            <Text style={styles.otherHeaderText}>Thu chi khác</Text>
+            <Text style={styles.otherHeaderText}>{t("customPieChart.otherTitle") || "Thu chi khác"}</Text>
           </View>
         )}
 
@@ -425,7 +427,7 @@ const CustomPieChart: React.FC<Props> = ({
       ) : (
         <View style={styles.infoBoxPlaceholder}>
           <Text style={styles.infoPlaceholderText}>
-            Nhấn vào biểu đồ để xem chi tiết
+            {t("customPieChart.hint")}
           </Text>
         </View>
       )}
@@ -475,7 +477,7 @@ const CustomPieChart: React.FC<Props> = ({
         </G>
       </Svg>
       <View style={styles.listHeaderRow}>
-        <Text style={styles.listHeaderTitle}>Cơ cấu theo danh mục</Text>
+        <Text style={styles.listHeaderTitle}>{t("customPieChart.categoryStructure")}</Text>
         <TouchableOpacity
           style={styles.expandBtn}
           onPress={() => setShowExpandedModal(true)}
@@ -503,7 +505,7 @@ const CustomPieChart: React.FC<Props> = ({
           {/* Header */}
           <View style={styles.expandedHeader}>
             <Text style={styles.expandedHeaderTitle}>
-              Danh sách chi tiết danh mục
+              {t("customPieChart.detailListTitle")}
             </Text>
             <TouchableOpacity
               style={styles.expandedCloseBtn}

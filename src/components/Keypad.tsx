@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const DENOMINATIONS = [
   { label: "500k", value: 500000 },
@@ -26,6 +27,7 @@ const Keypad: React.FC<KeypadProps> = ({
   onClear,
   hideClearButton = false,
 }) => {
+  const { t } = useLanguage();
   const [counts, setCounts] = useState<{ [key: number]: number }>({});
 
   useEffect(() => {
@@ -77,7 +79,7 @@ const Keypad: React.FC<KeypadProps> = ({
           style={[styles.button, styles.clearButton]}
           onPress={handleClear}
         >
-          <Text style={[styles.buttonText, styles.clearText]}>Hủy</Text>
+          <Text style={[styles.buttonText, styles.clearText]}>{t("common.cancel")}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -96,7 +98,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#f1f5f9",
     width: "31%",
     paddingVertical: 14,
-    borderRadius: 8,
     alignItems: "center",
     marginBottom: 8,
   },

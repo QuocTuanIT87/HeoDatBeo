@@ -37,11 +37,13 @@ import {
 } from "lucide-react-native";
 import Keypad from "../components/Keypad";
 import { BarChart } from "react-native-gifted-charts";
-import { EXPENSE_ICONS, getIncomeIconSource } from "./HomeScreen";
+import { EXPENSE_ICONS, getIncomeIconSource } from "./MoneyDiaryScreen";
 import CustomPieChart from "../components/CustomPieChart";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { styles } from "../styles/StatisticsScreen";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -166,7 +168,7 @@ const TransactionCard = React.memo(
 const cardStyles = StyleSheet.create({
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 12,
+    borderRadius: 0,
     padding: 16,
     elevation: 1,
     shadowColor: "#000",
@@ -199,7 +201,7 @@ const cardStyles = StyleSheet.create({
     backgroundColor: "#f1f5f9",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 0,
     alignSelf: "flex-start",
   },
   cardAmount: {
@@ -365,7 +367,7 @@ const renderHistoryBody = (bodyStr: string) => {
               style={{
                 backgroundColor: "#f1f5f9",
                 padding: 12,
-                borderRadius: 8,
+                borderRadius: 0,
                 marginTop: 12,
                 flexDirection: "column",
                 gap: 6,
@@ -399,7 +401,7 @@ const renderHistoryBody = (bodyStr: string) => {
               style={{
                 backgroundColor: "#f1f5f9",
                 padding: 12,
-                borderRadius: 8,
+                borderRadius: 0,
                 marginTop: 12,
               }}
             >
@@ -449,6 +451,9 @@ const renderHistoryBody = (bodyStr: string) => {
 };
 
 const StatisticsScreen = () => {
+  const insets = useSafeAreaInsets();
+  const bottomTabBarHeight = 64 + Math.max(insets.bottom, 12);
+  const { t } = useLanguage();
   const isFocused = useIsFocused();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -908,56 +913,27 @@ const StatisticsScreen = () => {
       } else {
         const cat = cats.find((b) => b.name === catName);
         if (cat) {
-          const isDirect = cat.type === "direct";
-          if (isDirect) {
-            // Chi trực tiếp: kiểm tra unallocated balance
-            const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
-            const unallocated = Math.max(0, p.initialBalance - totalAllocated);
-            if (diff > unallocated) {
-              Alert.alert(
-                "Lỗi",
-                "Số dư chưa phân bổ không đủ để thực hiện sửa đổi này.",
-              );
-              return;
-            }
-            // Cập nhật spent và initialBalance
-            const updatedCats = cats.map((b) =>
-              b.name === catName ? { ...b, spent: (b.spent || 0) + diff } : b,
+          // Chi trực tiếp: kiểm tra unallocated balance (số dư khả dụng)
+          const unallocated = p.initialBalance;
+          if (diff > unallocated) {
+            Alert.alert(
+              "Lỗi",
+              "Số dư chưa phân bổ không đủ để thực hiện sửa đổi này.",
             );
-            await storage.saveCategoryBudgets(updatedCats);
-            await storage.saveUserProfile({
-              ...p,
-              initialBalance: p.initialBalance - diff,
-            });
-          } else {
-            // Chi nạp tiền (recharge): kiểm tra cat.budget
-            if (diff > cat.budget) {
-              Alert.alert(
-                "Lỗi",
-                `Ngân sách danh mục "${catName}" không đủ. Còn lại: ${formatCurrency(cat.budget)} đ.`,
-              );
-              return;
-            }
-            // Cập nhật budget, spent và initialBalance
-            const updatedCats = cats.map((b) =>
-              b.name === catName
-                ? {
-                    ...b,
-                    budget: b.budget - diff,
-                    spent: (b.spent || 0) + diff,
-                  }
-                : b,
-            );
-            await storage.saveCategoryBudgets(updatedCats);
-            await storage.saveUserProfile({
-              ...p,
-              initialBalance: p.initialBalance - diff,
-            });
+            return;
           }
+          // Cập nhật spent và initialBalance
+          const updatedCats = cats.map((b) =>
+            b.name === catName ? { ...b, spent: (b.spent || 0) + diff } : b,
+          );
+          await storage.saveCategoryBudgets(updatedCats);
+          await storage.saveUserProfile({
+            ...p,
+            initialBalance: p.initialBalance - diff,
+          });
         } else {
           // Danh mục đã bị xóa: chỉ trừ/cộng vào initialBalance (coi như unallocated)
-          const totalAllocated = cats.reduce((sum, b) => sum + b.budget, 0);
-          const unallocated = Math.max(0, p.initialBalance - totalAllocated);
+          const unallocated = p.initialBalance;
           if (diff > unallocated) {
             Alert.alert(
               "Lỗi",
@@ -1116,40 +1092,40 @@ const StatisticsScreen = () => {
   const getMonthBadgeLabel = () => {
     if (selectedMonth) {
       const [y, m] = selectedMonth.split("-");
-      return `T${parseInt(m)}/${y}`;
+      return `${t("stats.month")} ${parseInt(m)}/${y}`;
     }
     const now = new Date();
-    return `T${now.getMonth() + 1}/${now.getFullYear()}`;
+    return `${t("stats.month")} ${now.getMonth() + 1}/${now.getFullYear()}`;
   };
 
   const getYearBadgeLabel = () => {
-    if (selectedYear) return `Năm ${selectedYear}`;
-    return `Năm ${new Date().getFullYear()}`;
+    if (selectedYear) return `${t("stats.year")} ${selectedYear}`;
+    return `${t("stats.year")} ${new Date().getFullYear()}`;
   };
 
   const getFilterDateText = () => {
     if (period === "day") {
-      return `Hôm nay (${formatDateShort(new Date())})`;
+      return `${t("stats.today")} (${formatDateShort(new Date())})`;
     } else if (period === "month") {
       const targetMonth =
         selectedMonth ||
         `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
       const [y, m] = targetMonth.split("-");
-      return `Tháng ${parseInt(m)}/${y}`;
+      return `${t("stats.month")} ${parseInt(m)}/${y}`;
     } else if (period === "year") {
       const targetYear = selectedYear ?? new Date().getFullYear();
-      return `Năm ${targetYear}`;
+      return `${t("stats.year")} ${targetYear}`;
     } else if (period === "custom") {
       return `${formatDateShort(customStartDate)} - ${formatDateShort(customEndDate)}`;
     } else {
-      return "Tất cả thời gian";
+      return t("stats.allTime");
     }
   };
 
   // Format tháng để hiển thị trong modal
   const formatMonthDisplay = (monthStr: string) => {
     const [y, m] = monthStr.split("-");
-    return `Tháng ${parseInt(m)} năm ${y}`;
+    return `${t("stats.month")} ${parseInt(m)} / ${y}`;
   };
 
   const getFilterCategories = () => {
@@ -1332,6 +1308,7 @@ const StatisticsScreen = () => {
           )}
         </View>
         <ScrollView
+          showsVerticalScrollIndicator={false}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 10 }}
@@ -1363,7 +1340,7 @@ const StatisticsScreen = () => {
       <View style={styles.header}>
         <View style={styles.headerRow}>
          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-           <Text style={styles.headerTitle}>Thống kê</Text>
+           <Text style={styles.headerTitle}>{t("stats.title")}</Text>
           <TouchableOpacity
               onPress={() => {
                 loadNotificationHistory();
@@ -1411,6 +1388,7 @@ const StatisticsScreen = () => {
 
       <View style={styles.filterSection}>
         <ScrollView
+          showsVerticalScrollIndicator={false}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.periodFilters}
@@ -1418,13 +1396,13 @@ const StatisticsScreen = () => {
           {(["day", "month", "year", "custom", "all"] as FilterPeriod[]).map(
             (p) => {
               let label = "";
-              if (p === "day") label = "Hôm nay";
+              if (p === "day") label = t("stats.today");
               else if (p === "month")
-                label = period === "month" ? getMonthBadgeLabel() : "Tháng";
+                label = period === "month" ? getMonthBadgeLabel() : t("stats.month");
               else if (p === "year")
-                label = period === "year" ? getYearBadgeLabel() : "Năm";
-              else if (p === "custom") label = "Tùy chỉnh";
-              else if (p === "all") label = "Tất cả";
+                label = period === "year" ? getYearBadgeLabel() : t("stats.year");
+              else if (p === "custom") label = t("stats.custom");
+              else if (p === "all") label = t("stats.all");
               return (
                 <TouchableOpacity
                   key={p}
@@ -1454,7 +1432,7 @@ const StatisticsScreen = () => {
 
         {period === "custom" && (
           <View style={styles.customDateContainer}>
-            <Text style={styles.dateLabel}>Từ:</Text>
+            <Text style={styles.dateLabel}>{t("stats.from")}</Text>
             <TouchableOpacity
               style={styles.dateBtn}
               onPress={() => setShowPicker("start")}
@@ -1464,7 +1442,7 @@ const StatisticsScreen = () => {
               </Text>
             </TouchableOpacity>
 
-            <Text style={styles.dateLabel}>Đến:</Text>
+            <Text style={styles.dateLabel}>{t("stats.to")}</Text>
             <TouchableOpacity
               style={styles.dateBtn}
               onPress={() => setShowPicker("end")}
@@ -1487,7 +1465,7 @@ const StatisticsScreen = () => {
                 type === "all" && styles.typeTabTextActive,
               ]}
             >
-              Tất cả
+              {t("stats.all")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -1503,7 +1481,7 @@ const StatisticsScreen = () => {
                 type === "expense" && styles.typeTabTextActive,
               ]}
             >
-              Chi Tiền
+              {t("stats.expenseTitle")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -1519,12 +1497,13 @@ const StatisticsScreen = () => {
                 type === "income" && styles.typeTabTextActive,
               ]}
             >
-              Thu Tiền
+              {t("stats.incomeTitle")}
             </Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView
+          showsVerticalScrollIndicator={false}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoryFilters}
@@ -1542,7 +1521,7 @@ const StatisticsScreen = () => {
                 categoryFilter === "all" && styles.categoryTextActive,
               ]}
             >
-              Tất cả
+              {t("stats.all")}
             </Text>
           </TouchableOpacity>
           {getFilterCategories().map((cat) => (
@@ -1573,6 +1552,7 @@ const StatisticsScreen = () => {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={5}
@@ -1591,24 +1571,24 @@ const StatisticsScreen = () => {
       />
 
       {type === "all" ? (
-        <View style={styles.summaryContainer}>
+        <View style={[styles.summaryContainer, { paddingBottom: bottomTabBarHeight + 12 }]}>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabelBold}>Tổng thu:</Text>
+            <Text style={styles.summaryLabelBold}>{t("stats.totalIncome")}:</Text>
             <Text style={styles.summaryIncome}>
               +{formatCurrency(totalIncome)} đ
             </Text>
           </View>
           <View style={[styles.summaryRow, { marginBottom: 0 }]}>
-            <Text style={styles.summaryLabelBold}>Tổng chi:</Text>
+            <Text style={styles.summaryLabelBold}>{t("stats.totalExpense")}:</Text>
             <Text style={styles.summaryExpense}>
               -{formatCurrency(totalExpense)} đ
             </Text>
           </View>
         </View>
       ) : displayTotal !== null ? (
-        <View style={styles.summaryContainer}>
+        <View style={[styles.summaryContainer, { paddingBottom: bottomTabBarHeight + 12 }]}>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabelBold}>Tổng:</Text>
+            <Text style={styles.summaryLabelBold}>{t("stats.total")}:</Text>
             <Text
               style={[
                 styles.summaryAmount,
@@ -1646,13 +1626,13 @@ const StatisticsScreen = () => {
         >
           <View style={styles.modalBox}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chọn tháng</Text>
+              <Text style={styles.modalTitle}>{t("stats.selectMonth")}</Text>
               <TouchableOpacity onPress={() => setShowMonthModal(false)}>
                 <X color="#64748b" size={20} />
               </TouchableOpacity>
             </View>
             {availableMonths.length === 0 ? (
-              <Text style={styles.modalEmpty}>Chưa có giao dịch nào</Text>
+              <Text style={styles.modalEmpty}>{t("stats.noTransactions")}</Text>
             ) : (
               <ScrollView
                 style={styles.modalScroll}
@@ -1705,13 +1685,13 @@ const StatisticsScreen = () => {
         >
           <View style={styles.modalBox}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chọn năm</Text>
+              <Text style={styles.modalTitle}>{t("stats.selectYear")}</Text>
               <TouchableOpacity onPress={() => setShowYearModal(false)}>
                 <X color="#64748b" size={20} />
               </TouchableOpacity>
             </View>
             {availableYears.length === 0 ? (
-              <Text style={styles.modalEmpty}>Chưa có giao dịch nào</Text>
+              <Text style={styles.modalEmpty}>{t("stats.noTransactions")}</Text>
             ) : (
               <ScrollView
                 style={styles.modalScroll}
@@ -1738,7 +1718,7 @@ const StatisticsScreen = () => {
                           isSelected && styles.modalItemTextActive,
                         ]}
                       >
-                        Năm {y}
+                        {t("stats.year")} {y}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -1763,17 +1743,17 @@ const StatisticsScreen = () => {
                 source={require("../../assets/common_icons/monitor.png")}
                 style={{ width: 24, height: 24, resizeMode: "contain" }}
               />
-              <Text style={styles.modalTitle}>Lịch sử báo cáo</Text>
+              <Text style={styles.modalTitle}>{t("stats.historyTitle")}</Text>
               <TouchableOpacity
                 onPress={() => setShowNotificationHistoryModal(false)}
                 style={{
                   padding: 8,
                   backgroundColor: "#f1f5f9",
-                  borderRadius: 8,
+                  borderRadius: 0,
                 }}
               >
                 <Text style={{ color: "#0f172a", fontWeight: "bold" }}>
-                  Đóng
+                  {t("common.close")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1782,7 +1762,7 @@ const StatisticsScreen = () => {
             <View style={{
               flexDirection: 'row',
               backgroundColor: '#f1f5f9',
-              borderRadius: 12,
+              borderRadius: 0,
               padding: 4,
               marginHorizontal: 16,
               marginTop: 12,
@@ -1790,7 +1770,7 @@ const StatisticsScreen = () => {
             }}>
               {(['day', 'month', 'year'] as const).map((tab) => {
                 const isActive = historyTab === tab;
-                const label = tab === 'day' ? 'Ngày' : tab === 'month' ? 'Tháng' : 'Năm';
+                const label = tab === 'day' ? t("stats.day") : tab === 'month' ? t("stats.month") : t("stats.year");
                 return (
                   <TouchableOpacity
                     key={tab}
@@ -1799,7 +1779,7 @@ const StatisticsScreen = () => {
                       flex: 1,
                       paddingVertical: 10,
                       alignItems: 'center',
-                      borderRadius: 8,
+                      borderRadius: 0,
                       backgroundColor: isActive ? '#3b82f6' : 'transparent',
                       shadowColor: isActive ? '#3b82f6' : 'transparent',
                       shadowOffset: { width: 0, height: 2 },
@@ -1902,7 +1882,7 @@ const StatisticsScreen = () => {
                     <View
                       style={{
                         backgroundColor: "#f8fafc",
-                        borderRadius: 16,
+                        borderRadius: 0,
                         padding: 16,
                         marginBottom: 16,
                         borderWidth: 1,
@@ -1958,10 +1938,10 @@ const StatisticsScreen = () => {
           <View style={styles.pieModalBox}>
             <View style={styles.modalHeader}>
               <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={styles.modalTitle}>Cơ cấu Chi Tiền</Text>
-                <Text style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
-                  Thời gian lọc: {getFilterDateText()}
-                </Text>
+            <Text style={styles.modalTitle}>{t("stats.pieStructure")}</Text>
+            <Text style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
+              {t("stats.filterTime")}: {getFilterDateText()}
+            </Text>
               </View>
               <TouchableOpacity
                 onPress={() => {
@@ -1970,7 +1950,7 @@ const StatisticsScreen = () => {
                 style={{
                   padding: 8,
                   backgroundColor: "#f1f5f9",
-                  borderRadius: 8,
+                  borderRadius: 0,
                 }}
               >
                 <Text style={{ color: "#0f172a", fontWeight: "bold" }}>

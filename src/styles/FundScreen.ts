@@ -88,7 +88,6 @@ export const styles = StyleSheet.create({
     },
     bankCard: {
         backgroundColor: "#1e293b", // Slate-800
-        borderRadius: 18,
         padding: 20,
         borderWidth: 1,
         borderColor: "rgba(255, 255, 255, 0.1)",
@@ -118,7 +117,6 @@ export const styles = StyleSheet.create({
     cardChip: {
         width: 32,
         height: 24,
-        borderRadius: 4,
         backgroundColor: "#f59e0b",
         opacity: 0.8,
     },
@@ -188,7 +186,6 @@ export const styles = StyleSheet.create({
         alignItems: "center",
         backgroundColor: "#ffffff",
         padding: 20,
-        borderRadius: 16,
         marginBottom: 12,
         elevation: 2,
         shadowColor: "#000",
@@ -230,7 +227,6 @@ export const styles = StyleSheet.create({
     },
     deleteWarningBox: {
         backgroundColor: "#fff1f2",
-        borderRadius: 12,
         padding: 14,
         marginBottom: 16,
         borderWidth: 1,
@@ -250,7 +246,6 @@ export const styles = StyleSheet.create({
     deleteCancelBtn: {
         flex: 1,
         paddingVertical: 14,
-        borderRadius: 12,
         alignItems: "center",
         backgroundColor: "#f1f5f9",
     },
@@ -258,7 +253,6 @@ export const styles = StyleSheet.create({
     deleteConfirmBtn: {
         flex: 2,
         paddingVertical: 14,
-        borderRadius: 12,
         alignItems: "center",
         backgroundColor: "#ef4444",
     },
@@ -272,12 +266,10 @@ export const styles = StyleSheet.create({
     },
     modalContent: {
         backgroundColor: "#ffffff",
-        borderRadius: 20,
         padding: 24,
     },
     allocModalContent: {
         backgroundColor: "#ffffff",
-        borderRadius: 20,
         padding: 24,
         marginTop: 100,
         marginBottom: "auto",
@@ -295,7 +287,6 @@ export const styles = StyleSheet.create({
     textInput: {
         borderWidth: 1,
         borderColor: "#cbd5e1",
-        borderRadius: 12,
         padding: 16,
         fontSize: 16,
         color: "#0f172a",
@@ -314,7 +305,6 @@ export const styles = StyleSheet.create({
     confirmBtn: {
         backgroundColor: "#3b82f6",
         padding: 16,
-        borderRadius: 12,
         alignItems: "center",
     },
     confirmBtnText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
@@ -328,7 +318,6 @@ export const styles = StyleSheet.create({
     actionConfirmBtn: {
         flex: 1,
         height: 54,
-        borderRadius: 16,
         alignItems: "center",
         justifyContent: "center",
     },
@@ -347,7 +336,6 @@ export const styles = StyleSheet.create({
     tabs: {
         flexDirection: "row",
         backgroundColor: "#f1f5f9",
-        borderRadius: 12,
         padding: 4,
         marginBottom: 20,
     },
@@ -357,7 +345,6 @@ export const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         paddingVertical: 10,
-        borderRadius: 8,
         gap: 8,
     },
     tabActiveDeposit: { backgroundColor: "#10b981", elevation: 2 },
@@ -373,7 +360,6 @@ export const styles = StyleSheet.create({
     },
     iconModalContent: {
         backgroundColor: "#ffffff",
-        borderRadius: 24,
         padding: 24,
         width: "100%",
         maxHeight: "80%",
@@ -404,7 +390,6 @@ export const styles = StyleSheet.create({
     iconGridItem: {
         width: "22%",
         aspectRatio: 1,
-        borderRadius: 16,
         borderWidth: 1.5,
         borderColor: "#e2e8f0",
         backgroundColor: "#f8fafc",
@@ -423,5 +408,33 @@ export const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
+    },
+    streakHeaderChip: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(255, 255, 255, 0.2)",
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 20,
+        gap: 4,
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.3)",
+        marginRight: 12
+    },
+    streakHeaderTxt: {
+        color: "#ffffff",
+        fontWeight: "800",
+        fontSize: 16,
+    },
+    actionBadge: {
+        position: "absolute",
+        top: 2,
+        right: 2,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: "#ef4444",
+        borderWidth: 1.5,
+        borderColor: "#0c2340",
     },
 });

@@ -17,21 +17,22 @@ export function isCategoryIdMatch(id1?: string, id2?: string): boolean {
 export function resolveCategoryName(
   tx: { categoryId?: string; type: 'income' | 'expense' },
   profile: UserProfile | null,
-  categoryBudgets: CategoryBudget[]
+  categoryBudgets: CategoryBudget[],
+  t?: (key: string) => string
 ): string {
   const { categoryId, type } = tx;
 
   // 1. System categories
-  if (categoryId === "system_tiet_kiem") return "Nuôi heo béo";
-  if (categoryId === "system_rut_tiet_kiem") return "Heo giảm cân";
-  if (categoryId === "system_xoa_quy") return "Xóa quỹ";
+  if (categoryId === "system_tiet_kiem") return t ? t("systemCategories.feedPig") : "Nuôi heo béo";
+  if (categoryId === "system_rut_tiet_kiem") return t ? t("systemCategories.pigSlim") : "Heo giảm cân";
+  if (categoryId === "system_xoa_quy") return t ? t("systemCategories.deleteFund") : "Xóa quỹ";
 
   // 2. Custom funds
   if (categoryId?.startsWith("fund_")) {
     const fundId = categoryId.substring(5);
     const fund = profile?.customFunds?.find(f => f.id && isCategoryIdMatch(f.id, fundId));
     if (fund) return fund.name;
-    return "Quỹ";
+    return t ? t("systemCategories.fund") : "Quỹ";
   }
 
   // 3. Normal categories
@@ -40,13 +41,13 @@ export function resolveCategoryName(
       const budget = categoryBudgets.find(b => b.id && isCategoryIdMatch(b.id, categoryId));
       if (budget) return budget.name;
     }
-    return "Khác";
+    return t ? t("systemCategories.other") : "Khác";
   } else {
     if (categoryId) {
       const incomeCat = profile?.incomeCategories?.find(c => c.id && isCategoryIdMatch(c.id, categoryId));
       if (incomeCat) return incomeCat.name;
     }
-    return "Khác";
+    return t ? t("systemCategories.other") : "Khác";
   }
 }
 
